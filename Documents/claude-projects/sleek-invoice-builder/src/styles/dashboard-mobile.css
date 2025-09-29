@@ -1,0 +1,421 @@
+/* ============================================
+   DASHBOARD MOBILE OPTIMIZATION
+   Improved touch targets and mobile layout
+   ============================================ */
+
+/* Mobile Dashboard Stats Grid */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+    padding-bottom: calc(var(--mobile-bottom-nav) + 80px); /* Account for FAB + nav */
+  }
+
+  /* Stats Cards - Better mobile layout */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    min-height: 80px;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+  }
+
+  .stat-change {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Quick Actions - Large touch targets */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding: 1rem;
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    transition: all 0.2s ease;
+  }
+
+  .quick-action-btn:active {
+    transform: scale(0.98);
+    background: var(--gray-50);
+  }
+
+  .quick-action-icon {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+  }
+
+  /* Invoice List - Mobile optimized */
+  .invoice-list-container {
+    margin: 0 -1rem; /* Full width on mobile */
+  }
+
+  .invoice-list-header {
+    padding: 1rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .invoice-filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-tab {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    background: white;
+    border: 1px solid var(--gray-300);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    transition: all 0.2s ease;
+  }
+
+  .filter-tab.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  /* Invoice Cards - Better mobile layout */
+  .invoice-card {
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1rem;
+    position: relative;
+    transition: all 0.2s ease;
+    min-height: 100px; /* Better touch target */
+  }
+
+  .invoice-card:active {
+    background: var(--gray-50);
+  }
+
+  .invoice-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+
+  .invoice-number {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .invoice-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .invoice-status.draft {
+    background: var(--gray-100);
+    color: var(--gray-700);
+  }
+
+  .invoice-status.sent {
+    background: var(--blue-100);
+    color: var(--blue-700);
+  }
+
+  .invoice-status.paid {
+    background: var(--green-100);
+    color: var(--green-700);
+  }
+
+  .invoice-status.overdue {
+    background: var(--red-100);
+    color: var(--red-700);
+  }
+
+  .invoice-client {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    margin-bottom: 0.25rem;
+  }
+
+  .invoice-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+  }
+
+  .invoice-amount {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  /* Search Bar - Mobile optimized */
+  .search-container {
+    padding: 1rem;
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 24px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    background: white;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--gray-400);
+  }
+
+  /* Bulk Actions Bar - Mobile optimized */
+  .bulk-actions-bar {
+    position: fixed;
+    bottom: var(--mobile-bottom-nav);
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--gray-200);
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .bulk-actions-bar.show {
+    transform: translateY(0);
+  }
+
+  .bulk-action-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    min-height: 44px; /* iOS touch target */
+  }
+
+  /* Empty State - Mobile optimized */
+  .empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    color: var(--gray-400);
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-text {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-state-action {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    min-height: 48px;
+  }
+
+  /* Swipe Actions Support */
+  .invoice-card.swipeable {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .swipe-action-delete {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    background: var(--danger);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateX(100%);
+  }
+
+  /* Loading State */
+  .invoice-skeleton {
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 1rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .skeleton-line {
+    height: 12px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .skeleton-line.short {
+    width: 60%;
+  }
+
+  .skeleton-line.medium {
+    width: 80%;
+  }
+
+  /* Pull to Refresh */
+  .pull-to-refresh {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .pull-to-refresh.active {
+    top: 20px;
+  }
+
+  /* Responsive Table - Convert to cards on mobile */
+  .invoice-table {
+    display: none; /* Hide table on mobile */
+  }
+
+  .invoice-cards {
+    display: block; /* Show cards instead */
+  }
+
+  /* Landscape Mode Adjustments */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .stats-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .quick-actions {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .invoice-card {
+      min-height: 60px;
+      padding: 0.75rem 1rem;
+    }
+  }
+}
+
+/* Tablet Optimization (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .invoice-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .stat-card,
+  .quick-action-btn,
+  .invoice-card {
+    background: var(--gray-800);
+    border-color: var(--gray-700);
+  }
+
+  .invoice-card:active {
+    background: var(--gray-700);
+  }
+
+  .search-input {
+    background: var(--gray-800);
+    border-color: var(--gray-700);
+    color: white;
+  }
+}
