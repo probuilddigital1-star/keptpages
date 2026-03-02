@@ -43,8 +43,8 @@ export const useScanStore = create((set, get) => ({
     try {
       const result = await api.post(`/scan/${scanId}/process`);
       set((state) => ({
-        currentScan: result,
-        scans: state.scans.map((s) => (s.id === scanId ? result : s)),
+        currentScan: { ...state.currentScan, ...result },
+        scans: state.scans.map((s) => (s.id === scanId ? { ...s, ...result } : s)),
         processing: false,
       }));
       return result;
@@ -59,8 +59,8 @@ export const useScanStore = create((set, get) => ({
     try {
       const result = await api.post(`/scan/${scanId}/reprocess`);
       set((state) => ({
-        currentScan: result,
-        scans: state.scans.map((s) => (s.id === scanId ? result : s)),
+        currentScan: { ...state.currentScan, ...result },
+        scans: state.scans.map((s) => (s.id === scanId ? { ...s, ...result } : s)),
         processing: false,
       }));
       return result;
@@ -84,8 +84,8 @@ export const useScanStore = create((set, get) => ({
     try {
       const updated = await api.put(`/scan/${scanId}`, data);
       set((state) => ({
-        currentScan: state.currentScan?.id === scanId ? updated : state.currentScan,
-        scans: state.scans.map((s) => (s.id === scanId ? updated : s)),
+        currentScan: state.currentScan?.id === scanId ? { ...state.currentScan, ...updated } : state.currentScan,
+        scans: state.scans.map((s) => (s.id === scanId ? { ...s, ...updated } : s)),
       }));
       return updated;
     } catch (error) {

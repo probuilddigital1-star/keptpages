@@ -23,11 +23,12 @@ export const useCollectionsStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const collection = await api.post('/collections', data);
+      const withDefaults = { ...collection, itemCount: 0, coverImageUrl: null, updatedAt: collection.createdAt };
       set((state) => ({
-        collections: [...state.collections, collection],
+        collections: [...state.collections, withDefaults],
         loading: false,
       }));
-      return collection;
+      return withDefaults;
     } catch (error) {
       set({ error: error.message, loading: false });
       throw error;

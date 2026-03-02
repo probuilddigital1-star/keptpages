@@ -10,11 +10,23 @@ export const useDocumentsStore = create((set, get) => ({
   fetchDocuments: async (collectionId) => {
     set({ loading: true });
     try {
-      const documents = await api.get(`/collections/${collectionId}`);
+      const res = await api.get(`/collections/${collectionId}`);
+      const items = (res.items || []).map((item) => ({
+        id: item.scan?.id || item.id,
+        collectionItemId: item.id,
+        title: item.scan?.title,
+        documentType: item.scan?.documentType,
+        extractedData: item.scan?.extractedData,
+        originalFilename: item.scan?.originalFilename,
+        status: item.scan?.status,
+        confidence: item.scan?.confidence,
+        position: item.position,
+        sectionTitle: item.sectionTitle,
+      }));
       set((state) => ({
         documents: {
           ...state.documents,
-          [collectionId]: documents,
+          [collectionId]: items,
         },
         loading: false,
       }));

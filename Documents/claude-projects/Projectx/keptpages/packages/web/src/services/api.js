@@ -57,7 +57,7 @@ async function uploadFile(path, file, onProgress) {
     xhr.onerror = () => reject(new Error('Upload failed'));
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('image', file);
     xhr.send(formData);
   });
 }

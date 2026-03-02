@@ -48,9 +48,7 @@ export const useEditorStore = create((set, get) => ({
     const { editedData } = get();
     set({ saving: true });
     try {
-      const result = await api.put(`/scan/${scanId}`, {
-        extractedData: editedData,
-      });
+      const result = await api.put(`/scan/${scanId}`, editedData);
       set({
         extractedData: { ...editedData },
         isDirty: false,
