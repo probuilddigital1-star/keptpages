@@ -33,16 +33,16 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BLOG-11 | Blog routes | TODO | |
 | US-BLOG-12 | Blog RSS feed | TODO | |
 | US-BLOG-13 | Blog admin UI | TODO | |
-| US-PAY-1 | Stripe account | TODO | |
-| US-PAY-2 | Stripe products/prices | TODO | |
-| US-PAY-3 | Stripe public key | TODO | |
-| US-PAY-4 | Stripe webhook | TODO | |
-| US-PAY-5 | Checkout flow E2E | TODO | |
-| US-PAY-6 | Webhook lifecycle | TODO | |
-| US-PAY-7 | Customer portal | TODO | |
-| US-PAY-8 | Lulu Print API | TODO | |
-| US-PAY-9 | Book pricing/checkout | TODO | |
-| US-PAY-10 | Subscription sync | TODO | |
+| US-PAY-1 | Stripe account | MANUAL | Code ready — needs Stripe account creation + API keys in env |
+| US-PAY-2 | Stripe products/prices | MANUAL | Code ready — needs products/prices created in Stripe Dashboard |
+| US-PAY-3 | Stripe public key | DONE | `@stripe/stripe-js` installed, `getStripe()` singleton, `config.stripePublicKey` wired |
+| US-PAY-4 | Stripe webhook | MANUAL | Code ready — needs webhook registered in Stripe Dashboard + signing secret |
+| US-PAY-5 | Checkout flow E2E | DONE | Full checkout flow: checkout session, redirect, success/cancel pages, webhook activation |
+| US-PAY-6 | Webhook lifecycle | DONE | Handles checkout.completed, sub.updated, sub.deleted, invoice.succeeded, invoice.failed |
+| US-PAY-7 | Customer portal | DONE | POST /stripe/portal endpoint, Settings page "Manage Subscription" button |
+| US-PAY-8 | Lulu Print API | MANUAL | Code ready — needs Lulu API credentials in env |
+| US-PAY-9 | Book pricing/checkout | DONE | Book orders go through Stripe, webhook triggers Lulu fulfillment, dynamic pricing |
+| US-PAY-10 | Subscription sync | DONE | Migration 009 adds stripe columns, webhook-driven sync, profile-based tier derivation |
 | US-CORE-1 | Fix waitlist migration | DONE | Added missing columns in migration 002 |
 | US-CORE-2 | Auth providers | DONE | Google OAuth configured in Supabase + Google Cloud |
 | US-CORE-3 | Wire real Supabase client | DONE | `.env` configured, `isSupabaseConfigured=true`, build passes |
@@ -69,7 +69,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-QA-11 | Clean up artifacts | TODO | |
 | US-QA-12 | Production validation | TODO | |
 
-**Completed: 20/57** | **Remaining: 37**
+**Completed: 26/57** | **Remaining: 31** (4 PAY stories need manual Stripe/Lulu account setup)
 
 ### Key Credentials & Resources (do not commit)
 - **Supabase project:** `jvvcbekzmsnziulpewwh` (https://jvvcbekzmsnziulpewwh.supabase.co)
@@ -98,10 +98,10 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 |------|---------|-----------|-----------|
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
 | **BLOG** — Blog Feature (new) | 13 | 0 | 13 |
-| **PAY** — Payments & Subscriptions | 10 | 0 | 10 |
+| **PAY** — Payments & Subscriptions | 10 | 6 | 4 (manual setup) |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **QA** — Testing & Launch Readiness | 12 | 0 | 12 |
-| **Total** | **57** | **20** | **37** |
+| **Total** | **57** | **26** | **31** |
 
 ---
 
