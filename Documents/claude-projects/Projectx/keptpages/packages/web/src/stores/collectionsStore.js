@@ -11,8 +11,8 @@ export const useCollectionsStore = create((set, get) => ({
   fetchCollections: async () => {
     set({ loading: true, error: null });
     try {
-      const collections = await api.get('/collections');
-      set({ collections, loading: false });
+      const res = await api.get('/collections');
+      set({ collections: res.collections || [], loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
       throw error;
