@@ -75,10 +75,11 @@ export default function BookPage() {
   const [quantity, setQuantity] = useState(1);
   const [shipping, setShipping] = useState({
     name: '',
-    address: '',
+    email: '',
+    street1: '',
     city: '',
     state: '',
-    zip: '',
+    postalCode: '',
     country: 'US',
   });
 
@@ -104,10 +105,11 @@ export default function BookPage() {
     if (step === 3) {
       return (
         shipping.name.trim() &&
-        shipping.address.trim() &&
+        shipping.email.trim() &&
+        shipping.street1.trim() &&
         shipping.city.trim() &&
         shipping.state.trim() &&
-        shipping.zip.trim()
+        shipping.postalCode.trim()
       );
     }
     return true;
@@ -132,10 +134,7 @@ export default function BookPage() {
 
   const handleOrder = useCallback(async () => {
     try {
-      const result = await orderBook(book?.id || collectionId, {
-        ...shipping,
-        quantity,
-      });
+      const result = await orderBook(book?.id || collectionId, shipping, quantity);
       if (result?.url) {
         window.location.href = result.url;
       } else {
@@ -542,11 +541,20 @@ export default function BookPage() {
                 }
               />
               <Input
+                label="Email"
+                type="email"
+                placeholder="jane@example.com"
+                value={shipping.email}
+                onChange={(e) =>
+                  setShipping((s) => ({ ...s, email: e.target.value }))
+                }
+              />
+              <Input
                 label="Street Address"
                 placeholder="123 Main Street"
-                value={shipping.address}
+                value={shipping.street1}
                 onChange={(e) =>
-                  setShipping((s) => ({ ...s, address: e.target.value }))
+                  setShipping((s) => ({ ...s, street1: e.target.value }))
                 }
               />
               <div className="grid grid-cols-2 gap-4">
@@ -569,11 +577,11 @@ export default function BookPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="ZIP Code"
+                  label="ZIP / Postal Code"
                   placeholder="44101"
-                  value={shipping.zip}
+                  value={shipping.postalCode}
                   onChange={(e) =>
-                    setShipping((s) => ({ ...s, zip: e.target.value }))
+                    setShipping((s) => ({ ...s, postalCode: e.target.value }))
                   }
                 />
                 <Input

@@ -8,7 +8,8 @@ import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
 import { validate } from '../middleware/validate.js';
 import { generateBookPdf, generateCoverPdf } from '../services/pdf.js';
-import { createProject, createOrder, getOrderStatus } from '../services/lulu.js';
+import { getOrderStatus } from '../services/lulu.js';
+import { createBookCheckoutSession } from '../services/stripe.js';
 
 const books = new Hono();
 
@@ -341,7 +342,8 @@ books.post('/:id/generate', async (c) => {
 
 /**
  * POST /books/:id/order
- * Submit the book to Lulu for printing.
+ * Create a Stripe Checkout session for a book order.
+ * The actual Lulu print job is created by the webhook after payment succeeds.
  */
 books.post(
   '/:id/order',
@@ -391,43 +393,38 @@ books.post(
     }
 
     try {
-      // Generate presigned/public URLs for the PDFs
-      // In production, you'd use R2 custom domains or presigned URLs
-      const interiorUrl = `${env.R2_PUBLIC_URL || 'https://r2.keptpages.com'}/${book.interior_pdf_key}`;
-      const coverUrl = `${env.R2_PUBLIC_URL || 'https://r2.keptpages.com'}/${book.cover_pdf_key}`;
+      const quantity = body.quantity || 1;
 
-      // Create Lulu project
-      const luluProject = await createProject(interiorUrl, coverUrl, book.title, env);
+      // Create a Stripe Checkout session for the book order
+      const session = await createBookCheckoutSession(
+        user.id,
+        book,
+        addr,
+        quantity,
+        env
+      );
 
-      // Place the order
-      const order = await createOrder(luluProject.id, addr, body.quantity || 1, env);
-
-      // Update book record
+      // Store the checkout session ID on the book record
       await supabase
         .from('books')
         .update({
-          status: 'ordered',
-          lulu_project_id: luluProject.id,
-          lulu_order_id: order.id,
+          stripe_session_id: session.sessionId,
+          payment_status: 'pending',
           shipping_address: addr,
-          quantity: body.quantity || 1,
-          order_cost: order.totalCost,
+          quantity,
           updated_at: new Date().toISOString(),
         })
         .eq('id', bookId);
 
       return c.json({
         id: bookId,
-        status: 'ordered',
-        luluProjectId: luluProject.id,
-        luluOrderId: order.id,
-        estimatedCost: order.totalCost,
-        currency: order.currency,
-        message: 'Order placed successfully with Lulu.',
+        sessionId: session.sessionId,
+        url: session.url,
+        message: 'Checkout session created. Complete payment to place your order.',
       });
     } catch (err) {
-      console.error('Lulu order error:', err);
-      return c.json({ error: 'Failed to place order with Lulu', details: err.message }, 500);
+      console.error('Book order checkout error:', err);
+      return c.json({ error: 'Failed to create checkout session', details: err.message }, 500);
     }
   }
 );

@@ -1,14 +1,15 @@
 /**
- * Stripe payment routes.
- * Handles checkout session creation and webhook processing.
+ * Stripe payment routes (protected, require auth).
+ * Handles checkout session creation, subscription management, and billing portal.
+ * Note: The webhook endpoint is registered separately in index.js as a public route.
  */
 
 import { Hono } from 'hono';
-import Stripe from 'stripe';
 import { validate } from '../middleware/validate.js';
 import {
   createCheckoutSession,
-  handleWebhookEvent,
+  cancelSubscription,
+  createPortalSession,
 } from '../services/stripe.js';
 
 const stripe = new Hono();
@@ -47,52 +48,34 @@ stripe.post(
 );
 
 /**
- * POST /stripe/webhook
- * Handle incoming Stripe webhook events.
- * This endpoint does NOT require auth middleware - it uses Stripe signature verification.
+ * POST /stripe/cancel
+ * Cancel the user's subscription at the end of the current billing period.
  */
-stripe.post('/webhook', async (c) => {
-  const stripeSecretKey = c.env.STRIPE_SECRET_KEY;
-  const webhookSecret = c.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!stripeSecretKey || !webhookSecret) {
-    console.error('Stripe secrets not configured');
-    return c.json({ error: 'Server configuration error' }, 500);
-  }
-
-  const stripeClient = new Stripe(stripeSecretKey, {
-    apiVersion: '2024-11-20.acacia',
-    httpClient: Stripe.createFetchHttpClient(),
-  });
-
-  // Get the raw body for signature verification
-  const rawBody = await c.req.text();
-  const signature = c.req.header('stripe-signature');
-
-  if (!signature) {
-    return c.json({ error: 'Missing stripe-signature header' }, 400);
-  }
-
-  let event;
-  try {
-    event = await stripeClient.webhooks.constructEventAsync(
-      rawBody,
-      signature,
-      webhookSecret
-    );
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return c.json({ error: 'Invalid webhook signature' }, 400);
-  }
+stripe.post('/cancel', async (c) => {
+  const user = c.get('user');
 
   try {
-    await handleWebhookEvent(event, c.env);
-    return c.json({ received: true });
+    const result = await cancelSubscription(user.id, c.env);
+    return c.json(result);
   } catch (err) {
-    console.error('Webhook processing error:', err);
-    // Return 200 even on processing errors to prevent Stripe retries for handled events
-    // Only return 500 if it's a transient error that should be retried
-    return c.json({ received: true, error: err.message });
+    console.error('Subscription cancellation failed:', err);
+    return c.json({ error: 'Failed to cancel subscription', details: err.message }, 500);
+  }
+});
+
+/**
+ * POST /stripe/portal
+ * Create a Stripe Customer Portal session for managing billing.
+ */
+stripe.post('/portal', async (c) => {
+  const user = c.get('user');
+
+  try {
+    const result = await createPortalSession(user.id, c.env);
+    return c.json(result);
+  } catch (err) {
+    console.error('Portal session creation failed:', err);
+    return c.json({ error: 'Failed to create portal session', details: err.message }, 500);
   }
 });
 

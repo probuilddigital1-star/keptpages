@@ -74,11 +74,12 @@ export const useBookStore = create((set, get) => ({
     }
   },
 
-  orderBook: async (bookId, shippingAddress) => {
+  orderBook: async (bookId, shippingAddress, quantity = 1) => {
     set({ loading: true });
     try {
       const order = await api.post(`/books/${bookId}/order`, {
         shippingAddress,
+        quantity,
       });
       set({ loading: false });
       return order;

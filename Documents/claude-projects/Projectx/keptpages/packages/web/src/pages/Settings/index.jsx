@@ -10,6 +10,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
+import { stripeService } from '@/services/stripe';
 import { PLANS } from '@/config/plans';
 import { config } from '@/config/env';
 import { formatDate } from '@/utils/formatters';
@@ -26,6 +27,8 @@ export default function Settings() {
   const subLoading = useSubscriptionStore((s) => s.loading);
   const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
   const upgrade = useSubscriptionStore((s) => s.upgrade);
+  const cancelSub = useSubscriptionStore((s) => s.cancelSubscription);
+  const openPortal = useSubscriptionStore((s) => s.openPortal);
 
   // Profile form
   const [displayName, setDisplayName] = useState('');
@@ -40,6 +43,7 @@ export default function Settings() {
   const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exportingData, setExportingData] = useState(false);
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   useEffect(() => {
     fetchSubscription().catch(() => {});
@@ -92,20 +96,36 @@ export default function Settings() {
     }
   }, [upgrade]);
 
-  // Cancel subscription
+  // Cancel subscription (via stripeService)
   const handleCancelSubscription = useCallback(async () => {
     setCancelling(true);
     try {
-      await api.post('/stripe/cancel');
+      await cancelSub();
       toast('Subscription cancelled. You will retain access until the end of your billing period.');
       setShowCancelModal(false);
-      fetchSubscription().catch(() => {});
     } catch {
       toast('Failed to cancel subscription.', 'error');
     } finally {
       setCancelling(false);
     }
-  }, [fetchSubscription]);
+  }, [cancelSub]);
+
+  // Open Stripe Customer Portal
+  const handleManageSubscription = useCallback(async () => {
+    setOpeningPortal(true);
+    try {
+      const url = await openPortal();
+      if (url) {
+        window.location.href = url;
+      } else {
+        toast('Could not open billing portal. Please try again.', 'error');
+      }
+    } catch {
+      toast('Failed to open billing portal.', 'error');
+    } finally {
+      setOpeningPortal(false);
+    }
+  }, [openPortal]);
 
   // Export data
   const handleExportData = useCallback(async () => {
@@ -290,13 +310,35 @@ export default function Settings() {
                   </span>
                 </p>
               )}
-              <Button
-                variant="ghost"
-                onClick={() => setShowCancelModal(true)}
-                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              >
-                Cancel Subscription
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handleManageSubscription}
+                  loading={openingPortal}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4 h-4"
+                  >
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                    <line x1="1" y1="10" x2="23" y2="10" />
+                  </svg>
+                  Manage Subscription
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowCancelModal(true)}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                >
+                  Cancel Subscription
+                </Button>
+              </div>
             </div>
           )}
         </Card>

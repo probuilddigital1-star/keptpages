@@ -21,10 +21,10 @@ user.get('/profile', async (c) => {
   const authUser = c.get('user');
   const supabase = getSupabase(c.env);
 
-  // Fetch profile
+  // Fetch profile (including Stripe/subscription fields from migration 009)
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, tier, scan_count, collection_count, created_at, updated_at')
+    .select('id, display_name, avatar_url, tier, scan_count, collection_count, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_plan, subscription_period_end, subscription_updated_at, created_at, updated_at')
     .eq('id', authUser.id)
     .single();
 
@@ -55,12 +55,23 @@ user.get('/profile', async (c) => {
       ? {
           id: subscription.id,
           status: subscription.status,
+          plan: profile.subscription_plan || null,
           tier: profile.tier,
-          current_period_start: subscription.current_period_start,
-          current_period_end: subscription.current_period_end,
+          currentPeriodStart: subscription.current_period_start,
+          currentPeriodEnd: subscription.current_period_end || profile.subscription_period_end,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
         }
-      : null,
+      : profile.subscription_status && profile.subscription_status !== 'none'
+        ? {
+            id: null,
+            status: profile.subscription_status,
+            plan: profile.subscription_plan || null,
+            tier: profile.tier,
+            currentPeriodEnd: profile.subscription_period_end,
+            cancelAtPeriodEnd: false,
+          }
+        : null,
+    stripeCustomerId: profile.stripe_customer_id || null,
     createdAt: profile.created_at,
   });
 });
