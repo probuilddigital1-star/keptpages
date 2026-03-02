@@ -69,7 +69,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-QA-11 | Clean up artifacts | TODO | |
 | US-QA-12 | Production validation | TODO | |
 
-**Completed: 12/57** | **Remaining: 45**
+**Completed: 20/57** | **Remaining: 37**
 
 ### Key Credentials & Resources (do not commit)
 - **Supabase project:** `jvvcbekzmsnziulpewwh` (https://jvvcbekzmsnziulpewwh.supabase.co)
@@ -81,11 +81,14 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 - **Auth middleware updated** to support ES256 JWTs (JWKS-based verification)
 
 ### Key Fixes Applied
-- `supabase/config.toml`: removed `[project]` section, updated `major_version` to 17, enabled Google OAuth
+- `supabase/config.toml`: removed `[project]` section, updated `major_version` to 17, enabled Google OAuth, added production redirect URLs
 - `packages/worker/src/middleware/auth.js`: rewritten to support ES256 (new Supabase) + HS256 (legacy) JWT verification via JWKS
 - `packages/worker/.dev.vars`: uses legacy service_role JWT instead of sb_secret_ key
-- Migrations 002-004 added: grants, waitlist columns, anon policy fix, PostgREST schema reload
-- Migration 005 added: `scan_id` FK on `collection_items` (schema originally referenced `documents` table, but app uses `scans` directly)
+- Migrations 002-008 added: grants, waitlist columns, anon policy fix, PostgREST schema reload, scan_id FK, worker columns, status enum, shares table
+- Supabase auth redirect URLs updated for production (site_url → keptpages.com, allowed all production domains)
+- Landing page CTAs converted from waitlist form to signup navigation
+- `isFreeTier` fixed to query correct `tier` column (was querying non-existent columns)
+- 10 frontend-API integration bugs fixed (upload field name, response shape mismatches, cross-origin URLs)
 
 ---
 
@@ -93,12 +96,12 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 | Epic | Stories | Completed | Remaining |
 |------|---------|-----------|-----------|
-| **INFRA** — Infrastructure & DevOps | 9 | 4 | 5 |
+| **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
 | **BLOG** — Blog Feature (new) | 13 | 0 | 13 |
 | **PAY** — Payments & Subscriptions | 10 | 0 | 10 |
-| **CORE** — Auth, API Wiring & Features | 13 | 8 | 5 |
+| **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **QA** — Testing & Launch Readiness | 12 | 0 | 12 |
-| **Total** | **57** | **12** | **45** |
+| **Total** | **57** | **20** | **37** |
 
 ---
 
