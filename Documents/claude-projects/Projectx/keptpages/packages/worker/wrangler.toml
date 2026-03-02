@@ -1,0 +1,19 @@
+name = "keptpages-api"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+account_id = "e63d3b40b8b4cfaf24feab115bb9ae19"
+
+[vars]
+ENVIRONMENT = "production"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "keptpages-uploads"
+
+[[r2_buckets]]
+binding = "PROCESSED"
+bucket_name = "keptpages-processed"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "b869a2860f7346ef8069e5948bb29fa9"
