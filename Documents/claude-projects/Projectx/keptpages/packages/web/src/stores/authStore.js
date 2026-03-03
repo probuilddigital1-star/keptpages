@@ -7,7 +7,7 @@ import { supabase, isSupabaseConfigured } from '@/services/supabase';
  * so the Supabase client can pick up the session from the URL hash.
  */
 function getOAuthRedirectUrl() {
-  return `${window.location.origin}/app`;
+  return `${window.location.origin}/auth/callback`;
 }
 
 export const useAuthStore = create((set, get) => ({

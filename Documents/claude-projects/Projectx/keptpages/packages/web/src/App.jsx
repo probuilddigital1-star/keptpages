@@ -22,6 +22,7 @@ const SettingsPage = lazy(() => import('@/pages/Settings'));
 const SharedCollection = lazy(() => import('@/pages/Shared'));
 const CheckoutSuccess = lazy(() => import('@/pages/CheckoutSuccess'));
 const CheckoutCancel = lazy(() => import('@/pages/CheckoutCancel'));
+const AuthCallback = lazy(() => import('@/pages/Auth/Callback'));
 
 function PageLoader() {
   return (
@@ -78,6 +79,9 @@ export default function App() {
               <Route path="/app/settings" element={<SettingsPage />} />
             </Route>
           </Route>
+
+          {/* OAuth callback (must be outside AuthGuard so tokens can be processed) */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Checkout result pages (no auth required — user may land here after Stripe redirect) */}
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
