@@ -6,5 +6,5 @@ export const scansService = {
   reprocess: (id) => api.post(`/scan/${id}/reprocess`),
   get: (id) => api.get(`/scan/${id}`),
   update: (id, data) => api.put(`/scan/${id}`, data),
-  list: () => api.get('/scans'),
+  list: () => api.get('/scan'),
 };

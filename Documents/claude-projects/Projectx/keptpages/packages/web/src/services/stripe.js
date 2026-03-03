@@ -18,7 +18,7 @@ export function getStripe() {
 export const stripeService = {
   /** Create a Stripe Checkout session and return { url } */
   createCheckout: (plan, options = {}) =>
-    api.post('/stripe/checkout', { plan, ...options }),
+    api.post('/stripe/checkout', { plan, metadata: options }),
 
   /** Create a Stripe Customer Portal session and return { url } */
   createPortalSession: () =>

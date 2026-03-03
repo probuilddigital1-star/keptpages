@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '@/services/supabase';
 
+/**
+ * Build the OAuth redirect URL based on current environment.
+ * In production this must point to the app domain (app.keptpages.com)
+ * so the Supabase client can pick up the session from the URL hash.
+ */
+function getOAuthRedirectUrl() {
+  return `${window.location.origin}/app`;
+}
+
 export const useAuthStore = create((set, get) => ({
   // State
   user: null,
@@ -83,6 +92,9 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+        },
       });
       if (error) throw error;
     } catch (error) {
@@ -106,7 +118,9 @@ export const useAuthStore = create((set, get) => ({
   resetPassword: async (email) => {
     set({ loading: true, error: null });
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
       if (error) throw error;
       set({ loading: false });
     } catch (error) {

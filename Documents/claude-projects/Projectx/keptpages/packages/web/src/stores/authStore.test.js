@@ -2,6 +2,7 @@ import { useAuthStore } from './authStore';
 import { supabase } from '@/services/supabase';
 
 vi.mock('@/services/supabase', () => ({
+  isSupabaseConfigured: true,
   supabase: {
     auth: {
       signInWithPassword: vi.fn(),
@@ -128,13 +129,16 @@ describe('authStore', () => {
   });
 
   describe('loginWithGoogle', () => {
-    it('calls supabase.auth.signInWithOAuth', async () => {
+    it('calls supabase.auth.signInWithOAuth with redirectTo', async () => {
       supabase.auth.signInWithOAuth.mockResolvedValue({ error: null });
 
       await useAuthStore.getState().loginWithGoogle();
 
       expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
         provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/app`,
+        },
       });
     });
 
@@ -188,7 +192,9 @@ describe('authStore', () => {
 
       await useAuthStore.getState().resetPassword('user@test.com');
 
-      expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('user@test.com');
+      expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('user@test.com', {
+        redirectTo: `${window.location.origin}/login`,
+      });
       expect(useAuthStore.getState().loading).toBe(false);
     });
 

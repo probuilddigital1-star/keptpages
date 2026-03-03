@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 
-export default function StickyMobileCTA({ onCtaClick }) {
+export default function StickyMobileCTA({ onCtaClick, onLoginClick }) {
   const [visible, setVisible] = useState(false);
   const heroRef = useRef(null);
 
@@ -29,12 +29,20 @@ export default function StickyMobileCTA({ onCtaClick }) {
           Free to start &middot; No credit card
         </span>
       </div>
-      <button
-        onClick={onCtaClick}
-        className="font-ui text-sm font-semibold py-2.5 px-[22px] bg-terracotta text-white rounded-pill border-none cursor-pointer whitespace-nowrap transition-colors duration-200 hover:bg-terracotta-hover"
-      >
-        Get Started
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onLoginClick}
+          className="font-ui text-[13px] font-medium text-walnut-secondary bg-transparent border-none cursor-pointer whitespace-nowrap transition-colors duration-200 hover:text-walnut"
+        >
+          Log In
+        </button>
+        <button
+          onClick={onCtaClick}
+          className="font-ui text-sm font-semibold py-2.5 px-[22px] bg-terracotta text-white rounded-pill border-none cursor-pointer whitespace-nowrap transition-colors duration-200 hover:bg-terracotta-hover"
+        >
+          Get Started
+        </button>
+      </div>
     </div>
   );
 }

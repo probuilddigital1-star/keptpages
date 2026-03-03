@@ -1,4 +1,4 @@
-export default function Hero({ onCtaClick }) {
+export default function Hero({ onCtaClick, onLoginClick }) {
   const words = [
     { text: 'Every ', highlight: false },
     { text: 'family ', highlight: false },
@@ -62,6 +62,15 @@ export default function Hero({ onCtaClick }) {
           </button>
           <p className="font-ui text-[13px] text-walnut-muted mt-3.5 tracking-[0.2px]">
             No credit card required <span className="mx-1.5 opacity-40">&middot;</span> 25 free scans
+          </p>
+          <p className="font-ui text-[13px] text-walnut-muted mt-2 tracking-[0.2px]">
+            Already have an account?{' '}
+            <button
+              onClick={onLoginClick}
+              className="font-ui text-[13px] text-terracotta font-medium bg-transparent border-none cursor-pointer p-0 underline underline-offset-2 decoration-terracotta/40 hover:decoration-terracotta transition-colors duration-200"
+            >
+              Log in
+            </button>
           </p>
         </div>
       </div>

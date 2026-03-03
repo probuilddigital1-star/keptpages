@@ -40,13 +40,14 @@ export default function Landing() {
   }, []);
 
   const goToSignup = () => navigate('/signup');
+  const goToLogin = () => navigate('/login');
 
   return (
     <>
-      <Nav onCtaClick={goToSignup} />
+      <Nav onCtaClick={goToSignup} onLoginClick={goToLogin} />
 
       <div data-hero>
-        <Hero onCtaClick={goToSignup} />
+        <Hero onCtaClick={goToSignup} onLoginClick={goToLogin} />
       </div>
 
       <TrustBar />
@@ -58,7 +59,7 @@ export default function Landing() {
       <FinalCTA onCtaClick={goToSignup} />
       <Footer />
 
-      <StickyMobileCTA onCtaClick={goToSignup} />
+      <StickyMobileCTA onCtaClick={goToSignup} onLoginClick={goToLogin} />
     </>
   );
 }

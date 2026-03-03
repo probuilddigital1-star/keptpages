@@ -23,7 +23,7 @@ export const useScanStore = create((set, get) => ({
     set({ uploadProgress: 0 });
     try {
       const scan = await api.upload('/scan', file, (progress) => {
-        set({ uploadProgress: progress });
+        set({ uploadProgress: Math.round(progress * 100) });
         if (onProgress) onProgress(progress);
       });
       set((state) => ({

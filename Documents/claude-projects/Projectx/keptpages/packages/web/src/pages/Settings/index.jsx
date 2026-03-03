@@ -302,11 +302,11 @@ export default function Settings() {
           {/* Keeper users: billing info */}
           {tier === 'keeper' && (
             <div>
-              {subscription?.current_period_end && (
+              {subscription?.currentPeriodEnd && (
                 <p className="font-ui text-sm text-walnut-secondary mb-4">
                   Next billing date:{' '}
                   <span className="font-medium text-walnut">
-                    {formatDate(subscription.current_period_end)}
+                    {formatDate(subscription.currentPeriodEnd)}
                   </span>
                 </p>
               )}

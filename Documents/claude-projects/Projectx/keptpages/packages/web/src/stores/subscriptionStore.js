@@ -52,7 +52,7 @@ export const useSubscriptionStore = create((set, get) => ({
   },
 
   /** Start a Stripe Checkout session for Keeper upgrade */
-  upgrade: async (plan = 'keeper') => {
+  upgrade: async (plan = 'keeper_yearly') => {
     set({ loading: true });
     try {
       const result = await stripeService.createCheckout(plan);

@@ -119,10 +119,16 @@ export default function BookPage() {
     if (step === 2) {
       // Generate PDF when moving from Preview to Order
       try {
-        if (!book) {
-          await createBook(collectionId);
+        let currentBook = book;
+        if (!currentBook) {
+          const title = coverDesign.title.trim() || 'Untitled Book';
+          currentBook = await createBook(collectionId, title);
         }
-        await generatePdf(book?.id || collectionId);
+        if (!currentBook?.id) {
+          toast('Book creation failed. Please try again.', 'error');
+          return;
+        }
+        await generatePdf(currentBook.id);
         toast('PDF generated successfully!');
       } catch {
         toast('Failed to generate PDF. Please try again.', 'error');
@@ -130,11 +136,15 @@ export default function BookPage() {
       }
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  }, [step, book, collectionId, createBook, generatePdf]);
+  }, [step, book, coverDesign.title, collectionId, createBook, generatePdf]);
 
   const handleOrder = useCallback(async () => {
+    if (!book?.id) {
+      toast('No book found. Please go back and generate the PDF first.', 'error');
+      return;
+    }
     try {
-      const result = await orderBook(book?.id || collectionId, shipping, quantity);
+      const result = await orderBook(book.id, shipping, quantity);
       if (result?.url) {
         window.location.href = result.url;
       } else {
@@ -144,7 +154,7 @@ export default function BookPage() {
     } catch {
       toast('Failed to place order. Please try again.', 'error');
     }
-  }, [book, collectionId, shipping, quantity, orderBook, navigate]);
+  }, [book, shipping, quantity, orderBook, navigate]);
 
   // Handle cover photo upload
   const handlePhotoUpload = useCallback(

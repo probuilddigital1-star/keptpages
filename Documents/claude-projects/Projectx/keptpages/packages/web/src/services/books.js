@@ -1,7 +1,7 @@
 import { api } from './api';
 
 export const booksService = {
-  create: (collectionId) => api.post('/books', { collectionId }),
+  create: (collectionId, title) => api.post('/books', { collectionId, title }),
   get: (id) => api.get(`/books/${id}`),
   update: (id, data) => api.put(`/books/${id}`, data),
   generatePdf: (id) => api.post(`/books/${id}/generate`),

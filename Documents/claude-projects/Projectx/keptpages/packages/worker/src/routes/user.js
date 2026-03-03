@@ -138,7 +138,7 @@ user.post('/avatar', async (c) => {
     return c.json({ error: 'Invalid form data' }, 400);
   }
 
-  const file = formData.get('file');
+  const file = formData.get('image') || formData.get('file');
   if (!file || !(file instanceof File)) {
     return c.json({ error: 'No file provided' }, 400);
   }

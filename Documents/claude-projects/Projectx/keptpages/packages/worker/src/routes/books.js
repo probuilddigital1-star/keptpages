@@ -223,7 +223,7 @@ books.post('/:id/generate', async (c) => {
     const { data: items, error: itemsError } = await supabase
       .from('collection_items')
       .select(`
-        position,
+        sort_order,
         scans (
           title,
           document_type,
@@ -231,7 +231,7 @@ books.post('/:id/generate', async (c) => {
         )
       `)
       .eq('collection_id', book.collection_id)
-      .order('position', { ascending: true });
+      .order('sort_order', { ascending: true });
 
     if (itemsError) {
       throw new Error('Failed to fetch collection items');
@@ -243,7 +243,7 @@ books.post('/:id/generate', async (c) => {
       const itemMap = new Map();
       for (const item of orderedItems) {
         if (item.scans) {
-          itemMap.set(item.scans.id || item.position, item);
+          itemMap.set(item.scans.id || item.sort_order, item);
         }
       }
       // Reorder based on chapter_order, keep rest at the end

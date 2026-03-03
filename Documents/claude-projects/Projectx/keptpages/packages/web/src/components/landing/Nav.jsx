@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 
-export default function Nav({ onCtaClick }) {
+export default function Nav({ onCtaClick, onLoginClick }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -25,12 +25,20 @@ export default function Nav({ onCtaClick }) {
         <div className="font-display font-[800] text-[22px] text-walnut tracking-[-0.5px]">
           Kept<span className="text-terracotta">Pages</span>
         </div>
-        <button
-          onClick={onCtaClick}
-          className="font-ui text-[13px] font-semibold px-[18px] py-2 bg-walnut text-cream rounded-pill tracking-[0.3px] border-none cursor-pointer transition-all duration-200 hover:-translate-y-px hover:shadow-md"
-        >
-          Get Started
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onLoginClick}
+            className="font-ui text-[13px] font-medium text-walnut-secondary tracking-[0.3px] bg-transparent border-none cursor-pointer transition-colors duration-200 hover:text-walnut"
+          >
+            Log In
+          </button>
+          <button
+            onClick={onCtaClick}
+            className="font-ui text-[13px] font-semibold px-[18px] py-2 bg-walnut text-cream rounded-pill tracking-[0.3px] border-none cursor-pointer transition-all duration-200 hover:-translate-y-px hover:shadow-md"
+          >
+            Get Started
+          </button>
+        </div>
       </div>
     </nav>
   );

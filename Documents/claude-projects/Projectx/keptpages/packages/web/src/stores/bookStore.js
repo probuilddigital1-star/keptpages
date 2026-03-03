@@ -16,10 +16,10 @@ export const useBookStore = create((set, get) => ({
   loading: false,
 
   // Actions
-  createBook: async (collectionId) => {
+  createBook: async (collectionId, title) => {
     set({ loading: true });
     try {
-      const book = await api.post('/books', { collectionId });
+      const book = await api.post('/books', { collectionId, title });
       set({
         book,
         template: book.template || 'classic',

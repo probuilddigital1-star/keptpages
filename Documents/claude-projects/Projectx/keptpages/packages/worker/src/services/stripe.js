@@ -161,8 +161,8 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
   const unitPrice = basePrice + (extraPages * perPageCost);
 
   const appUrl = env.APP_URL || 'https://app.keptpages.com';
-  const successUrl = `${appUrl}/books/${book.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${appUrl}/books/${book.id}?payment=canceled`;
+  const successUrl = `${appUrl}/app/book/${book.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${appUrl}/app/book/${book.id}?payment=canceled`;
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -265,7 +265,7 @@ export async function createPortalSession(userId, env) {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: profile.stripe_customer_id,
-    return_url: `${appUrl}/settings`,
+    return_url: `${appUrl}/app/settings`,
   });
 
   return { url: session.url };
