@@ -41,13 +41,22 @@ async function getJwks(supabaseUrl) {
   }
 
   const url = `${supabaseUrl}/auth/v1/.well-known/jwks.json`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch JWKS: ${res.status}`);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch JWKS: ${res.status}`);
+    }
+    const data = await res.json();
+    jwksCache = { keys: data.keys, fetchedAt: now };
+    return data.keys;
+  } catch (err) {
+    // Stale-while-revalidate: use cached keys if refetch fails
+    if (jwksCache) {
+      console.warn('JWKS refetch failed, using stale cache:', err.message);
+      return jwksCache.keys;
+    }
+    throw err;
   }
-  const data = await res.json();
-  jwksCache = { keys: data.keys, fetchedAt: now };
-  return data.keys;
 }
 
 /**

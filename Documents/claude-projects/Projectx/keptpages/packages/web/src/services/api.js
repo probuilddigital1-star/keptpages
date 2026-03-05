@@ -62,12 +62,28 @@ async function uploadFile(path, file, onProgress) {
   });
 }
 
+async function getBlob(path) {
+  const url = `${config.apiUrl}${path}`;
+  const authHeaders = await getAuthHeaders();
+
+  const res = await fetch(url, {
+    headers: { ...authHeaders },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch resource');
+  }
+
+  return res.blob();
+}
+
 export const api = {
   get: (path, opts) => request('GET', path, opts),
   post: (path, body, opts) => request('POST', path, { body, ...opts }),
   put: (path, body, opts) => request('PUT', path, { body, ...opts }),
   delete: (path, opts) => request('DELETE', path, opts),
   upload: uploadFile,
+  getBlob,
 };
 
 export default api;

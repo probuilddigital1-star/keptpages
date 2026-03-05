@@ -180,7 +180,7 @@ app.post('/api/stripe/webhook', async (c) => {
   }
 
   const stripeClient = new Stripe(stripeSecretKey, {
-    apiVersion: '2024-11-20.acacia',
+    apiVersion: '2026-02-25.clover',
     httpClient: Stripe.createFetchHttpClient(),
   });
 

@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-01
+Last Updated: 2026-03-05
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -33,10 +33,10 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BLOG-11 | Blog routes | TODO | |
 | US-BLOG-12 | Blog RSS feed | TODO | |
 | US-BLOG-13 | Blog admin UI | TODO | |
-| US-PAY-1 | Stripe account | MANUAL | Code ready — needs Stripe account creation + API keys in env |
-| US-PAY-2 | Stripe products/prices | MANUAL | Code ready — needs products/prices created in Stripe Dashboard |
+| US-PAY-1 | Stripe account | DONE | Stripe account created + API keys configured in env |
+| US-PAY-2 | Stripe products/prices | DONE | Products/prices created in Stripe Dashboard |
 | US-PAY-3 | Stripe public key | DONE | `@stripe/stripe-js` installed, `getStripe()` singleton, `config.stripePublicKey` wired |
-| US-PAY-4 | Stripe webhook | MANUAL | Code ready — needs webhook registered in Stripe Dashboard + signing secret |
+| US-PAY-4 | Stripe webhook | DONE | Webhook registered in Stripe Dashboard, signing secret configured |
 | US-PAY-5 | Checkout flow E2E | DONE | Full checkout flow: checkout session, redirect, success/cancel pages, webhook activation |
 | US-PAY-6 | Webhook lifecycle | DONE | Handles checkout.completed, sub.updated, sub.deleted, invoice.succeeded, invoice.failed |
 | US-PAY-7 | Customer portal | DONE | POST /stripe/portal endpoint, Settings page "Manage Subscription" button |
@@ -56,20 +56,35 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-CORE-11 | Sharing flow | DONE | Migration 008 created shares table. POST/GET/DELETE share endpoints + public viewer. Frontend Shared page wired. |
 | US-CORE-12 | R2 upload flow | DONE | Upload stores in R2 via worker, verified in E2E test |
 | US-CORE-13 | Settings page wiring | DONE | User routes: GET/PUT profile, POST avatar, POST export, DELETE account. All tested. |
-| US-QA-1 | Unit test suite | TODO | |
-| US-QA-2 | Integration tests | TODO | |
+| US-EXPORT-1 | Fix PDF TOC + content overflow | DONE | Two-pass rendering: docs first, then insert front matter with correct page numbers. Content overflow adds continuation pages. |
+| US-EXPORT-2 | PDF service export options | DONE | Options: template, fontFamily (serif/sans-serif/monospace), includeTitlePage/Copyright/Toc, showPageNumbers. Backward-compatible. 13 new tests. |
+| US-EXPORT-3 | API export options endpoint | DONE | POST /collections/:id/export accepts options body + documentIds filter/reorder. Empty body = defaults. |
+| US-EXPORT-4 | Export Options Modal | DONE | ExportOptionsModal component: template radio cards, font dropdown, section toggles, doc checklist with reorder. |
+| US-EXPORT-5 | Tier-gated export flow | DONE | Keeper → ExportOptionsModal → API with options. Free → direct export with defaults. |
+| US-EXPORT-6 | Marketing messaging update | DONE | FREE: 'Basic PDF export'. KEEPER: 'Custom PDF export' added to feature lists. |
+| US-QA-1 | Unit test suite | DONE | 538 tests (128 worker + 410 frontend), 44 test files, all passing. Fixed 41 stale test assertions. |
+| US-QA-2 | Integration tests | DONE | 46 integration tests covering scan, collections, share, books routes. Queue-based Supabase mock. |
 | US-QA-3 | E2E tests | TODO | |
-| US-QA-4 | Error monitoring | TODO | |
-| US-QA-5 | Analytics | TODO | |
-| US-QA-6 | Performance audit | TODO | |
-| US-QA-7 | Accessibility audit | TODO | |
-| US-QA-8 | Mobile QA | TODO | |
-| US-QA-9 | Security review | TODO | |
+| US-QA-4 | Error monitoring | DONE | ErrorBoundary component, captureError/captureMessage utility. Sentry-ready (install @sentry/react + set DSN to activate). |
+| US-QA-5 | Analytics | DONE | trackPageView/trackEvent utility, usePageTracking hook wired into App. Plausible-compatible (set VITE_ANALYTICS_ID to activate). |
+| US-QA-6 | Performance audit | DONE | Non-blocking font loading (preload + media swap), Stripe in separate chunk, manual chunks for vendor/supabase/stripe. |
+| US-QA-7 | Accessibility audit | DONE | Modal focus trap, Input aria-describedby + aria-invalid, skip-to-content link, main landmark ID. |
+| US-QA-8 | Mobile QA | DONE | Fixed: Modal scroll overflow, touch targets (44px min), CollectionCard hover-only delete, delete button visibility |
+| US-QA-9 | Security review | DONE | Fixed: path traversal in R2 downloads, JWKS stale-fallback, avatar_url validation. Noted: shares RLS policy, waitlist rate limit, MIME sniffing |
 | US-QA-10 | Pre-launch checklist | TODO | |
 | US-QA-11 | Clean up artifacts | TODO | |
 | US-QA-12 | Production validation | TODO | |
 
-**Completed: 26/57** | **Remaining: 31** (4 PAY stories need manual Stripe/Lulu account setup)
+**Completed: 43/63** | **Remaining: 20** (1 PAY story needs manual Lulu account setup)
+
+### Prioritized Roadmap (as of 2026-03-05)
+
+**Phase 1 — Fix & Validate:** US-EXPORT-1 (PDF bug fix), US-QA-1 (unit tests), US-QA-9 (security), US-QA-8 (mobile)
+**Phase 2 — Revenue Features:** US-EXPORT-2→6 (Keeper PDF customization)
+**Phase 3 — Quality & Polish:** US-QA-2 (integration), US-QA-6 (perf), US-QA-7 (a11y), US-QA-4 (monitoring), US-QA-5 (analytics)
+**Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
+**Phase 5 — Launch Readiness:** US-QA-3 (E2E), US-QA-10→12 (pre-launch), US-PAY-8 (Lulu)
+**Parked:** US-CORE-6 (Claude API fallback — optional)
 
 ### Key Credentials & Resources (do not commit)
 - **Supabase project:** `jvvcbekzmsnziulpewwh` (https://jvvcbekzmsnziulpewwh.supabase.co)
@@ -97,11 +112,12 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | Epic | Stories | Completed | Remaining |
 |------|---------|-----------|-----------|
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
-| **BLOG** — Blog Feature (new) | 13 | 0 | 13 |
-| **PAY** — Payments & Subscriptions | 10 | 6 | 4 (manual setup) |
+| **BLOG** — Blog Feature | 13 | 0 | 13 |
+| **PAY** — Payments & Subscriptions | 10 | 9 | 1 (Lulu manual setup) |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
-| **QA** — Testing & Launch Readiness | 12 | 0 | 12 |
-| **Total** | **57** | **26** | **31** |
+| **EXPORT** — PDF Export Customization | 6 | 1 | 5 |
+| **QA** — Testing & Launch Readiness | 12 | 3 | 9 |
+| **Total** | **63** | **33** | **30** |
 
 ---
 
@@ -978,7 +994,117 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-## Epic 5: Testing, QA & Launch Readiness (QA)
+## Epic 5: PDF Export Customization (EXPORT) — NEW
+
+### US-EXPORT-1: Fix PDF TOC page numbering and content overflow
+**As a** user exporting a collection
+**I want** the table of contents page numbers to be correct and all content to render fully
+**So that** I can navigate the PDF and not lose any document content
+
+**Acceptance Criteria:**
+- [ ] TOC page numbers reflect actual start page of each document (not hardcoded `tocStartPage = 4`)
+- [ ] Multi-page documents handled: when content overflows a page, a continuation page is added
+- [ ] Recipes with 30+ ingredients render fully (no silent truncation)
+- [ ] Instructions that overflow continue on next page
+- [ ] TOC accounts for multi-page documents when numbering subsequent entries
+- [ ] Existing tests pass
+
+**Dependencies:** None
+**Estimate:** M
+**Tier:** All users
+
+---
+
+### US-EXPORT-2: Add export options to PDF service
+**As a** developer
+**I want** `generateBookPdf()` to accept an options parameter for template, font, sections, and page numbers
+**So that** the export can be customized without breaking existing callers
+
+**Acceptance Criteria:**
+- [ ] `generateBookPdf(book, documents, options = {})` accepts options: `template`, `fontFamily`, `includeTitlePage`, `includeCopyright`, `includeToc`, `showPageNumbers`
+- [ ] Font mapping: `serif` → TimesRoman, `sans-serif` → Helvetica, `monospace` → Courier (all pdf-lib StandardFonts)
+- [ ] Title page, copyright page, TOC conditionally rendered based on flags
+- [ ] Page numbers centered in footer when enabled
+- [ ] No options = exact current behavior (backward compatible)
+- [ ] Unit tests for each option
+
+**Dependencies:** US-EXPORT-1
+**Estimate:** M
+
+---
+
+### US-EXPORT-3: Accept export options in API endpoint
+**As a** developer
+**I want** `POST /collections/:id/export` to accept options in the request body
+**So that** the frontend can pass customization choices to the PDF generator
+
+**Acceptance Criteria:**
+- [ ] Accepts optional body: `{ template, fontFamily, includeTitlePage, includeCopyright, includeToc, showPageNumbers, documentIds }`
+- [ ] If `documentIds` array provided, filter and reorder documents accordingly (export-only ordering)
+- [ ] All options passed to `generateBookPdf()`
+- [ ] Empty body = current defaults (backward compatible)
+- [ ] Validation: `documentIds` must contain valid scan IDs belonging to the collection
+
+**Dependencies:** US-EXPORT-2
+**Estimate:** S
+
+---
+
+### US-EXPORT-4: Export Options Modal (Keeper only)
+**As a** Keeper user
+**I want** a modal where I can customize my PDF export before generating it
+**So that** I can control the template, font, sections, document selection, and ordering
+
+**Acceptance Criteria:**
+- [ ] `ExportOptionsModal` component created at `packages/web/src/components/collection/ExportOptionsModal.jsx`
+- [ ] Template selection: Classic, Modern, Minimal (radio cards)
+- [ ] Font selection: Serif, Sans-Serif, Monospace (dropdown)
+- [ ] Section toggles: Title Page, Copyright Page, Table of Contents (checkboxes, default checked)
+- [ ] Page Numbers toggle (checkbox, default checked)
+- [ ] Document list with checkboxes and up/down reorder buttons
+- [ ] Select All / Deselect All toggle
+- [ ] Validation: at least 1 document must be selected
+- [ ] Uses existing Modal/Button/Input component patterns
+
+**Dependencies:** US-EXPORT-3
+**Estimate:** L
+
+---
+
+### US-EXPORT-5: Tier-gated export flow in Collection page
+**As a** product owner
+**I want** export customization to be gated behind the Keeper tier
+**So that** it drives upgrade conversions while free users still get a working basic export
+
+**Acceptance Criteria:**
+- [ ] Keeper users: Clicking "Export PDF" opens `ExportOptionsModal`; submitting calls API with options
+- [ ] Free users: Clicking "Export PDF" triggers direct export with defaults (no modal)
+- [ ] Free users see a subtle upgrade nudge after successful export
+- [ ] Export download flow (blob URL) works for both tiers
+- [ ] Loading/error states handled for both paths
+
+**Dependencies:** US-EXPORT-4
+**Estimate:** S
+
+---
+
+### US-EXPORT-6: Update marketing messaging for PDF customization
+**As a** product owner
+**I want** the Keeper feature lists and upgrade prompts to mention PDF customization
+**So that** users know this benefit exists when considering an upgrade
+
+**Acceptance Criteria:**
+- [ ] `plans.js`: FREE features changes `'PDF export'` → `'Basic PDF export'`
+- [ ] `plans.js`: KEEPER and KEEPER_MONTHLY features add `'Custom PDF export'`
+- [ ] Scan page upgrade modal includes "Custom PDF export" in features list
+- [ ] Settings page upgrade card auto-updates (reads from PLANS.KEEPER.features)
+
+**Dependencies:** US-EXPORT-5
+**Estimate:** S
+
+---
+
+## Epic 6: Testing, QA & Launch Readiness (QA)
 
 ### US-QA-1: Run existing unit test suite and fix failures
 **As a** developer

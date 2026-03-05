@@ -241,6 +241,7 @@ describe('bookStore', () => {
 
       expect(api.post).toHaveBeenCalledWith('/books/book-1/order', {
         shippingAddress: address,
+        quantity: 1,
       });
       expect(result).toEqual(mockOrder);
       expect(useBookStore.getState().loading).toBe(false);

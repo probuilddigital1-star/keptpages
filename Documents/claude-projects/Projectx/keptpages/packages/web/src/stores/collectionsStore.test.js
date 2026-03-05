@@ -37,7 +37,7 @@ describe('collectionsStore', () => {
         { id: '1', name: 'Recipes' },
         { id: '2', name: 'Letters' },
       ];
-      api.get.mockResolvedValue(mockCollections);
+      api.get.mockResolvedValue({ collections: mockCollections });
 
       await useCollectionsStore.getState().fetchCollections();
 
@@ -75,16 +75,17 @@ describe('collectionsStore', () => {
       useCollectionsStore.setState({
         collections: [{ id: '1', name: 'Existing' }],
       });
-      const newCollection = { id: '2', name: 'New' };
+      const newCollection = { id: '2', name: 'New', createdAt: '2026-03-01T00:00:00Z' };
       api.post.mockResolvedValue(newCollection);
 
       const result = await useCollectionsStore.getState().createCollection({ name: 'New' });
 
       expect(api.post).toHaveBeenCalledWith('/collections', { name: 'New' });
-      expect(result).toEqual(newCollection);
+      const expected = { id: '2', name: 'New', createdAt: '2026-03-01T00:00:00Z', itemCount: 0, coverImageUrl: null, updatedAt: '2026-03-01T00:00:00Z' };
+      expect(result).toEqual(expected);
       expect(useCollectionsStore.getState().collections).toEqual([
         { id: '1', name: 'Existing' },
-        { id: '2', name: 'New' },
+        expected,
       ]);
       expect(useCollectionsStore.getState().loading).toBe(false);
     });

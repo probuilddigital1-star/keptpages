@@ -11,7 +11,7 @@ export const PLANS = {
       '25 document scans',
       '5 collections',
       'AI text extraction',
-      'PDF export',
+      'Basic PDF export',
     ],
   },
   KEEPER_MONTHLY: {
@@ -19,7 +19,7 @@ export const PLANS = {
     name: 'Keeper Monthly',
     price: 4.99,
     period: 'month',
-    stripePriceId: 'price_keeper_monthly_placeholder',
+    stripePriceId: 'price_1T7MfVGzoQtucHQEAPQXYt1h',
     limits: {
       scans: Infinity,
       collections: Infinity,
@@ -27,6 +27,7 @@ export const PLANS = {
     features: [
       'Unlimited scans',
       'Unlimited collections',
+      'Custom PDF export',
       'Family sharing',
       'Priority AI processing',
       'All document types',
@@ -37,7 +38,7 @@ export const PLANS = {
     name: 'Keeper',
     price: 39.99,
     period: 'year',
-    stripePriceId: 'price_keeper_yearly_placeholder',
+    stripePriceId: 'price_1T7Mh5GzoQtucHQEWuxdZKGD',
     limits: {
       scans: Infinity,
       collections: Infinity,
@@ -45,6 +46,7 @@ export const PLANS = {
     features: [
       'Unlimited scans',
       'Unlimited collections',
+      'Custom PDF export',
       'Family sharing',
       'Priority AI processing',
       'All document types',

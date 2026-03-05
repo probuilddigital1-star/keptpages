@@ -10,9 +10,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
-import { config } from '@/config/env';
 import DocumentCard from '@/components/collection/DocumentCard';
 import { DocumentPickerModal } from '@/components/collection/DocumentPickerModal';
+import ExportOptionsModal from '@/components/collection/ExportOptionsModal';
 
 export default function CollectionPage() {
   const { id } = useParams();
@@ -21,6 +21,7 @@ export default function CollectionPage() {
   // Store state
   const collections = useCollectionsStore((s) => s.collections);
   const updateCollection = useCollectionsStore((s) => s.updateCollection);
+  const deleteCollection = useCollectionsStore((s) => s.deleteCollection);
   const fetchCollections = useCollectionsStore((s) => s.fetchCollections);
 
   const documentsMap = useDocumentsStore((s) => s.documents);
@@ -45,6 +46,9 @@ export default function CollectionPage() {
   const [sectionInsertIndex, setSectionInsertIndex] = useState(-1);
   const [exporting, setExporting] = useState(false);
   const [showDocPicker, setShowDocPicker] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   useEffect(() => {
     if (collections.length === 0) {
@@ -128,22 +132,53 @@ export default function CollectionPage() {
     [id, removeFromCollection],
   );
 
-  // Export PDF
-  const handleExport = useCallback(async () => {
+  // Export PDF — accepts optional options object (Keeper customization)
+  const handleExport = useCallback(async (options) => {
     setExporting(true);
     try {
-      const result = await api.post(`/collections/${id}/export`);
+      const result = await api.post(`/collections/${id}/export`, options || {});
       if (result.url) {
-        const exportUrl = result.url.startsWith('http') ? result.url : `${config.apiUrl.replace('/api', '')}${result.url}`;
-        window.open(exportUrl, '_blank');
+        const blob = await api.getBlob(result.url);
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${collection?.name || 'collection'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
       }
       toast('PDF exported!');
+      setShowExportOptions(false);
     } catch {
       toast('Failed to export PDF', 'error');
     } finally {
       setExporting(false);
     }
-  }, [id]);
+  }, [id, collection?.name]);
+
+  // Export button click — Keeper gets modal, free gets direct export
+  const handleExportClick = useCallback(() => {
+    if (tier === 'keeper') {
+      setShowExportOptions(true);
+    } else {
+      handleExport();
+    }
+  }, [tier, handleExport]);
+
+  // Delete collection
+  const handleDeleteCollection = useCallback(async () => {
+    setDeleting(true);
+    try {
+      await deleteCollection(id);
+      toast('Collection deleted');
+      navigate('/app');
+    } catch {
+      toast('Failed to delete collection', 'error');
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [id, deleteCollection, navigate]);
 
   // Add section title
   const handleAddSection = useCallback(
@@ -289,7 +324,7 @@ export default function CollectionPage() {
           Add Document
         </Button>
 
-        <Link to="/app/scan">
+        <Link to="/app/scan" state={{ collectionId: id, collectionName: collection?.name }}>
           <Button variant="primary">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -310,8 +345,8 @@ export default function CollectionPage() {
 
         <Button
           variant="secondary"
-          onClick={handleExport}
-          loading={exporting}
+          onClick={handleExportClick}
+          loading={exporting && !showExportOptions}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -351,6 +386,28 @@ export default function CollectionPage() {
             Create Book
           </Button>
         )}
+
+        <Button
+          variant="ghost"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-red-400 hover:text-red-500 hover:bg-red-50"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <path d="M3 6h18" />
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          </svg>
+          Delete
+        </Button>
       </div>
 
       {/* Documents loading */}
@@ -415,7 +472,7 @@ export default function CollectionPage() {
                     index < documents.length - 1 ? handleMoveDown : undefined
                   }
                   onRemove={handleRemove}
-                  onClick={() => navigate(`/app/scan/${doc.id}`)}
+                  onClick={() => navigate(`/app/scan/${doc.id}`, { state: { fromCollection: id } })}
                 />
 
                 {/* Add section button between documents */}
@@ -446,6 +503,45 @@ export default function CollectionPage() {
         }}
         collectionId={id}
         existingItems={documents}
+      />
+
+      {/* Delete Collection Modal */}
+      <Modal
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Collection"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="font-body text-walnut-secondary">
+            Are you sure you want to delete <strong>{collection?.name}</strong>? All documents will be removed from this collection. The scans themselves will not be deleted.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteCollection}
+              loading={deleting}
+            >
+              Delete Collection
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Export Options Modal (Keeper only) */}
+      <ExportOptionsModal
+        open={showExportOptions}
+        onClose={() => setShowExportOptions(false)}
+        onExport={handleExport}
+        documents={documents}
+        exporting={exporting}
       />
 
       {/* Add Section Modal */}

@@ -13,9 +13,9 @@ describe('Nav', () => {
     expect(screen.getByText('Pages')).toBeInTheDocument();
   });
 
-  it('renders "Join Waitlist" button', () => {
+  it('renders "Get Started" button', () => {
     render(<Nav onCtaClick={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /join waitlist/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
   });
 
   it('calls onCtaClick when button is clicked', async () => {
@@ -23,7 +23,7 @@ describe('Nav', () => {
     render(<Nav onCtaClick={handleClick} />);
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole('button', { name: /join waitlist/i }));
+    await user.click(screen.getByRole('button', { name: /get started/i }));
 
     expect(handleClick).toHaveBeenCalledTimes(1);
   });

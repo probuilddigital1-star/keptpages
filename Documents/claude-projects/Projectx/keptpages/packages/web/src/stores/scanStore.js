@@ -93,6 +93,18 @@ export const useScanStore = create((set, get) => ({
     }
   },
 
+  deleteScan: async (scanId) => {
+    try {
+      await api.delete(`/scan/${scanId}`);
+      set((state) => ({
+        currentScan: state.currentScan?.id === scanId ? null : state.currentScan,
+        scans: state.scans.filter((s) => s.id !== scanId),
+      }));
+    } catch (error) {
+      throw error;
+    }
+  },
+
   reset: () => {
     set({
       currentScan: null,

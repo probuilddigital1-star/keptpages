@@ -31,31 +31,32 @@ describe('documentsStore', () => {
 
   describe('fetchDocuments', () => {
     it('calls api.get and stores documents keyed by collectionId', async () => {
-      const mockDocs = [
-        { id: 'doc1', sortOrder: 0 },
-        { id: 'doc2', sortOrder: 1 },
+      const mockItems = [
+        { id: 'item1', position: 0, sectionTitle: null, scan: { id: 'doc1', title: 'Doc 1', documentType: 'recipe', extractedData: null, originalFilename: 'f1.jpg', status: 'completed', confidence: 0.9 } },
+        { id: 'item2', position: 1, sectionTitle: null, scan: { id: 'doc2', title: 'Doc 2', documentType: 'letter', extractedData: null, originalFilename: 'f2.jpg', status: 'completed', confidence: 0.8 } },
       ];
-      api.get.mockResolvedValue(mockDocs);
+      api.get.mockResolvedValue({ items: mockItems });
 
       await useDocumentsStore.getState().fetchDocuments('col-1');
 
       expect(api.get).toHaveBeenCalledWith('/collections/col-1');
-      expect(useDocumentsStore.getState().documents).toEqual({
-        'col-1': mockDocs,
-      });
+      const stored = useDocumentsStore.getState().documents['col-1'];
+      expect(stored).toHaveLength(2);
+      expect(stored[0].id).toBe('doc1');
+      expect(stored[1].id).toBe('doc2');
     });
 
     it('preserves documents from other collections', async () => {
       useDocumentsStore.setState({
-        documents: { 'col-1': [{ id: 'doc1', sortOrder: 0 }] },
+        documents: { 'col-1': [{ id: 'doc1', position: 0 }] },
       });
-      api.get.mockResolvedValue([{ id: 'doc3', sortOrder: 0 }]);
+      api.get.mockResolvedValue({ items: [{ id: 'item3', position: 0, sectionTitle: null, scan: { id: 'doc3', title: 'Doc 3' } }] });
 
       await useDocumentsStore.getState().fetchDocuments('col-2');
 
       const docs = useDocumentsStore.getState().documents;
-      expect(docs['col-1']).toEqual([{ id: 'doc1', sortOrder: 0 }]);
-      expect(docs['col-2']).toEqual([{ id: 'doc3', sortOrder: 0 }]);
+      expect(docs['col-1']).toEqual([{ id: 'doc1', position: 0 }]);
+      expect(docs['col-2'][0].id).toBe('doc3');
     });
 
     it('sets loading during request', async () => {

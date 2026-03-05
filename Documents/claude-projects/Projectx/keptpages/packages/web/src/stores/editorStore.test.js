@@ -191,9 +191,7 @@ describe('editorStore', () => {
 
       const result = await useEditorStore.getState().save('scan-1');
 
-      expect(api.put).toHaveBeenCalledWith('/scan/scan-1', {
-        extractedData: { title: 'Saved Title' },
-      });
+      expect(api.put).toHaveBeenCalledWith('/scan/scan-1', { title: 'Saved Title' });
       expect(result).toEqual(mockResult);
 
       const state = useEditorStore.getState();

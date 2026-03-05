@@ -380,6 +380,40 @@ scan.get('/:id', async (c) => {
 });
 
 /**
+ * GET /scan/:id/image
+ * Serve the original scan image from R2.
+ */
+scan.get('/:id/image', async (c) => {
+  const user = c.get('user');
+  const scanId = c.req.param('id');
+  const env = c.env;
+  const supabase = getSupabase(env);
+
+  const { data: scanRecord, error } = await supabase
+    .from('scans')
+    .select('r2_key, mime_type')
+    .eq('id', scanId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (error || !scanRecord) {
+    return c.json({ error: 'Scan not found' }, 404);
+  }
+
+  const r2Object = await env.UPLOADS.get(scanRecord.r2_key);
+  if (!r2Object) {
+    return c.json({ error: 'Image not found in storage' }, 404);
+  }
+
+  return new Response(r2Object.body, {
+    headers: {
+      'Content-Type': scanRecord.mime_type || 'image/jpeg',
+      'Cache-Control': 'private, max-age=3600',
+    },
+  });
+});
+
+/**
  * PUT /scan/:id
  * Update extracted text fields (user corrections).
  */
@@ -458,6 +492,48 @@ scan.put('/:id', async (c) => {
     extractedData: updated.extracted_data,
     updatedAt: updated.updated_at,
   });
+});
+
+/**
+ * DELETE /scan/:id
+ * Soft-delete a scan (sets deleted_at timestamp).
+ */
+scan.delete('/:id', async (c) => {
+  const user = c.get('user');
+  const scanId = c.req.param('id');
+  const supabase = getSupabase(c.env);
+
+  // Verify ownership
+  const { data: scanRecord, error: fetchError } = await supabase
+    .from('scans')
+    .select('id, r2_key')
+    .eq('id', scanId)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .single();
+
+  if (fetchError || !scanRecord) {
+    return c.json({ error: 'Scan not found' }, 404);
+  }
+
+  // Remove from any collections first
+  await supabase
+    .from('collection_items')
+    .delete()
+    .eq('scan_id', scanId);
+
+  // Soft-delete the scan
+  const { error: deleteError } = await supabase
+    .from('scans')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', scanId);
+
+  if (deleteError) {
+    console.error('Failed to delete scan:', deleteError);
+    return c.json({ error: 'Failed to delete scan' }, 500);
+  }
+
+  return c.json({ success: true });
 });
 
 export default scan;

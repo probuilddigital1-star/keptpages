@@ -14,17 +14,17 @@ describe('PLANS', () => {
       expect(PLANS.FREE.limits.scans).toBe(25);
     });
 
-    it('has 1 collection limit', () => {
-      expect(PLANS.FREE.limits.collections).toBe(1);
+    it('has 5 collection limit', () => {
+      expect(PLANS.FREE.limits.collections).toBe(5);
     });
 
     it('has expected features list', () => {
       expect(PLANS.FREE.features).toEqual(
         expect.arrayContaining([
           '25 document scans',
-          '1 collection',
+          '5 collections',
           'AI text extraction',
-          'PDF export',
+          'Basic PDF export',
         ])
       );
     });

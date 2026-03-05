@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Spinner } from '@/components/ui/Spinner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { usePageTracking } from '@/hooks/usePageTracking';
 import { AuthGuard, GuestGuard } from '@/routes/guards';
 import { MarketingLayout } from '@/components/layout/MarketingLayout';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -35,6 +37,8 @@ function PageLoader() {
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize);
 
+  usePageTracking();
+
   useEffect(() => {
     initialize();
   }, [initialize]);
@@ -54,6 +58,7 @@ export default function App() {
       {/* Top color bar */}
       <div className="top-bar" />
 
+      <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Marketing pages */}
@@ -93,6 +98,7 @@ export default function App() {
           </Route>
         </Routes>
       </Suspense>
+      </ErrorBoundary>
 
       <ToastContainer />
     </>

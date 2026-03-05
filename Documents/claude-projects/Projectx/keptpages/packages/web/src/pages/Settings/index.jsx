@@ -12,7 +12,6 @@ import { toast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
 import { stripeService } from '@/services/stripe';
 import { PLANS } from '@/config/plans';
-import { config } from '@/config/env';
 import { formatDate } from '@/utils/formatters';
 
 export default function Settings() {
@@ -133,8 +132,15 @@ export default function Settings() {
     try {
       const result = await api.post('/user/export');
       if (result?.url) {
-        const exportUrl = result.url.startsWith('http') ? result.url : `${config.apiUrl.replace('/api', '')}${result.url}`;
-        window.open(exportUrl, '_blank');
+        const blob = await api.getBlob(result.url);
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'keptpages-export.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
       }
       toast('Your data export is ready!');
     } catch {

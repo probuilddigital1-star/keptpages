@@ -96,7 +96,15 @@ user.put('/profile', async (c) => {
     updates.display_name = body.name;
   }
   if (body.avatar_url !== undefined) {
-    updates.avatar_url = body.avatar_url;
+    const url = body.avatar_url;
+    if (typeof url !== 'string' || url.length > 2048) {
+      return c.json({ error: 'Invalid avatar_url' }, 400);
+    }
+    // Only allow relative API paths or HTTPS URLs
+    if (url && !url.startsWith('/user/avatar/') && !url.startsWith('https://')) {
+      return c.json({ error: 'avatar_url must be an API path or HTTPS URL' }, 400);
+    }
+    updates.avatar_url = url;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -255,7 +263,7 @@ user.post('/export', async (c) => {
 
     // Return a temporary download endpoint
     return c.json({
-      url: `/api/user/export/${encodeURIComponent(r2Key)}`,
+      url: `/user/export/${encodeURIComponent(r2Key)}`,
       size: jsonStr.length,
       exportedAt: exportData.exportedAt,
     });
@@ -274,6 +282,10 @@ user.get('/export/:key{.+}', async (c) => {
   const key = c.req.param('key');
 
   // Ensure the user can only download their own exports
+  // Block path traversal sequences before checking ownership
+  if (key.includes('..') || key.includes('%2e') || key.includes('%2E')) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
   if (!key.startsWith(`exports/${authUser.id}/`)) {
     return c.json({ error: 'Forbidden' }, 403);
   }

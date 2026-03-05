@@ -515,6 +515,24 @@ collections.post('/:id/export', async (c) => {
   const collectionId = c.req.param('id');
   const supabase = getSupabase(c.env);
 
+  // Parse optional export options from request body
+  let body = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    // No body or invalid JSON — use defaults
+  }
+
+  const {
+    template,
+    fontFamily,
+    includeTitlePage,
+    includeCopyright,
+    includeToc,
+    showPageNumbers,
+    documentIds,
+  } = body;
+
   // Verify ownership and fetch collection
   const { data: collection, error: colError } = await supabase
     .from('collections')
@@ -532,6 +550,7 @@ collections.post('/:id/export', async (c) => {
     .from('collection_items')
     .select(`
       sort_order,
+      scan_id,
       scans:scan_id (
         title,
         document_type,
@@ -547,17 +566,44 @@ collections.post('/:id/export', async (c) => {
   }
 
   // Prepare documents for PDF generation
-  const documents = (items || [])
+  let documents = (items || [])
     .filter((item) => item.scans?.extracted_data)
     .map((item) => ({
       ...item.scans.extracted_data,
+      _scanId: item.scan_id,
       title: item.scans.title || item.scans.extracted_data.title || 'Untitled',
       type: item.scans.document_type || item.scans.extracted_data.type || 'document',
     }));
 
+  // Filter and reorder by documentIds if provided
+  if (Array.isArray(documentIds) && documentIds.length > 0) {
+    const idSet = new Set(documentIds);
+    const docMap = new Map(documents.map((d) => [d._scanId, d]));
+    const filtered = documentIds
+      .filter((id) => docMap.has(id))
+      .map((id) => docMap.get(id));
+
+    if (filtered.length === 0) {
+      return c.json({ error: 'None of the specified documentIds match items in this collection' }, 400);
+    }
+    documents = filtered;
+  }
+
+  // Remove internal _scanId before passing to PDF
+  documents = documents.map(({ _scanId, ...rest }) => rest);
+
   if (documents.length === 0) {
     return c.json({ error: 'No documents to export in this collection' }, 400);
   }
+
+  // Build options, only including explicitly set values
+  const pdfOptions = {};
+  if (template !== undefined) pdfOptions.template = template;
+  if (fontFamily !== undefined) pdfOptions.fontFamily = fontFamily;
+  if (includeTitlePage !== undefined) pdfOptions.includeTitlePage = includeTitlePage;
+  if (includeCopyright !== undefined) pdfOptions.includeCopyright = includeCopyright;
+  if (includeToc !== undefined) pdfOptions.includeToc = includeToc;
+  if (showPageNumbers !== undefined) pdfOptions.showPageNumbers = showPageNumbers;
 
   try {
     // Dynamic import to avoid loading pdf-lib unless needed
@@ -570,7 +616,7 @@ collections.post('/:id/export', async (c) => {
         author: user.email,
       },
       documents,
-      'classic'
+      pdfOptions,
     );
 
     // Store the PDF in R2
@@ -586,7 +632,7 @@ collections.post('/:id/export', async (c) => {
 
     return c.json({
       message: 'PDF export generated successfully',
-      url: `/api/collections/${collectionId}/download/${encodeURIComponent(exportKey)}`,
+      url: `/collections/${collectionId}/download/${encodeURIComponent(exportKey)}`,
       exportKey,
       documentCount: documents.length,
     });
@@ -605,6 +651,10 @@ collections.get('/:id/download/:key{.+}', async (c) => {
   const key = c.req.param('key');
 
   // Ensure the user can only download their own exports
+  // Block path traversal sequences before checking ownership
+  if (key.includes('..') || key.includes('%2e') || key.includes('%2E')) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
   if (!key.startsWith(`${user.id}/exports/`)) {
     return c.json({ error: 'Forbidden' }, 403);
   }

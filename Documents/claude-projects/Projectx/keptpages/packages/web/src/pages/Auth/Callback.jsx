@@ -1,64 +1,47 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/services/supabase';
 import { Spinner } from '@/components/ui/Spinner';
 
 /**
  * OAuth callback handler.
  *
  * After Google (or any OAuth provider) authenticates the user, Supabase
- * redirects here with either:
- *   - PKCE flow: ?code=... in the query string
- *   - Implicit flow: #access_token=... in the hash fragment
+ * redirects here with ?code=... (PKCE flow).
+ *
+ * IMPORTANT: We do NOT manually call exchangeCodeForSession here.
+ * The Supabase client's internal _initialize() auto-detects the PKCE code
+ * from the URL and exchanges it automatically. Calling it manually causes
+ * a race condition where one exchange succeeds and the other fails —
+ * and if _initialize() loses the race, it calls _removeSession() which
+ * destroys the valid session.
  *
  * This page sits OUTSIDE the AuthGuard so the Supabase client has time
- * to exchange the code/token before any redirect-to-login logic fires.
+ * to process the code before any redirect-to-login logic fires.
+ * We simply wait for onAuthStateChange to fire and populate the user.
  */
 export default function AuthCallback() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const handled = useRef(false);
 
-  // On mount, explicitly try to exchange the code for a session (PKCE)
-  // or let the client detect the hash fragment (implicit).
-  useEffect(() => {
-    if (handled.current) return;
-    handled.current = true;
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-
-    if (code) {
-      // PKCE flow: exchange the authorization code for a session
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          console.error('OAuth code exchange failed:', error.message);
-          navigate('/login', { replace: true });
-        }
-        // On success, onAuthStateChange will fire and set the user
-      });
-    }
-    // For implicit flow, the Supabase client auto-detects the hash.
-    // Either way, we rely on onAuthStateChange updating the store.
-  }, [navigate]);
-
-  // Watch for the user to appear in the store, then redirect to /app
+  // When user appears in the store (set by onAuthStateChange), go to /app
   useEffect(() => {
     if (user) {
       navigate('/app', { replace: true });
       return;
     }
 
-    // Safety net: if after 5 seconds we still have no user, go to login
+    // Safety net: if after 10 seconds we still have no user, go to login.
+    // This handles edge cases where the code is invalid or expired.
     const timer = setTimeout(() => {
       const { user: currentUser } = useAuthStore.getState();
       if (currentUser) {
         navigate('/app', { replace: true });
       } else {
+        console.error('OAuth callback: no session established after 10s');
         navigate('/login', { replace: true });
       }
-    }, 5000);
+    }, 10_000);
 
     return () => clearTimeout(timer);
   }, [user, navigate]);
