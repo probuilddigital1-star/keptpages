@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_9ce743a88ccd57c1e6f915872b56da774c796ecb npx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(export:*)",
+      "Bash(printf:*)",
+      "Bash(python:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm update:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_b308b54dba0067060a48eeb350b7c36648e791a1 npx supabase:*)",
+      "Bash(npx vite:*)",
+      "Bash(# First check if old JWT still works\nJWT=$\\(cat /tmp/keptpages_jwt.txt 2>/dev/null\\)\ncurl -s -H \"Authorization: Bearer $JWT\" http://127.0.0.1:8790/api/user/profile | python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('displayName', d.get\\('error',''\\)\\)\\)\" 2>/dev/null)",
+      "Bash(# Check all auth users and whether they have matching profiles\ncurl -s \"https://jvvcbekzmsnziulpewwh.supabase.co/auth/v1/admin/users\" \\\\\n  -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dmNiZWt6bXNueml1bHBld3doIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NTg0NCwiZXhwIjoyMDg3OTYxODQ0fQ.HPYMOeeHLEMKMz6G5Fg8VWOl0ymqoGVjqFzVjKQr25Y\" \\\\\n  -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dmNiZWt6bXNueml1bHBld3doIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NTg0NCwiZXhwIjoyMDg3OTYxODQ0fQ.HPYMOeeHLEMKMz6G5Fg8VWOl0ymqoGVjqFzVjKQr25Y\" 2>&1 | python3 -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\nusers = data.get\\('users', []\\)\nfor u in users:\n    print\\(f\\\\\"id: {u['id']}, email: {u.get\\('email','?'\\)}, confirmed: {u.get\\('email_confirmed_at'\\) is not None}, created: {u.get\\('created_at','?'\\)[:19]}\\\\\"\\)\" 2>&1)",
+      "Bash(echo Service key length: ${#SERVICE_KEY}:*)",
+      "Bash(xargs:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm:*)",
+      "Bash(node:*)",
+      "Bash(CLOUDFLARE_API_TOKEN=ge7bwVvQZd7Oi57cqfPYeIBShNLJR80-GGfLJoXY npx wrangler:*)",
+      "Bash(cat:*)",
+      "Bash(VITE_API_URL=https://api.keptpages.com/api VITE_SUPABASE_URL=https://jvvcbekzmsnziulpewwh.supabase.co VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dmNiZWt6bXNueml1bHBld3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODU4NDQsImV4cCI6MjA4Nzk2MTg0NH0.E_Nw08dOgjw0tADGLfGmzTGqMRKcKF8VBk2UGYoSNYw npx vite:*)",
+      "Bash(npx vitest:*)",
+      "Bash(VITE_API_URL=https://api.keptpages.com/api VITE_SUPABASE_URL=https://jvvcbekzmsnziulpewwh.supabase.co VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dmNiZWt6bXNueml1bHBld3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODU4NDQsImV4cCI6MjA4Nzk2MTg0NH0.a4cdi7sQ5VlLyq6D-nXrjKUYicSEjYQJcbx6vn1Lyow npx vite:*)",
+      "Bash(VITE_API_URL=https://api.keptpages.com/api npx vite:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:www.relativewriter.ca)",
+      "WebFetch(domain:www.bookdesignmadesimple.com)",
+      "WebFetch(domain:4everbound.com)",
+      "WebFetch(domain:www.shutterfly.com)",
+      "WebFetch(domain:notionexporter.com)",
+      "Bash(git:*)"
+    ]
+  },
+  "remote": {
+    "defaultEnvironmentId": "env_01F7XCwiDmmR5oyDUfLmbTxR"
+  }
+}

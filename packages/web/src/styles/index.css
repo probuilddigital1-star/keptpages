@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #FAF4E8;
+    color: #2C1810;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: rgba(198, 93, 62, 0.15);
+    color: #2C1810;
+  }
+}
+
+@layer components {
+  /* Section label — Outfit uppercase tracking */
+  .section-label {
+    @apply font-ui text-section-label uppercase tracking-[2.5px] text-terracotta;
+  }
+
+  /* Container utilities */
+  .container-narrow {
+    @apply mx-auto max-w-container-sm px-6;
+  }
+
+  .container-medium {
+    @apply mx-auto max-w-container-md px-6;
+  }
+
+  .container-wide {
+    @apply mx-auto max-w-container-lg px-6;
+  }
+
+  .container-full {
+    @apply mx-auto max-w-container-xl px-6;
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-section lg:py-section-lg;
+  }
+
+  /* Paper grain overlay */
+  .paper-grain {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0.018;
+  }
+
+  /* Top color bar */
+  .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 1001;
+    background: linear-gradient(90deg, #C65D3E, #B8923F, #C65D3E);
+  }
+
+  /* Scroll reveal base state */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Section ornament */
+  .section-ornament {
+    @apply flex items-center justify-center gap-3 my-8;
+  }
+
+  .section-ornament::before,
+  .section-ornament::after {
+    content: '';
+    @apply h-px flex-1 bg-border;
+  }
+
+  /* Gradient border top */
+  .gradient-border-top {
+    border-top: 3px solid transparent;
+    border-image: linear-gradient(90deg, #C65D3E, #B8923F) 1;
+  }
+}
+
+@layer utilities {
+  /* Stagger delays for scroll reveal */
+  .delay-100 { transition-delay: 0.1s; }
+  .delay-200 { transition-delay: 0.2s; }
+  .delay-300 { transition-delay: 0.3s; }
+  .delay-400 { transition-delay: 0.4s; }
+}

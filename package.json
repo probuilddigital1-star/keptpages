@@ -1,0 +1,16 @@
+{
+  "name": "keptpages",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @keptpages/web dev",
+    "dev:worker": "pnpm --filter @keptpages/worker dev",
+    "build": "pnpm --filter @keptpages/web build",
+    "build:worker": "pnpm --filter @keptpages/worker build",
+    "preview": "pnpm --filter @keptpages/web preview",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
