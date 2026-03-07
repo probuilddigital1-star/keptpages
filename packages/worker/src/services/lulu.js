@@ -11,9 +11,11 @@ const LULU_SANDBOX_BASE = 'https://api.sandbox.lulu.com';
 
 /**
  * Get the appropriate Lulu API base URL.
+ * Uses sandbox unless LULU_SANDBOX is explicitly set to 'false'.
  */
 function getBaseUrl(env) {
-  return env.ENVIRONMENT === 'production' ? LULU_API_BASE : LULU_SANDBOX_BASE;
+  if (env.LULU_SANDBOX === 'false') return LULU_API_BASE;
+  return LULU_SANDBOX_BASE;
 }
 
 /**
@@ -73,15 +75,44 @@ async function luluFetch(env, path, options = {}) {
 }
 
 /**
+ * Build a Lulu pod_package_id from user-selected print options.
+ * Format: {trim}{color}{quality}{binding}{paper}{finish}
+ *
+ * Example: 0850X1100BWSTDPB060UW444MXX
+ *   trim    = 0850X1100 (8.5" x 11", fixed)
+ *   color   = BW or FC
+ *   quality = STD (fixed)
+ *   binding = PB (paperback), CW (case wrap/hardcover), CO (coil)
+ *   paper   = 060UW444 (60# uncoated) or 080CW444 (80# coated)
+ *   finish  = MXX (matte, no linen/foil) or GXX (glossy, no linen/foil)
+ *
+ * @param {object} printOptions - { binding, interior, paper, cover }
+ * @returns {string} 27-character Lulu pod_package_id
+ */
+export function buildPodPackageId(printOptions = {}) {
+  const trim = '0850X1100';
+  const color = printOptions.interior || 'BW';
+  const quality = 'STD';
+  const binding = printOptions.binding || 'PB';
+  const paper = printOptions.paper || '060UW444';
+  const finish = (printOptions.cover || 'M') === 'G' ? 'GXX' : 'MXX';
+
+  return `${trim}${color}${quality}${binding}${paper}${finish}`;
+}
+
+/**
  * Create a print-ready project in Lulu.
  *
  * @param {string} interiorPdfUrl - Public URL to the interior PDF file
  * @param {string} coverPdfUrl - Public URL to the cover PDF file
  * @param {string} title - Book title
  * @param {object} env - Worker environment bindings
+ * @param {object} [printOptions] - User-selected print options
  * @returns {Promise<object>} The created Lulu print job / line item data
  */
-export async function createProject(interiorPdfUrl, coverPdfUrl, title, env) {
+export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, printOptions = {}) {
+  const podPackageId = buildPodPackageId(printOptions);
+
   const projectData = {
     line_items: [
       {
@@ -92,14 +123,7 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env) {
         interior: {
           source_url: interiorPdfUrl,
         },
-        pod_package_id: '0850X1100BWSTDLW060UW444MNG',
-        // 0850X1100 = 8.5" x 11" trim size
-        // BW = Black & White interior
-        // STD = Standard quality
-        // LW = Linen Wrap (softcover)
-        // 060 = 60# paper
-        // UW444 = Uncoated White paper
-        // MNG = Matte Laminate, No Foil, Gloss Laminate
+        pod_package_id: podPackageId,
         quantity: 1,
       },
     ],
@@ -119,6 +143,7 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env) {
       title: item.title,
       status: item.status?.name,
     })) || [],
+    podPackageId,
     createdAt: result.date_created,
   };
 }

@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
+import { isAdminEmail } from '../middleware/admin.js';
 
 const user = new Hono();
 
@@ -72,6 +73,7 @@ user.get('/profile', async (c) => {
           }
         : null,
     stripeCustomerId: profile.stripe_customer_id || null,
+    isAdmin: isAdminEmail(authUser.email, c.env),
     createdAt: profile.created_at,
   });
 });

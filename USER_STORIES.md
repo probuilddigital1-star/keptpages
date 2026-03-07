@@ -40,9 +40,15 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-PAY-5 | Checkout flow E2E | DONE | Full checkout flow: checkout session, redirect, success/cancel pages, webhook activation |
 | US-PAY-6 | Webhook lifecycle | DONE | Handles checkout.completed, sub.updated, sub.deleted, invoice.succeeded, invoice.failed |
 | US-PAY-7 | Customer portal | DONE | POST /stripe/portal endpoint, Settings page "Manage Subscription" button |
-| US-PAY-8 | Lulu Print API | MANUAL | Code ready — needs Lulu API credentials in env |
+| US-PAY-8 | Lulu Print API | DONE | Sandbox credentials configured, signed R2 URLs |
 | US-PAY-9 | Book pricing/checkout | DONE | Book orders go through Stripe, webhook triggers Lulu fulfillment, dynamic pricing |
 | US-PAY-10 | Subscription sync | DONE | Migration 009 adds stripe columns, webhook-driven sync, profile-based tier derivation |
+| US-PAY-11 | Print options config & UI selectors | DONE | PRINT_OPTIONS constant, OrderPanel radio selectors, live price updates |
+| US-PAY-12 | Print options backend & database | DONE | Migration 012, validation, Stripe metadata, print_options JSONB column |
+| US-PAY-13 | Dynamic Lulu package ID & pricing fix | DONE | buildPodPackageId(), unified $79 base pricing, 8 new tests |
+| US-PAY-14 | Customer order status display | DONE | OrderStatusPanel with status stepper, tracking links, order details. OrderPanel auto-delegates for post-order books. |
+| US-PAY-15 | Admin order dashboard | DONE | Admin middleware (ADMIN_EMAILS env), GET /admin/orders with pagination/filter, admin nav link, AdminOrders page. |
+| US-PAY-16 | Dev mock status endpoint | DONE | POST /admin/orders/:id/mock-status (blocked in production), mock tracking data, dev-only UI controls. |
 | US-CORE-1 | Fix waitlist migration | DONE | Added missing columns in migration 002 |
 | US-CORE-2 | Auth providers | DONE | Google OAuth configured in Supabase + Google Cloud |
 | US-CORE-3 | Wire real Supabase client | DONE | `.env` configured, `isSupabaseConfigured=true`, build passes |
@@ -62,6 +68,9 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-EXPORT-4 | Export Options Modal | DONE | ExportOptionsModal component: template radio cards, font dropdown, section toggles, doc checklist with reorder. |
 | US-EXPORT-5 | Tier-gated export flow | DONE | Keeper → ExportOptionsModal → API with options. Free → direct export with defaults. |
 | US-EXPORT-6 | Marketing messaging update | DONE | FREE: 'Basic PDF export'. KEEPER: 'Custom PDF export' added to feature lists. |
+| US-EXPORT-7 | Color theme templates | DONE | 5 templates (heritage, garden, heirloom, parchment, modern) with coordinated color palettes |
+| US-EXPORT-8 | Decorative page graphics | DONE | Page borders (single/double/none), corner ornaments, section dividers (diamond/dots/line), title decoration |
+| US-EXPORT-9 | Embed original scan images | DONE | includeOriginalScans option, scan images rendered as full-page with caption before document text |
 | US-QA-1 | Unit test suite | DONE | 538 tests (128 worker + 410 frontend), 44 test files, all passing. Fixed 41 stale test assertions. |
 | US-QA-2 | Integration tests | DONE | 46 integration tests covering scan, collections, share, books routes. Queue-based Supabase mock. |
 | US-QA-3 | E2E tests | TODO | |
@@ -74,16 +83,31 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-QA-10 | Pre-launch checklist | TODO | |
 | US-QA-11 | Clean up artifacts | TODO | |
 | US-QA-12 | Production validation | TODO | |
+| US-BOOK-1 | Book designer shell & page navigation | DONE | BookDesigner replaces 4-step wizard, 2-column layout, sortable page list, GlobalSettingsPanel, migration 011 |
+| US-BOOK-2 | Konva canvas page renderer | DONE | PageCanvas with Konva Stage 850x1100, background/content layers, PageBackground with textures, PageThumbnail |
+| US-BOOK-3 | Interactive element editing (drag/resize) | DONE | Transformer handles, drag/resize with normalized coords, element selection, AddElementPanel |
+| US-BOOK-4 | Inline text editing & text styles | DONE | TextEditOverlay on double-click, font/size/weight/style/color/alignment controls, 4 text presets |
+| US-BOOK-5 | All page types (7 kinds) | DONE | document, custom-text, photo, photo-collage, section-divider, dedication, blank — each with default elements |
+| US-BOOK-6 | Image library & additional photo upload | DONE | ImageLibraryPanel, POST/DELETE /books/:id/images endpoints, R2 storage, max 50 images |
+| US-BOOK-7 | Page backgrounds & photo frames | DONE | 5 textures (linen, paper-grain, watercolor-wash, parchment, none), 6 frame styles, PageSettingsPanel |
+| US-BOOK-8 | Enhanced cover designer | DONE | CoverDesignerPanel with 3 layouts (centered, left-aligned, photo-background), live preview |
+| US-BOOK-9 | Custom font embedding in PDFs | DONE | fonts.js service, KV-based font loading, StandardFonts fallback, 4 font families |
+| US-BOOK-10 | Blueprint-driven PDF generation engine | DONE | renderBlueprintBook(), coordinate translation, text/image/shape/decorative renderers, texture backgrounds, photo frames, front matter, 11 tests |
+| US-BOOK-11 | Order panel & book ordering | DONE | OrderPanel with generate/download, shipping form, quantity, pricing, Stripe checkout integration |
+| US-BOOK-12 | Auto-save, undo/redo & keyboard shortcuts | DONE | zundo temporal middleware, Ctrl+Z/Shift+Z, Delete/arrow nudge, 5s auto-save, save status indicator |
+| US-BOOK-13 | Testing & production polish | DONE | 11 blueprint PDF tests, hexToRgb 3-char fix, responsive sidebar, 642 total tests passing, clean build |
 
-**Completed: 43/63** | **Remaining: 20** (1 PAY story needs manual Lulu account setup)
+**Completed: 65/85** | **Remaining: 20**
 
 ### Prioritized Roadmap (as of 2026-03-05)
 
 **Phase 1 — Fix & Validate:** US-EXPORT-1 (PDF bug fix), US-QA-1 (unit tests), US-QA-9 (security), US-QA-8 (mobile)
 **Phase 2 — Revenue Features:** US-EXPORT-2→6 (Keeper PDF customization)
+**Phase 2.5 — Enhanced Export Design:** US-EXPORT-7→9 (color themes, decorations, scan images)
 **Phase 3 — Quality & Polish:** US-QA-2 (integration), US-QA-6 (perf), US-QA-7 (a11y), US-QA-4 (monitoring), US-QA-5 (analytics)
 **Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
 **Phase 5 — Launch Readiness:** US-QA-3 (E2E), US-QA-10→12 (pre-launch), US-PAY-8 (Lulu)
+**Phase 5.5 — Print Customization:** US-PAY-11→13 (print option selectors, backend wiring, Lulu integration)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
 
 ### Key Credentials & Resources (do not commit)
@@ -113,11 +137,11 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 |------|---------|-----------|-----------|
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
 | **BLOG** — Blog Feature | 13 | 0 | 13 |
-| **PAY** — Payments & Subscriptions | 10 | 9 | 1 (Lulu manual setup) |
+| **PAY** — Payments & Subscriptions | 13 | 13 | 0 |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **EXPORT** — PDF Export Customization | 6 | 1 | 5 |
 | **QA** — Testing & Launch Readiness | 12 | 3 | 9 |
-| **Total** | **63** | **33** | **30** |
+| **Total** | **66** | **36** | **30** |
 
 ---
 
@@ -1101,6 +1125,74 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Dependencies:** US-EXPORT-5
 **Estimate:** S
+
+---
+
+### US-EXPORT-7: Color theme templates
+**As a** Keeper user
+**I want** to choose from visually distinct color themes for my PDF export
+**So that** my family heritage book has a beautiful, personalized aesthetic
+
+**Acceptance Criteria:**
+- [ ] 5 color themes: Heritage (warm terracotta/gold), Garden (sage green/brown), Heirloom (navy/gold), Parchment (sepia/amber), Modern (black/terracotta accent)
+- [ ] Each theme defines: accentColor, titleColor, sectionColor, bodyColor, lineColor, borderColor, ornamentColor, pageBgColor
+- [ ] Parchment theme draws a light parchment-colored background rectangle on content pages
+- [ ] Title page uses accent color for decorative elements
+- [ ] Section headers and separator lines use theme colors
+- [ ] ExportOptionsModal shows color swatches for each theme (3-color strip preview)
+- [ ] No options / free tier = Heritage theme as default (backward compatible)
+- [ ] Tests for all 5 templates
+
+**Dependencies:** US-EXPORT-2
+**Estimate:** M
+**Tier:** Keeper
+
+---
+
+### US-EXPORT-8: Decorative page graphics
+**As a** Keeper user
+**I want** decorative borders, dividers, and ornaments in my PDF export
+**So that** the book feels professionally designed, not just plain text
+
+**Acceptance Criteria:**
+- [ ] Page borders: rectangle stroke around content area, configurable per theme
+- [ ] Corner ornaments: L-shaped decorative corners on content pages
+- [ ] Section dividers: ornamental divider between documents
+- [ ] Title page decoration: accent color block behind title, ornamental rule below
+- [ ] TOC pages get matching page borders
+- [ ] Helper functions: drawPageBorder(), drawCornerOrnaments(), drawSectionDivider(), drawTitlePageDecoration()
+- [ ] All decorations use pdf-lib primitives only
+- [ ] Each theme specifies borderStyle, dividerStyle, ornamentStyle
+- [ ] Tests verify decorative rendering doesn't error
+
+**Dependencies:** US-EXPORT-7
+**Estimate:** M
+**Tier:** Keeper
+
+---
+
+### US-EXPORT-9: Embed original scan images in PDF
+**As a** Keeper user
+**I want** the original scanned photo included in the PDF alongside the transcribed text
+**So that** I can see both the original handwriting and the digitized version
+
+**Acceptance Criteria:**
+- [ ] "Include Original Scans" toggle in ExportOptionsModal
+- [ ] When enabled, export endpoint fetches scan images from R2 using r2_key
+- [ ] Each document gets a dedicated scan image page before its text pages
+- [ ] Image scaled to fit content margins, centered
+- [ ] Caption below image: document title + "Original Scan" in italic
+- [ ] TOC page numbering accounts for additional scan pages
+- [ ] Supports JPEG and PNG (skip WEBP/HEIC with warning)
+- [ ] Memory guard: max 30 images or 50MB total
+- [ ] Graceful fallback: if R2 fetch fails, skip and continue
+- [ ] Images fetched at route level, not inside PDF service
+- [ ] Supabase query expanded to include r2_key, mime_type from scans
+- [ ] Tests with small mock image buffers
+
+**Dependencies:** US-EXPORT-7
+**Estimate:** L
+**Tier:** Keeper
 
 ---
 

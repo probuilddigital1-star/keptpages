@@ -7,6 +7,19 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 /**
+ * Generate a signed public URL for an R2 file so Lulu can fetch it.
+ * Uses HMAC(key + service_key) as a simple auth token.
+ */
+async function getSignedFileUrl(apiBase, r2Key, env) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(r2Key + env.SUPABASE_SERVICE_KEY);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const token = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  return `${apiBase}/api/public/files/${token}/${r2Key}`;
+}
+
+/**
  * Initialize the Stripe client.
  */
 function getStripe(env) {
@@ -116,18 +129,54 @@ export async function createCheckoutSession(userId, plan, env, metadata = {}) {
   };
 }
 
+// Print option price modifiers in cents (must match frontend PRINT_OPTIONS)
+const OPTION_MODIFIERS = {
+  binding: { PB: 0, CW: 1500, CO: 500 },
+  interior: { BW: 0, FC: 2000 },
+  paper: { '060UW444': 0, '080CW444': 800 },
+  cover: { M: 0, G: 0 },
+};
+
+const BINDING_LABELS = { PB: 'Paperback', CW: 'Hardcover', CO: 'Coil Bound' };
+const INTERIOR_LABELS = { BW: 'B&W', FC: 'Full Color' };
+
+/**
+ * Calculate book unit price in cents from page count and print options.
+ * Unified formula: base $79 + $0.50/page over 40 + option modifiers, capped at $149 + modifiers.
+ */
+function calculateBookUnitPrice(pageCount, printOptions = {}) {
+  const BASE = 7900; // cents
+  const MAX_BASE = 14900; // cents
+  const PER_EXTRA_PAGE = 50; // cents
+  const FREE_PAGES = 40;
+
+  const extraPages = Math.max(0, pageCount - FREE_PAGES);
+  const basePrice = Math.min(BASE + extraPages * PER_EXTRA_PAGE, MAX_BASE);
+
+  let modifiers = 0;
+  for (const [group, value] of Object.entries(printOptions)) {
+    const groupMods = OPTION_MODIFIERS[group];
+    if (groupMods && groupMods[value] !== undefined) {
+      modifiers += groupMods[value];
+    }
+  }
+
+  return basePrice + modifiers;
+}
+
 /**
  * Create a Stripe Checkout session for a book order (one-time payment).
- * Uses dynamic pricing based on page count and quantity.
+ * Uses dynamic pricing based on page count, quantity, and print options.
  *
  * @param {string} userId - The authenticated user's ID
  * @param {object} book - The book record from the database
  * @param {object} shippingAddress - Shipping address for the order
  * @param {number} quantity - Number of copies to order
  * @param {object} env - Worker environment bindings
+ * @param {object} [printOptions] - User-selected print options
  * @returns {Promise<{ sessionId: string, url: string }>}
  */
-export async function createBookCheckoutSession(userId, book, shippingAddress, quantity, env) {
+export async function createBookCheckoutSession(userId, book, shippingAddress, quantity, env, printOptions = {}) {
   const stripe = getStripe(env);
   const supabase = getSupabase(env);
 
@@ -153,12 +202,12 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
       .eq('id', userId);
   }
 
-  // Calculate price based on page count
-  // Base price: $14.99 + $0.02 per page over 50 pages
-  const basePrice = 1499; // cents
-  const extraPages = Math.max(0, (book.page_count || 50) - 50);
-  const perPageCost = 2; // cents per extra page
-  const unitPrice = basePrice + (extraPages * perPageCost);
+  const unitPrice = calculateBookUnitPrice(book.page_count || 0, printOptions);
+
+  // Build description from print options
+  const bindingLabel = BINDING_LABELS[printOptions.binding] || 'Paperback';
+  const interiorLabel = INTERIOR_LABELS[printOptions.interior] || 'B&W';
+  const description = `KeptPages Book \u2014 ${bindingLabel}, ${interiorLabel}, ${book.page_count || 0} pages`;
 
   const appUrl = env.APP_URL || 'https://app.keptpages.com';
   const successUrl = `${appUrl}/app/book/${book.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
@@ -173,7 +222,7 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
           currency: 'usd',
           product_data: {
             name: `Printed Book: ${book.title}`,
-            description: `${book.page_count || 0} pages, softcover, ${quantity} ${quantity === 1 ? 'copy' : 'copies'}`,
+            description,
           },
           unit_amount: unitPrice,
         },
@@ -187,6 +236,7 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
       book_id: book.id,
       quantity: String(quantity),
       shipping_address: JSON.stringify(shippingAddress),
+      print_options: JSON.stringify(printOptions),
     },
   });
 
@@ -291,6 +341,15 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     return;
   }
 
+  let printOptions = {};
+  try {
+    if (session.metadata.print_options) {
+      printOptions = JSON.parse(session.metadata.print_options);
+    }
+  } catch {
+    console.error('Failed to parse print options from checkout metadata');
+  }
+
   // Update book with payment info
   await supabase
     .from('books')
@@ -324,11 +383,13 @@ async function handleBookPaymentCompleted(session, supabase, env) {
       return;
     }
 
-    const interiorUrl = `${env.R2_PUBLIC_URL || 'https://r2.keptpages.com'}/${book.interior_pdf_key}`;
-    const coverUrl = `${env.R2_PUBLIC_URL || 'https://r2.keptpages.com'}/${book.cover_pdf_key}`;
+    // Generate signed public URLs for Lulu to fetch PDFs
+    const apiBase = env.API_BASE_URL || 'https://api.keptpages.com';
+    const interiorUrl = await getSignedFileUrl(apiBase, book.interior_pdf_key, env);
+    const coverUrl = await getSignedFileUrl(apiBase, book.cover_pdf_key, env);
 
-    // Create Lulu project and place order
-    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env);
+    // Create Lulu project with user-selected print options and place order
+    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, printOptions);
     const order = await createOrder(luluProject.id, shippingAddress, quantity, env);
 
     // Update book record with Lulu order info

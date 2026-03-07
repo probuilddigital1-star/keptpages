@@ -179,6 +179,7 @@ collections.get('/:id', async (c) => {
         confidence_score,
         extracted_data,
         original_filename,
+        r2_key,
         status,
         created_at
       )
@@ -211,6 +212,7 @@ collections.get('/:id', async (c) => {
             confidence: item.scans.confidence_score,
             extractedData: item.scans.extracted_data,
             originalFilename: item.scans.original_filename,
+            r2Key: item.scans.r2_key,
             status: item.scans.status,
             createdAt: item.scans.created_at,
           }
@@ -530,6 +532,7 @@ collections.post('/:id/export', async (c) => {
     includeCopyright,
     includeToc,
     showPageNumbers,
+    includeOriginalScans,
     documentIds,
   } = body;
 
@@ -545,7 +548,7 @@ collections.post('/:id/export', async (c) => {
     return c.json({ error: 'Collection not found' }, 404);
   }
 
-  // Fetch items with extracted data
+  // Fetch items with extracted data (include r2_key/mime_type for scan image embedding)
   const { data: items, error: itemsError } = await supabase
     .from('collection_items')
     .select(`
@@ -554,7 +557,9 @@ collections.post('/:id/export', async (c) => {
       scans:scan_id (
         title,
         document_type,
-        extracted_data
+        extracted_data,
+        r2_key,
+        mime_type
       )
     `)
     .eq('collection_id', collectionId)
@@ -571,6 +576,8 @@ collections.post('/:id/export', async (c) => {
     .map((item) => ({
       ...item.scans.extracted_data,
       _scanId: item.scan_id,
+      _r2Key: item.scans.r2_key || null,
+      _mimeType: item.scans.mime_type || null,
       title: item.scans.title || item.scans.extracted_data.title || 'Untitled',
       type: item.scans.document_type || item.scans.extracted_data.type || 'document',
     }));
@@ -589,8 +596,39 @@ collections.post('/:id/export', async (c) => {
     documents = filtered;
   }
 
-  // Remove internal _scanId before passing to PDF
-  documents = documents.map(({ _scanId, ...rest }) => rest);
+  // Fetch scan images from R2 if requested (US-EXPORT-9)
+  if (includeOriginalScans && c.env.UPLOADS) {
+    const MAX_IMAGES = 30;
+    const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50MB
+    let totalBytes = 0;
+    let imageCount = 0;
+
+    for (const doc of documents) {
+      if (!doc._r2Key || imageCount >= MAX_IMAGES || totalBytes >= MAX_TOTAL_BYTES) continue;
+
+      // Only support JPEG and PNG (pdf-lib limitation)
+      const mime = (doc._mimeType || '').toLowerCase();
+      if (mime && !mime.includes('jpeg') && !mime.includes('jpg') && !mime.includes('png')) continue;
+
+      try {
+        const r2Object = await c.env.UPLOADS.get(doc._r2Key);
+        if (r2Object) {
+          const bytes = await r2Object.arrayBuffer();
+          if (totalBytes + bytes.byteLength <= MAX_TOTAL_BYTES) {
+            doc._imageBytes = new Uint8Array(bytes);
+            doc._mimeType = mime.includes('png') ? 'image/png' : 'image/jpeg';
+            totalBytes += bytes.byteLength;
+            imageCount++;
+          }
+        }
+      } catch {
+        // Graceful fallback: skip this image and continue
+      }
+    }
+  }
+
+  // Remove internal fields before passing to PDF
+  documents = documents.map(({ _scanId, _r2Key, ...rest }) => rest);
 
   if (documents.length === 0) {
     return c.json({ error: 'No documents to export in this collection' }, 400);
@@ -609,7 +647,7 @@ collections.post('/:id/export', async (c) => {
     // Dynamic import to avoid loading pdf-lib unless needed
     const { generateBookPdf } = await import('../services/pdf.js');
 
-    const pdfBuffer = await generateBookPdf(
+    const { buffer: pdfBuffer } = await generateBookPdf(
       {
         title: collection.name,
         subtitle: collection.description || '',

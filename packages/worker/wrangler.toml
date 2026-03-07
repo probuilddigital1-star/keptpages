@@ -17,3 +17,7 @@ bucket_name = "keptpages-processed"
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
 id = "b869a2860f7346ef8069e5948bb29fa9"
+
+[[kv_namespaces]]
+binding = "FONTS"
+id = "3084fcd1b8d947b48aada1a8780c8eb4"

@@ -82,6 +82,20 @@ describe('subscriptionStore', () => {
       expect(state.subscription).toEqual({ tier: 'keeper', id: 'sub-1', status: 'active' });
     });
 
+    it('uses profile.tier when subscription row is missing', async () => {
+      api.get.mockResolvedValue({
+        tier: 'keeper',
+        subscription: null,
+        usage: { scans: 50, collections: 10 },
+      });
+
+      await useSubscriptionStore.getState().fetchSubscription();
+
+      const state = useSubscriptionStore.getState();
+      expect(state.tier).toBe('keeper');
+      expect(state.limits).toEqual({ scans: Infinity, collections: Infinity });
+    });
+
     it('falls back to free limits for unknown tier', async () => {
       api.get.mockResolvedValue({
         subscription: { tier: 'unknown-tier', status: 'active' },

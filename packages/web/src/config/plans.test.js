@@ -1,4 +1,11 @@
-import { PLANS, BOOK_PRICING } from './plans';
+import {
+  PLANS,
+  BOOK_PRICING,
+  PRINT_OPTIONS,
+  DEFAULT_PRINT_OPTIONS,
+  calculateOptionModifiers,
+  calculateBookPrice,
+} from './plans';
 
 describe('PLANS', () => {
   describe('FREE plan', () => {
@@ -63,8 +70,8 @@ describe('PLANS', () => {
       expect(PLANS.BOOK_PROJECT.id).toBe('book_project');
     });
 
-    it('has correct price of 14.99', () => {
-      expect(PLANS.BOOK_PROJECT.price).toBe(14.99);
+    it('has correct price of 79', () => {
+      expect(PLANS.BOOK_PROJECT.price).toBe(79);
     });
 
     it('is marked as oneTime purchase', () => {
@@ -85,16 +92,20 @@ describe('PLANS', () => {
 });
 
 describe('BOOK_PRICING', () => {
-  it('has base price of 79', () => {
-    expect(BOOK_PRICING.base).toBe(79);
+  it('has base price of 7900 cents', () => {
+    expect(BOOK_PRICING.base).toBe(7900);
   });
 
-  it('has max price of 149', () => {
-    expect(BOOK_PRICING.max).toBe(149);
+  it('has max price of 14900 cents', () => {
+    expect(BOOK_PRICING.max).toBe(14900);
   });
 
-  it('has per-extra-page cost of 0.5', () => {
-    expect(BOOK_PRICING.perExtraPage).toBe(0.5);
+  it('has per-extra-page cost of 50 cents', () => {
+    expect(BOOK_PRICING.perExtraPage).toBe(50);
+  });
+
+  it('has 40 free pages', () => {
+    expect(BOOK_PRICING.freePages).toBe(40);
   });
 
   it('has family pack discount of 15%', () => {
@@ -103,5 +114,84 @@ describe('BOOK_PRICING', () => {
 
   it('has familyPackMinQty of 5', () => {
     expect(BOOK_PRICING.familyPackMinQty).toBe(5);
+  });
+});
+
+describe('PRINT_OPTIONS', () => {
+  it('has 4 option groups', () => {
+    expect(Object.keys(PRINT_OPTIONS)).toEqual(['binding', 'interior', 'paper', 'cover']);
+  });
+
+  it('binding has 3 options', () => {
+    expect(PRINT_OPTIONS.binding.options).toHaveLength(3);
+  });
+
+  it('interior has 2 options', () => {
+    expect(PRINT_OPTIONS.interior.options).toHaveLength(2);
+  });
+
+  it('paper has 2 options', () => {
+    expect(PRINT_OPTIONS.paper.options).toHaveLength(2);
+  });
+
+  it('cover has 2 options', () => {
+    expect(PRINT_OPTIONS.cover.options).toHaveLength(2);
+  });
+});
+
+describe('DEFAULT_PRINT_OPTIONS', () => {
+  it('defaults to cheapest options', () => {
+    expect(DEFAULT_PRINT_OPTIONS).toEqual({
+      binding: 'PB',
+      interior: 'BW',
+      paper: '060UW444',
+      cover: 'M',
+    });
+  });
+});
+
+describe('calculateOptionModifiers', () => {
+  it('returns 0 for default options', () => {
+    expect(calculateOptionModifiers(DEFAULT_PRINT_OPTIONS)).toBe(0);
+  });
+
+  it('adds hardcover modifier', () => {
+    expect(calculateOptionModifiers({ ...DEFAULT_PRINT_OPTIONS, binding: 'CW' })).toBe(1500);
+  });
+
+  it('adds full color modifier', () => {
+    expect(calculateOptionModifiers({ ...DEFAULT_PRINT_OPTIONS, interior: 'FC' })).toBe(2000);
+  });
+
+  it('sums multiple modifiers', () => {
+    const opts = { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'G' };
+    expect(calculateOptionModifiers(opts)).toBe(1500 + 2000 + 800 + 0);
+  });
+});
+
+describe('calculateBookPrice', () => {
+  it('returns base price for 40 or fewer pages with defaults', () => {
+    expect(calculateBookPrice(40)).toBe(7900);
+    expect(calculateBookPrice(0)).toBe(7900);
+    expect(calculateBookPrice(20)).toBe(7900);
+  });
+
+  it('adds per-page cost for extra pages', () => {
+    expect(calculateBookPrice(50)).toBe(7900 + 10 * 50); // 8400
+  });
+
+  it('adds option modifiers to base', () => {
+    const opts = { binding: 'CW', interior: 'BW', paper: '060UW444', cover: 'M' };
+    expect(calculateBookPrice(40, opts)).toBe(7900 + 1500); // 9400
+  });
+
+  it('caps at max + modifiers', () => {
+    // 300 extra pages would be 7900 + 300*50 = 22900, capped at 14900
+    expect(calculateBookPrice(340)).toBe(14900);
+  });
+
+  it('caps at max + modifiers for premium options', () => {
+    const opts = { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'G' };
+    expect(calculateBookPrice(340, opts)).toBe(14900 + 1500 + 2000 + 800);
   });
 });

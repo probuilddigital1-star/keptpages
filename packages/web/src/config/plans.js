@@ -55,7 +55,7 @@ export const PLANS = {
   BOOK_PROJECT: {
     id: 'book_project',
     name: 'Book Project',
-    price: 14.99,
+    price: 79,
     oneTime: true,
     stripePriceId: 'price_book_project_placeholder',
     features: [
@@ -68,9 +68,73 @@ export const PLANS = {
 };
 
 export const BOOK_PRICING = {
-  base: 79,
-  max: 149,
-  perExtraPage: 0.5,
+  base: 7900, // cents
+  max: 14900, // cents
+  perExtraPage: 50, // cents per page over 40
+  freePages: 40,
   familyPackDiscount: 0.15, // 15% off for 5+ copies
   familyPackMinQty: 5,
 };
+
+export const PRINT_OPTIONS = {
+  binding: {
+    label: 'Binding',
+    options: [
+      { value: 'PB', label: 'Paperback', description: 'Perfect-bound softcover', modifier: 0 },
+      { value: 'CW', label: 'Hardcover', description: 'Case wrap hardcover', modifier: 1500 },
+      { value: 'CO', label: 'Coil Bound', description: 'Spiral/coil binding', modifier: 500 },
+    ],
+  },
+  interior: {
+    label: 'Interior Color',
+    options: [
+      { value: 'BW', label: 'Black & White', description: 'Standard B&W printing', modifier: 0 },
+      { value: 'FC', label: 'Full Color', description: 'Full color throughout', modifier: 2000 },
+    ],
+  },
+  paper: {
+    label: 'Paper Quality',
+    options: [
+      { value: '060UW444', label: '60# Uncoated', description: 'Standard uncoated white', modifier: 0 },
+      { value: '080CW444', label: '80# Coated', description: 'Premium coated white', modifier: 800 },
+    ],
+  },
+  cover: {
+    label: 'Cover Finish',
+    options: [
+      { value: 'M', label: 'Matte', description: 'Matte laminate finish', modifier: 0 },
+      { value: 'G', label: 'Glossy', description: 'Glossy laminate finish', modifier: 0 },
+    ],
+  },
+};
+
+export const DEFAULT_PRINT_OPTIONS = {
+  binding: 'PB',
+  interior: 'BW',
+  paper: '060UW444',
+  cover: 'M',
+};
+
+/**
+ * Calculate total print option modifiers in cents.
+ */
+export function calculateOptionModifiers(printOptions) {
+  let total = 0;
+  for (const [group, value] of Object.entries(printOptions)) {
+    const groupConfig = PRINT_OPTIONS[group];
+    if (!groupConfig) continue;
+    const opt = groupConfig.options.find((o) => o.value === value);
+    if (opt) total += opt.modifier;
+  }
+  return total;
+}
+
+/**
+ * Calculate book unit price in cents.
+ */
+export function calculateBookPrice(pageCount, printOptions = DEFAULT_PRINT_OPTIONS) {
+  const extraPages = Math.max(0, pageCount - BOOK_PRICING.freePages);
+  const basePrice = BOOK_PRICING.base + extraPages * BOOK_PRICING.perExtraPage;
+  const optionModifiers = calculateOptionModifiers(printOptions);
+  return Math.min(basePrice + optionModifiers, BOOK_PRICING.max + optionModifiers);
+}

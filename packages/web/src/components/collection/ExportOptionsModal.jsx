@@ -1,12 +1,39 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import clsx from 'clsx';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
-const TEMPLATES = [
-  { value: 'classic', label: 'Classic', desc: 'Traditional serif layout' },
-  { value: 'modern', label: 'Modern', desc: 'Clean contemporary feel' },
-  { value: 'minimal', label: 'Minimal', desc: 'Simple and understated' },
+const COLOR_THEMES = [
+  {
+    value: 'heritage',
+    label: 'Heritage',
+    desc: 'Warm vintage',
+    swatches: ['#c2891f', '#733819', '#b8933d'],
+  },
+  {
+    value: 'garden',
+    label: 'Garden',
+    desc: 'Rustic farmhouse',
+    swatches: ['#8cad6b', '#426140', '#705c47'],
+  },
+  {
+    value: 'heirloom',
+    label: 'Heirloom',
+    desc: 'Cool elegant',
+    swatches: ['#bfa138', '#1f2952', '#b3a673'],
+  },
+  {
+    value: 'parchment',
+    label: 'Parchment',
+    desc: 'Aged paper',
+    swatches: ['#ad853d', '#664720', '#b89e70'],
+  },
+  {
+    value: 'modern',
+    label: 'Modern',
+    desc: 'Clean contemporary',
+    swatches: ['#c26138', '#141414', '#c7c7c7'],
+  },
 ];
 
 const FONTS = [
@@ -32,12 +59,13 @@ export default function ExportOptionsModal({
   documents = [],
   exporting = false,
 }) {
-  const [template, setTemplate] = useState('classic');
+  const [template, setTemplate] = useState('heritage');
   const [fontFamily, setFontFamily] = useState('serif');
   const [includeTitlePage, setIncludeTitlePage] = useState(true);
   const [includeCopyright, setIncludeCopyright] = useState(true);
   const [includeToc, setIncludeToc] = useState(true);
   const [showPageNumbers, setShowPageNumbers] = useState(true);
+  const [includeOriginalScans, setIncludeOriginalScans] = useState(false);
 
   // Document selection — all selected by default
   const [selectedIds, setSelectedIds] = useState(() =>
@@ -46,14 +74,23 @@ export default function ExportOptionsModal({
   // Local ordering — starts from the prop order
   const [orderedDocs, setOrderedDocs] = useState(() => [...documents]);
 
+  // Sync document selection when modal opens or documents change
+  useEffect(() => {
+    if (open && documents.length > 0) {
+      setSelectedIds(new Set(documents.map((d) => d.id)));
+      setOrderedDocs([...documents]);
+    }
+  }, [open, documents]);
+
   // Reset state when documents change (modal re-opens)
   const resetState = useCallback(() => {
-    setTemplate('classic');
+    setTemplate('heritage');
     setFontFamily('serif');
     setIncludeTitlePage(true);
     setIncludeCopyright(true);
     setIncludeToc(true);
     setShowPageNumbers(true);
+    setIncludeOriginalScans(false);
     setSelectedIds(new Set(documents.map((d) => d.id)));
     setOrderedDocs([...documents]);
   }, [documents]);
@@ -106,6 +143,7 @@ export default function ExportOptionsModal({
       includeCopyright,
       includeToc,
       showPageNumbers,
+      includeOriginalScans,
       documentIds,
     });
   }
@@ -123,26 +161,38 @@ export default function ExportOptionsModal({
       size="md"
     >
       <div className="flex flex-col gap-6">
-        {/* Template */}
+        {/* Color Theme */}
         <fieldset>
-          <legend className="font-ui text-sm font-medium text-walnut mb-2">Template</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {TEMPLATES.map((t) => (
+          <legend className="font-ui text-sm font-medium text-walnut mb-2">Color Theme</legend>
+          <div className="grid grid-cols-5 gap-2">
+            {COLOR_THEMES.map((t) => (
               <button
                 key={t.value}
                 type="button"
                 onClick={() => setTemplate(t.value)}
                 className={clsx(
-                  'rounded-md border p-3 text-left transition-all',
+                  'rounded-md border p-2.5 text-left transition-all flex flex-col items-center',
                   template === t.value
                     ? 'border-terracotta bg-terracotta-light ring-1 ring-terracotta/30'
                     : 'border-border-light hover:border-terracotta/30',
                 )}
               >
-                <span className="font-ui text-sm font-semibold text-walnut block">
+                {/* 3-color swatch strip */}
+                <div className="flex w-full h-3 rounded-sm overflow-hidden mb-1.5">
+                  {t.swatches.map((color, i) => (
+                    <div
+                      key={i}
+                      className="flex-1"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+                <span className="font-ui text-xs font-semibold text-walnut block text-center">
                   {t.label}
                 </span>
-                <span className="font-body text-xs text-walnut-muted">{t.desc}</span>
+                <span className="font-body text-[10px] text-walnut-muted text-center leading-tight">
+                  {t.desc}
+                </span>
               </button>
             ))}
           </div>
@@ -181,6 +231,7 @@ export default function ExportOptionsModal({
               { label: 'Copyright Page', checked: includeCopyright, set: setIncludeCopyright },
               { label: 'Table of Contents', checked: includeToc, set: setIncludeToc },
               { label: 'Page Numbers', checked: showPageNumbers, set: setShowPageNumbers },
+              { label: 'Include Original Scans', checked: includeOriginalScans, set: setIncludeOriginalScans },
             ].map(({ label, checked, set }) => (
               <label
                 key={label}

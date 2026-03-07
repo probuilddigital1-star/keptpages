@@ -8,6 +8,7 @@ export const useSubscriptionStore = create((set, get) => ({
   usage: { scans: 0, collections: 0 },
   limits: { scans: 25, collections: 5 },
   subscription: null,
+  isAdmin: false,
   loading: false,
 
   // Actions
@@ -17,11 +18,13 @@ export const useSubscriptionStore = create((set, get) => ({
       const profile = await api.get('/user/profile');
       const subscription = profile.subscription || null;
 
-      // Derive tier: if subscription is active/trialing, use its tier; otherwise free
-      const isActive =
-        subscription &&
-        (subscription.status === 'active' || subscription.status === 'trialing');
-      const tier = isActive ? (subscription.tier || 'keeper') : 'free';
+      // Derive tier: trust profile.tier from the database (set by webhook or admin).
+      // Fall back to subscription status check, then default to 'free'.
+      const tier = profile.tier && profile.tier !== 'free'
+        ? profile.tier
+        : (subscription && (subscription.status === 'active' || subscription.status === 'trialing'))
+          ? (subscription.tier || 'keeper')
+          : 'free';
 
       const tierLimits = {
         free: { scans: 25, collections: 5 },
@@ -33,6 +36,7 @@ export const useSubscriptionStore = create((set, get) => ({
         subscription,
         usage: profile.usage || { scans: 0, collections: 0 },
         limits: tierLimits[tier] || tierLimits.free,
+        isAdmin: profile.isAdmin || false,
         loading: false,
       });
     } catch (error) {

@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
@@ -38,10 +39,21 @@ const navItems = [
   },
 ];
 
+const adminNavItem = {
+  to: '/app/admin/orders',
+  label: 'Admin',
+  icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+};
+
 function SidebarNav() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
+  const isAdmin = useSubscriptionStore((s) => s.isAdmin);
 
   const handleLogout = async () => {
     await logout();
@@ -77,6 +89,22 @@ function SidebarNav() {
             {item.label}
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink
+            to={adminNavItem.to}
+            className={({ isActive }) =>
+              clsx(
+                'flex items-center gap-3 px-3 py-2.5 rounded-md font-ui text-sm transition-colors',
+                isActive
+                  ? 'bg-terracotta-light text-terracotta font-medium'
+                  : 'text-walnut-secondary hover:bg-cream-alt hover:text-walnut'
+              )
+            }
+          >
+            {adminNavItem.icon}
+            {adminNavItem.label}
+          </NavLink>
+        )}
       </nav>
 
       {/* User section */}
@@ -108,6 +136,7 @@ function SidebarNav() {
 }
 
 function BottomTabs() {
+  const isAdmin = useSubscriptionStore((s) => s.isAdmin);
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-cream-surface/95 backdrop-blur-md border-t border-border-light z-40 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around px-2 py-2">
@@ -129,6 +158,20 @@ function BottomTabs() {
             <span>{item.label}</span>
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink
+            to={adminNavItem.to}
+            className={({ isActive }) =>
+              clsx(
+                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-md font-ui text-[10px] transition-colors',
+                isActive ? 'text-terracotta' : 'text-walnut-muted'
+              )
+            }
+          >
+            {adminNavItem.icon}
+            <span>{adminNavItem.label}</span>
+          </NavLink>
+        )}
       </div>
     </nav>
   );
@@ -136,8 +179,27 @@ function BottomTabs() {
 
 function TopBar() {
   const { user } = useAuthStore();
+  const logout = useAuthStore((s) => s.logout);
   const { tier } = useSubscriptionStore();
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await logout();
+    navigate('/');
+  };
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
 
   return (
     <header className="lg:hidden sticky top-[3px] z-30 bg-cream-surface/95 backdrop-blur-md border-b border-border-light">
@@ -154,8 +216,33 @@ function TopBar() {
               Upgrade
             </NavLink>
           )}
-          <div className="w-7 h-7 rounded-full bg-terracotta flex items-center justify-center text-white font-ui text-xs font-semibold">
-            {user?.user_metadata?.name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-7 h-7 rounded-full bg-terracotta flex items-center justify-center text-white font-ui text-xs font-semibold"
+            >
+              {user?.user_metadata?.name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-1 w-44 bg-white rounded-md shadow-lg border border-border-light py-1 z-50">
+                <p className="px-3 py-1.5 font-ui text-xs text-walnut-muted truncate border-b border-border-light">
+                  {user?.email}
+                </p>
+                <NavLink
+                  to="/app/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-3 py-2 font-ui text-sm text-walnut hover:bg-cream-alt transition-colors"
+                >
+                  Settings
+                </NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 font-ui text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

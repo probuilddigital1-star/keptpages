@@ -70,12 +70,12 @@ describe('bookStore', () => {
       expect(state.loading).toBe(false);
     });
 
-    it('falls back to classic template when book has no template', async () => {
+    it('falls back to heritage template when book has no template', async () => {
       api.post.mockResolvedValue({ id: 'book-1' });
 
       await useBookStore.getState().createBook('col-1');
 
-      expect(useBookStore.getState().template).toBe('classic');
+      expect(useBookStore.getState().template).toBe('heritage');
     });
 
     it('sets loading during request', async () => {
@@ -245,6 +245,20 @@ describe('bookStore', () => {
       });
       expect(result).toEqual(mockOrder);
       expect(useBookStore.getState().loading).toBe(false);
+    });
+
+    it('forwards printOptions when provided', async () => {
+      const address = { street: '123 Main', city: 'Town', zip: '12345' };
+      const printOptions = { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'G' };
+      api.post.mockResolvedValue({ orderId: 'ord-2' });
+
+      await useBookStore.getState().orderBook('book-1', address, 2, printOptions);
+
+      expect(api.post).toHaveBeenCalledWith('/books/book-1/order', {
+        shippingAddress: address,
+        quantity: 2,
+        printOptions,
+      });
     });
 
     it('sets loading=false on failure', async () => {

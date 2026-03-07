@@ -21,6 +21,7 @@ import booksRoutes from './routes/books.js';
 import stripeRoutes from './routes/stripe.js';
 import shareRoutes from './routes/share.js';
 import userRoutes from './routes/user.js';
+import adminRoutes from './routes/admin.js';
 import waitlistRoutes from './routes/waitlist.js';
 
 // Stripe webhook service
@@ -212,6 +213,32 @@ app.post('/api/stripe/webhook', async (c) => {
   }
 });
 
+// Public R2 file access with signed token (used by Lulu to fetch PDFs)
+app.get('/api/public/files/:token/:key{.+}', async (c) => {
+  const { token, key } = c.req.param();
+
+  // Verify HMAC token: SHA-256(key + SUPABASE_SERVICE_KEY) truncated to 32 hex chars
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key + c.env.SUPABASE_SERVICE_KEY);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const expectedToken = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+
+  if (token !== expectedToken) {
+    return c.json({ error: 'Invalid token' }, 403);
+  }
+
+  const object = await c.env.PROCESSED.get(key);
+  if (!object) {
+    return c.json({ error: 'File not found' }, 404);
+  }
+
+  const headers = new Headers();
+  headers.set('Content-Type', object.httpMetadata?.contentType || 'application/pdf');
+  headers.set('Cache-Control', 'private, max-age=3600');
+  return new Response(object.body, { headers });
+});
+
 // ---------------------------------------------------------------------------
 // Protected routes (auth + rate limiting)
 // ---------------------------------------------------------------------------
@@ -231,6 +258,7 @@ protectedApi.route('/books', booksRoutes);
 protectedApi.route('/stripe', stripeRoutes);
 protectedApi.route('/share', shareRoutes);
 protectedApi.route('/user', userRoutes);
+protectedApi.route('/admin', adminRoutes);
 
 // Mount protected routes under /api
 app.route('/api', protectedApi);
