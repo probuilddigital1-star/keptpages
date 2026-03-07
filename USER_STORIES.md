@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-05
+Last Updated: 2026-03-07
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -99,15 +99,11 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Completed: 65/85** | **Remaining: 20**
 
-### Prioritized Roadmap (as of 2026-03-05)
+### Prioritized Roadmap (as of 2026-03-07)
 
-**Phase 1 — Fix & Validate:** US-EXPORT-1 (PDF bug fix), US-QA-1 (unit tests), US-QA-9 (security), US-QA-8 (mobile)
-**Phase 2 — Revenue Features:** US-EXPORT-2→6 (Keeper PDF customization)
-**Phase 2.5 — Enhanced Export Design:** US-EXPORT-7→9 (color themes, decorations, scan images)
-**Phase 3 — Quality & Polish:** US-QA-2 (integration), US-QA-6 (perf), US-QA-7 (a11y), US-QA-4 (monitoring), US-QA-5 (analytics)
+**DONE — Phases 1–3, 5.5, 6:** Export, QA, Book Designer, Print Options, Order Tracking & Admin
 **Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
-**Phase 5 — Launch Readiness:** US-QA-3 (E2E), US-QA-10→12 (pre-launch), US-PAY-8 (Lulu)
-**Phase 5.5 — Print Customization:** US-PAY-11→13 (print option selectors, backend wiring, Lulu integration)
+**Phase 5 — Launch Readiness:** US-QA-3 (E2E), US-QA-10→12 (pre-launch)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
 
 ### Key Credentials & Resources (do not commit)
@@ -137,11 +133,12 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 |------|---------|-----------|-----------|
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
 | **BLOG** — Blog Feature | 13 | 0 | 13 |
-| **PAY** — Payments & Subscriptions | 13 | 13 | 0 |
+| **PAY** — Payments & Subscriptions | 16 | 16 | 0 |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
-| **EXPORT** — PDF Export Customization | 6 | 1 | 5 |
-| **QA** — Testing & Launch Readiness | 12 | 3 | 9 |
-| **Total** | **66** | **36** | **30** |
+| **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
+| **QA** — Testing & Launch Readiness | 12 | 7 | 5 |
+| **BOOK** — Visual Book Designer | 13 | 13 | 0 |
+| **Total** | **85** | **65** | **20** |
 
 ---
 
