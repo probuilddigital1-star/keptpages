@@ -46,11 +46,10 @@ share.post(
     // Generate a unique share token
     const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
-    // Default permissions
+    // Whitelist allowed permissions — canView is always true (server invariant)
     const permissions = {
       canView: true,
-      canDownload: body.permissions?.canDownload ?? false,
-      ...body.permissions,
+      canDownload: body.permissions?.canDownload === true,
     };
 
     // Calculate expiration

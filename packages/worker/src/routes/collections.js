@@ -584,7 +584,6 @@ collections.post('/:id/export', async (c) => {
 
   // Filter and reorder by documentIds if provided
   if (Array.isArray(documentIds) && documentIds.length > 0) {
-    const idSet = new Set(documentIds);
     const docMap = new Map(documents.map((d) => [d._scanId, d]));
     const filtered = documentIds
       .filter((id) => docMap.has(id))
@@ -627,7 +626,7 @@ collections.post('/:id/export', async (c) => {
     }
   }
 
-  // Remove internal fields before passing to PDF
+  // Remove internal ID fields before passing to PDF (_imageBytes and _mimeType are kept for PDF image embedding)
   documents = documents.map(({ _scanId, _r2Key, ...rest }) => rest);
 
   if (documents.length === 0) {

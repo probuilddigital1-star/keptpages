@@ -148,8 +148,8 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
       </div>
 
-      {/* Mobile sidebar (bottom drawer) */}
-      <div className="md:hidden border-t border-border-light bg-cream-surface overflow-y-auto max-h-64">
+      {/* Mobile sidebar (bottom drawer — expandable) */}
+      <div className="md:hidden border-t border-border-light bg-cream-surface overflow-y-auto max-h-[50vh]">
         <DesignerSidebar mode={mode} />
       </div>
     </div>

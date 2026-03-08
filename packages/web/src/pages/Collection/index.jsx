@@ -272,6 +272,9 @@ export default function CollectionPage() {
           <h1
             className="font-display text-2xl sm:text-3xl font-bold text-walnut cursor-pointer hover:text-terracotta transition-colors"
             onClick={() => setEditingName(true)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingName(true); } }}
+            role="button"
+            tabIndex={0}
             title="Click to edit"
           >
             {collection.name}
@@ -299,6 +302,9 @@ export default function CollectionPage() {
           <p
             className="font-body text-walnut-secondary mt-2 cursor-pointer hover:text-walnut transition-colors"
             onClick={() => setEditingDesc(true)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingDesc(true); } }}
+            role="button"
+            tabIndex={0}
             title="Click to edit"
           >
             {collection.description || 'Add a description...'}

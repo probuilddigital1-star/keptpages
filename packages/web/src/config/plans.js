@@ -135,6 +135,7 @@ export function calculateOptionModifiers(printOptions) {
 export function calculateBookPrice(pageCount, printOptions = DEFAULT_PRINT_OPTIONS) {
   const extraPages = Math.max(0, pageCount - BOOK_PRICING.freePages);
   const basePrice = BOOK_PRICING.base + extraPages * BOOK_PRICING.perExtraPage;
+  const cappedBase = Math.min(basePrice, BOOK_PRICING.max);
   const optionModifiers = calculateOptionModifiers(printOptions);
-  return Math.min(basePrice + optionModifiers, BOOK_PRICING.max + optionModifiers);
+  return cappedBase + optionModifiers;
 }

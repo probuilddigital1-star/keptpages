@@ -102,9 +102,12 @@ user.put('/profile', async (c) => {
     if (typeof url !== 'string' || url.length > 2048) {
       return c.json({ error: 'Invalid avatar_url' }, 400);
     }
-    // Only allow relative API paths or HTTPS URLs
+    // Only allow relative API paths or HTTPS URLs, block traversal sequences
     if (url && !url.startsWith('/user/avatar/') && !url.startsWith('https://')) {
       return c.json({ error: 'avatar_url must be an API path or HTTPS URL' }, 400);
+    }
+    if (url && (url.includes('..') || url.includes('%2e') || url.includes('%2E'))) {
+      return c.json({ error: 'Invalid avatar_url' }, 400);
     }
     updates.avatar_url = url;
   }
@@ -285,7 +288,9 @@ user.get('/export/:key{.+}', async (c) => {
 
   // Ensure the user can only download their own exports
   // Block path traversal sequences before checking ownership
-  if (key.includes('..') || key.includes('%2e') || key.includes('%2E')) {
+  // Block path traversal: literal .., single-encoded %2e/%2E, double-encoded %252e/%252E
+  const decodedKey = decodeURIComponent(key);
+  if (decodedKey.includes('..') || key.includes('..') || key.includes('%2e') || key.includes('%2E') || key.includes('%25')) {
     return c.json({ error: 'Forbidden' }, 403);
   }
   if (!key.startsWith(`exports/${authUser.id}/`)) {

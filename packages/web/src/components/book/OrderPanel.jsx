@@ -59,10 +59,6 @@ const POST_ORDER_STATUSES = ['ordered', 'printing', 'shipped', 'delivered', 'can
 export default function OrderPanel({ bookId }) {
   const navigate = useNavigate();
   const book = useBookStore((s) => s.book);
-
-  // Show order status view for post-order books
-  const isPostOrder = POST_ORDER_STATUSES.includes(book?.status);
-  if (isPostOrder) return <OrderStatusPanel bookId={bookId} />;
   const generatingPdf = useBookStore((s) => s.generatingPdf);
   const generatePdf = useBookStore((s) => s.generatePdf);
   const orderBook = useBookStore((s) => s.orderBook);
@@ -78,14 +74,6 @@ export default function OrderPanel({ bookId }) {
   const handleOptionChange = useCallback((group, value) => {
     setPrintOptions((prev) => ({ ...prev, [group]: value }));
   }, []);
-
-  const pageCount = book?.pageCount || 0;
-  const unitPrice = calculateBookPrice(pageCount, printOptions);
-  const discount = quantity >= BOOK_PRICING.familyPackMinQty ? BOOK_PRICING.familyPackDiscount : 0;
-  const totalCents = Math.round(unitPrice * quantity * (1 - discount));
-
-  const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.street1.trim() &&
-    shipping.city.trim() && shipping.state.trim() && shipping.postalCode.trim() && book?.status === 'ready';
 
   const handleGenerate = useCallback(async () => {
     if (!bookId) return;
@@ -126,6 +114,18 @@ export default function OrderPanel({ bookId }) {
       toast('Failed to place order.', 'error');
     }
   }, [bookId, shipping, quantity, printOptions, orderBook, navigate]);
+
+  // Show order status view for post-order books (after all hooks)
+  const isPostOrder = POST_ORDER_STATUSES.includes(book?.status);
+  if (isPostOrder) return <OrderStatusPanel bookId={bookId} />;
+
+  const pageCount = book?.pageCount || 0;
+  const unitPrice = calculateBookPrice(pageCount, printOptions);
+  const discount = quantity >= BOOK_PRICING.familyPackMinQty ? BOOK_PRICING.familyPackDiscount : 0;
+  const totalCents = Math.round(unitPrice * quantity * (1 - discount));
+
+  const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.street1.trim() &&
+    shipping.city.trim() && shipping.state.trim() && shipping.postalCode.trim() && book?.status === 'ready';
 
   return (
     <div className="max-w-2xl mx-auto w-full">

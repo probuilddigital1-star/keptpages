@@ -23,7 +23,7 @@ async function request(method, path, { body, headers = {}, isPublic = false } = 
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(error.message || 'Request failed');
+    throw new Error(error.error || error.message || 'Request failed');
   }
 
   return res.json();

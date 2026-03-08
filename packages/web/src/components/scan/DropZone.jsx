@@ -11,7 +11,11 @@ export default function DropZone({
 
   const handleFile = useCallback(
     (file) => {
-      if (file && file.type.startsWith('image/')) {
+      if (!file) return;
+      const isImageType = file.type.startsWith('image/');
+      const ext = file.name?.split('.').pop()?.toLowerCase();
+      const isHeic = ext === 'heic' || ext === 'heif';
+      if (isImageType || isHeic) {
         onFile?.(file);
       }
     },

@@ -226,7 +226,7 @@ books.post('/:id/cover-photo', async (c) => {
   // Verify ownership
   const { data: book, error } = await supabase
     .from('books')
-    .select('id')
+    .select('id, cover_design')
     .eq('id', bookId)
     .eq('user_id', user.id)
     .single();
@@ -255,11 +255,11 @@ books.post('/:id/cover-photo', async (c) => {
     httpMetadata: { contentType: mimeType },
   });
 
-  // Store the key in cover_design
+  // Merge photo data into existing cover_design to preserve other fields
   await supabase
     .from('books')
     .update({
-      cover_design: { photoKey, photoMimeType: mimeType },
+      cover_design: { ...(book.cover_design || {}), photoKey, photoMimeType: mimeType },
       updated_at: new Date().toISOString(),
     })
     .eq('id', bookId);
@@ -394,6 +394,7 @@ books.post('/:id/generate', async (c) => {
       .select(`
         sort_order,
         scans (
+          id,
           title,
           document_type,
           extracted_data

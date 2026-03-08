@@ -43,7 +43,7 @@ export const useScanStore = create((set, get) => ({
     try {
       const result = await api.post(`/scan/${scanId}/process`);
       set((state) => ({
-        currentScan: { ...state.currentScan, ...result },
+        currentScan: state.currentScan ? { ...state.currentScan, ...result } : result,
         scans: state.scans.map((s) => (s.id === scanId ? { ...s, ...result } : s)),
         processing: false,
       }));
@@ -59,7 +59,7 @@ export const useScanStore = create((set, get) => ({
     try {
       const result = await api.post(`/scan/${scanId}/reprocess`);
       set((state) => ({
-        currentScan: { ...state.currentScan, ...result },
+        currentScan: state.currentScan ? { ...state.currentScan, ...result } : result,
         scans: state.scans.map((s) => (s.id === scanId ? { ...s, ...result } : s)),
         processing: false,
       }));

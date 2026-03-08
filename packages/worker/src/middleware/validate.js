@@ -119,6 +119,10 @@ export function validate(schema) {
       return c.json({ error: 'Invalid JSON in request body' }, 400);
     }
 
+    if (!body || typeof body !== 'object') {
+      return c.json({ error: 'Request body must be a JSON object' }, 400);
+    }
+
     const allErrors = [];
 
     for (const [fieldName, rules] of Object.entries(schema)) {

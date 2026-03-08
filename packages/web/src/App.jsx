@@ -5,7 +5,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { Spinner } from '@/components/ui/Spinner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { usePageTracking } from '@/hooks/usePageTracking';
-import { AuthGuard, GuestGuard } from '@/routes/guards';
+import { AuthGuard, GuestGuard, AdminGuard } from '@/routes/guards';
 import { MarketingLayout } from '@/components/layout/MarketingLayout';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PublicLayout } from '@/components/layout/PublicLayout';
@@ -83,6 +83,12 @@ export default function App() {
               <Route path="/app/collection/:id" element={<CollectionPage />} />
               <Route path="/app/book/:id" element={<BookPage />} />
               <Route path="/app/settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
+
+          {/* Admin pages (authenticated + admin role) */}
+          <Route element={<AdminGuard />}>
+            <Route element={<AppLayout />}>
               <Route path="/app/admin/orders" element={<AdminOrders />} />
             </Route>
           </Route>

@@ -209,7 +209,7 @@ app.post('/api/stripe/webhook', async (c) => {
     return c.json({ received: true });
   } catch (err) {
     console.error('Webhook processing error:', err);
-    return c.json({ received: true, error: err.message });
+    return c.json({ received: false, error: err.message }, 500);
   }
 });
 

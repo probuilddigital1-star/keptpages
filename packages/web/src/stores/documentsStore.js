@@ -81,10 +81,13 @@ export const useDocumentsStore = create((set, get) => ({
       await api.put(`/collections/${collectionId}/reorder`, { orderedIds });
       set((state) => {
         const existing = state.documents[collectionId] || [];
-        const reordered = orderedIds.map((id, index) => {
-          const doc = existing.find((d) => d.id === id);
-          return { ...doc, sortOrder: index };
-        });
+        const reordered = orderedIds
+          .map((id, index) => {
+            const doc = existing.find((d) => d.id === id);
+            if (!doc) return null;
+            return { ...doc, sortOrder: index };
+          })
+          .filter(Boolean);
         return {
           documents: {
             ...state.documents,

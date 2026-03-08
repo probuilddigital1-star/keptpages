@@ -120,6 +120,8 @@ scan.post('/', async (c) => {
     .single();
 
   if (dbError) {
+    // Roll back the R2 upload to avoid orphaned objects
+    await env.UPLOADS.delete(r2Key).catch(() => {});
     console.error('Failed to create scan record:', dbError);
     return c.json({ error: 'Failed to create scan record' }, 500);
   }
@@ -158,15 +160,18 @@ scan.post('/:id/process', async (c) => {
     return c.json({ error: 'Scan not found' }, 404);
   }
 
-  if (scanRecord.status === 'processing') {
-    return c.json({ error: 'Scan is already being processed' }, 409);
-  }
-
-  // Update status to processing
-  await supabase
+  // Atomic claim: only transition to 'processing' if not already processing
+  const { data: claimed, error: claimError } = await supabase
     .from('scans')
     .update({ status: 'processing', processed_at: null })
-    .eq('id', scanId);
+    .eq('id', scanId)
+    .neq('status', 'processing')
+    .select('id')
+    .single();
+
+  if (claimError || !claimed) {
+    return c.json({ error: 'Scan is already being processed' }, 409);
+  }
 
   try {
     // Fetch image from R2
@@ -261,11 +266,19 @@ scan.post('/:id/reprocess', async (c) => {
     return c.json({ error: 'Scan not found' }, 404);
   }
 
-  // Update status
-  await supabase
+  // Atomic claim: only transition to 'reprocessing' if not already in progress
+  const { data: claimed, error: claimError } = await supabase
     .from('scans')
     .update({ status: 'reprocessing' })
-    .eq('id', scanId);
+    .eq('id', scanId)
+    .neq('status', 'processing')
+    .neq('status', 'reprocessing')
+    .select('id')
+    .single();
+
+  if (claimError || !claimed) {
+    return c.json({ error: 'Scan is already being processed' }, 409);
+  }
 
   try {
     // Fetch image from R2

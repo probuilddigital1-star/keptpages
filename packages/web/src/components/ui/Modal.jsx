@@ -102,7 +102,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }) {
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-walnut-muted hover:text-walnut transition-colors p-1 -mr-1"
+              className="text-walnut-muted hover:text-walnut transition-colors p-2 -mr-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

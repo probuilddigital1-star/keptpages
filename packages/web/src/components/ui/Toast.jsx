@@ -95,7 +95,7 @@ export function ToastContainer() {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 w-80"
+      className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 w-80"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} {...t} onDismiss={remove} />

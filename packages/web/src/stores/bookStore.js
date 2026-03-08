@@ -193,7 +193,7 @@ const blueprintSlice = (set, get) => ({
       return {
         blueprint: {
           ...state.blueprint,
-          additionalImages: [...state.blueprint.additionalImages, imageData],
+          additionalImages: [...(state.blueprint.additionalImages || []), imageData],
         },
         dirty: true,
       };
@@ -206,7 +206,7 @@ const blueprintSlice = (set, get) => ({
       return {
         blueprint: {
           ...state.blueprint,
-          additionalImages: state.blueprint.additionalImages.filter((img) => img.key !== key),
+          additionalImages: (state.blueprint.additionalImages || []).filter((img) => img.key !== key),
         },
         dirty: true,
       };
