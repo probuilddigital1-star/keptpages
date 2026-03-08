@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useScanStore } from '@/stores/scanStore';
@@ -27,7 +27,11 @@ export default function ScanPage() {
   const collectionName = location.state?.collectionName;
   const { uploadScan, processScan, uploadProgress, processing } = useScanStore();
   const addToCollection = useDocumentsStore((s) => s.addToCollection);
-  const { tier, usage, limits, canScan, upgrade, loading: upgradeLoading } = useSubscriptionStore();
+  const { tier, usage, limits, canScan, upgrade, loading: upgradeLoading, fetchSubscription } = useSubscriptionStore();
+
+  useEffect(() => {
+    fetchSubscription().catch(() => {});
+  }, [fetchSubscription]);
 
   const [step, setStep] = useState(STEP_CHOOSE);
   const [rawFile, setRawFile] = useState(null);

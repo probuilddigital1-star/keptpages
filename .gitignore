@@ -12,3 +12,6 @@ coverage/
 screenshot-*.html
 screenshot-*.png
 ss-*.png
+test-results/
+playwright-report/
+playwright/.cache/

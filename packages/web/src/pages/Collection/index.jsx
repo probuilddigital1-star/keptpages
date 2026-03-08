@@ -20,6 +20,7 @@ export default function CollectionPage() {
 
   // Store state
   const collections = useCollectionsStore((s) => s.collections);
+  const collectionsLoading = useCollectionsStore((s) => s.loading);
   const updateCollection = useCollectionsStore((s) => s.updateCollection);
   const deleteCollection = useCollectionsStore((s) => s.deleteCollection);
   const fetchCollections = useCollectionsStore((s) => s.fetchCollections);
@@ -202,8 +203,8 @@ export default function CollectionPage() {
     [sectionTitle],
   );
 
-  // Loading state if collection not yet loaded
-  if (!collection && collections.length === 0) {
+  // Loading state if collections haven't loaded yet
+  if (!collection && collectionsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Spinner size="lg" />

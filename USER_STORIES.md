@@ -73,7 +73,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-EXPORT-9 | Embed original scan images | DONE | includeOriginalScans option, scan images rendered as full-page with caption before document text |
 | US-QA-1 | Unit test suite | DONE | 538 tests (128 worker + 410 frontend), 44 test files, all passing. Fixed 41 stale test assertions. |
 | US-QA-2 | Integration tests | DONE | 46 integration tests covering scan, collections, share, books routes. Queue-based Supabase mock. |
-| US-QA-3 | E2E tests | TODO | |
+| US-QA-3 | E2E tests | DONE | 32 Playwright tests (7 specs), 2 bug fixes (Scan fetchSubscription, Collection spinner), boundary/error/equivalence testing |
 | US-QA-4 | Error monitoring | DONE | ErrorBoundary component, captureError/captureMessage utility. Sentry-ready (install @sentry/react + set DSN to activate). |
 | US-QA-5 | Analytics | DONE | trackPageView/trackEvent utility, usePageTracking hook wired into App. Plausible-compatible (set VITE_ANALYTICS_ID to activate). |
 | US-QA-6 | Performance audit | DONE | Non-blocking font loading (preload + media swap), Stripe in separate chunk, manual chunks for vendor/supabase/stripe. |
@@ -97,13 +97,13 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BOOK-12 | Auto-save, undo/redo & keyboard shortcuts | DONE | zundo temporal middleware, Ctrl+Z/Shift+Z, Delete/arrow nudge, 5s auto-save, save status indicator |
 | US-BOOK-13 | Testing & production polish | DONE | 11 blueprint PDF tests, hexToRgb 3-char fix, responsive sidebar, 642 total tests passing, clean build |
 
-**Completed: 65/85** | **Remaining: 20**
+**Completed: 66/85** | **Remaining: 19**
 
 ### Prioritized Roadmap (as of 2026-03-07)
 
 **DONE — Phases 1–3, 5.5, 6:** Export, QA, Book Designer, Print Options, Order Tracking & Admin
 **Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
-**Phase 5 — Launch Readiness:** US-QA-3 (E2E), US-QA-10→12 (pre-launch)
+**Phase 5 — Launch Readiness:** US-QA-10→12 (pre-launch)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
 
 ### Key Credentials & Resources (do not commit)
@@ -136,9 +136,9 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **PAY** — Payments & Subscriptions | 16 | 16 | 0 |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
-| **QA** — Testing & Launch Readiness | 12 | 7 | 5 |
+| **QA** — Testing & Launch Readiness | 12 | 8 | 4 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
-| **Total** | **85** | **65** | **20** |
+| **Total** | **85** | **66** | **19** |
 
 ---
 
