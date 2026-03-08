@@ -1,12 +1,16 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { useBookStore } from '@/stores/bookStore';
 import { COLOR_SCHEMES, COVER_LAYOUTS } from '../constants';
+import { toast } from '@/components/ui/Toast';
 
 export default function CoverDesignerPanel() {
   const blueprint = useBookStore((s) => s.blueprint);
+  const book = useBookStore((s) => s.book);
   const updateCoverDesign = useBookStore((s) => s.updateCoverDesign);
   const updateCover = useBookStore((s) => s.updateCover);
+  const uploadCoverPhoto = useBookStore((s) => s.uploadCoverPhoto);
+  const [uploading, setUploading] = useState(false);
 
   const cover = blueprint?.coverDesign || {};
 
@@ -108,21 +112,43 @@ export default function CoverDesignerPanel() {
       {/* Cover photo */}
       <div>
         <label className="font-ui text-xs font-medium text-walnut mb-1.5 block">Cover Photo</label>
-        <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-md cursor-pointer hover:border-terracotta/40 hover:bg-cream-alt transition-all">
+        {cover.photo && (
+          <img src={cover.photo} alt="Cover preview" className="w-full h-24 object-cover rounded-md mb-2" />
+        )}
+        <label className={clsx(
+          "flex items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-md cursor-pointer hover:border-terracotta/40 hover:bg-cream-alt transition-all",
+          uploading && "opacity-50 pointer-events-none"
+        )}>
           <input
             type="file"
             accept="image/*"
             className="sr-only"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               const reader = new FileReader();
-              reader.onload = () => handleChange({ photo: reader.result });
+              reader.onload = async () => {
+                const dataUrl = reader.result;
+                // Show preview immediately
+                handleChange({ photo: dataUrl });
+                // Upload to R2 for PDF generation
+                if (book?.id) {
+                  setUploading(true);
+                  try {
+                    const result = await uploadCoverPhoto(book.id, dataUrl);
+                    handleChange({ photoKey: result.photoKey, photoMimeType: 'image/jpeg' });
+                  } catch {
+                    toast('Failed to upload cover photo', 'error');
+                  } finally {
+                    setUploading(false);
+                  }
+                }
+              };
               reader.readAsDataURL(file);
             }}
           />
           <span className="font-ui text-xs text-walnut-muted">
-            {cover.photo ? 'Change photo' : 'Upload photo'}
+            {uploading ? 'Uploading...' : cover.photo ? 'Change photo' : 'Upload photo'}
           </span>
         </label>
       </div>

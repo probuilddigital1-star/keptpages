@@ -843,6 +843,24 @@ export async function generateCoverPdf(coverData, pageCount, env) {
         size: 16, font: fontRegular, color: frontSubColor,
       });
     }
+    // Cover photo for left-aligned layout (below author)
+    if (coverData.photoBytes && layout !== 'photo-background') {
+      try {
+        const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
+        const photo = await pdfDoc[embedFn](coverData.photoBytes);
+        const maxW = TRIM_WIDTH * 0.6;
+        const maxH = coverHeight * 0.25;
+        const photoDims = photo.scaleToFit(maxW, maxH);
+        coverPage.drawImage(photo, {
+          x: leftPad,
+          y: coverBleed + 90,
+          width: photoDims.width,
+          height: photoDims.height,
+        });
+      } catch (err) {
+        console.error('Cover photo embed failed (left-aligned):', err?.message || err);
+      }
+    }
   } else {
     // centered (and photo-background) layout
     const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
@@ -865,6 +883,24 @@ export async function generateCoverPdf(coverData, pageCount, env) {
         x: frontCenterX - authorWidth / 2, y: coverHeight * 0.3,
         size: authorSize, font: fontRegular, color: frontSubColor,
       });
+    }
+    // Cover photo for centered layout (between author and bottom)
+    if (coverData.photoBytes && layout !== 'photo-background') {
+      try {
+        const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
+        const photo = await pdfDoc[embedFn](coverData.photoBytes);
+        const maxW = TRIM_WIDTH * 0.5;
+        const maxH = coverHeight * 0.2;
+        const photoDims = photo.scaleToFit(maxW, maxH);
+        coverPage.drawImage(photo, {
+          x: frontCenterX - photoDims.width / 2,
+          y: coverBleed + 60,
+          width: photoDims.width,
+          height: photoDims.height,
+        });
+      } catch (err) {
+        console.error('Cover photo embed failed (centered):', err?.message || err);
+      }
     }
   }
 

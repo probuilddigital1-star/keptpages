@@ -365,10 +365,21 @@ export const useBookStore = create(
       generatePdf: async (bookId) => {
         set({ generatingPdf: true });
         try {
+          // Upload cover photo to R2 if it exists as a data URL but hasn't been uploaded
+          const { blueprint, uploadCoverPhoto: doUpload } = get();
+          if (blueprint?.coverDesign?.photo && !blueprint?.coverDesign?.photoKey) {
+            try {
+              const result = await doUpload(bookId, blueprint.coverDesign.photo);
+              get().updateCoverDesign({ photoKey: result.photoKey, photoMimeType: 'image/jpeg' });
+            } catch {
+              // Continue without cover photo if upload fails
+            }
+          }
+
           // Save blueprint before generating
-          const { blueprint } = get();
-          if (blueprint?.pages?.length) {
-            await api.put(`/books/${bookId}`, { customization: blueprint });
+          const currentBlueprint = get().blueprint;
+          if (currentBlueprint?.pages?.length) {
+            await api.put(`/books/${bookId}`, { customization: currentBlueprint });
           }
           const result = await api.post(`/books/${bookId}/generate`);
           set((state) => ({
