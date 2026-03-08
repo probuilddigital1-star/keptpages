@@ -1,0 +1,42 @@
+{
+  "name": "KeptPages",
+  "short_name": "KeptPages",
+  "description": "Preserve handwritten family recipes, letters, and journals. AI-powered text extraction and beautiful hardcover book printing.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#FAF4E8",
+  "theme_color": "#FAF4E8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/app/scan",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "photo",
+          "accept": ["image/jpeg", "image/png", "image/heic"]
+        }
+      ]
+    }
+  },
+  "categories": ["lifestyle", "productivity", "utilities"]
+}

@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeptPages — Preserve Your Family's Handwritten Treasures</title>
+    <meta name="description" content="Snap a photo of grandma's handwritten recipes, old letters, or any treasured document. AI preserves every word beautifully. Print gorgeous hardcover books.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ==============================
+           CSS VARIABLES
+           ============================== */
+        :root {
+            --bg: #FAF4E8;
+            --bg-alt: #F3EBDB;
+            --surface: #FFFDF7;
+            --surface-warm: #FBF6EE;
+            --border: #E5D9C8;
+            --border-light: #EDE4D6;
+            --text: #2C1810;
+            --text-secondary: #6B5B4D;
+            --text-muted: #9A8B7D;
+            --accent: #C65D3E;
+            --accent-hover: #B04E32;
+            --accent-light: rgba(198, 93, 62, 0.08);
+            --accent-glow: rgba(198, 93, 62, 0.2);
+            --sage: #5E7652;
+            --sage-light: rgba(94, 118, 82, 0.1);
+            --gold: #B8923F;
+            --gold-light: rgba(184, 146, 63, 0.12);
+            --aged-paper: #F0E2C8;
+            --aged-paper-dark: #E4D3B4;
+            --coffee-stain: rgba(139, 90, 43, 0.12);
+            --shadow-sm: 0 1px 3px rgba(44, 24, 16, 0.06);
+            --shadow-md: 0 4px 16px rgba(44, 24, 16, 0.08);
+            --shadow-lg: 0 8px 32px rgba(44, 24, 16, 0.1);
+            --shadow-xl: 0 16px 48px rgba(44, 24, 16, 0.12);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+        }
+
+        /* ==============================
+           RESET & BASE
+           ============================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: 'Newsreader', Georgia, serif;
+            font-size: 17px;
+            line-height: 1.65;
+            color: var(--text);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        /* Top color bar */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--gold), var(--accent));
+            z-index: 1001;
+        }
+
+        /* Grain overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0.018;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        img { max-width: 100%; display: block; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { color: var(--accent-hover); }
+
+        /* ==============================
+           TYPOGRAPHY
+           ============================== */
+        h1, h2, h3, h4 {
+            font-family: 'Fraunces', Georgia, serif;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--text);
+        }
+
+        .ui-text {
+            font-family: 'Outfit', system-ui, sans-serif;
+        }
+
+        .handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        /* ==============================
+           LAYOUT
+           ============================== */
+        .container {
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            padding: 72px 0;
+        }
+
+        /* Section divider ornament */
+        .ornament {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: var(--border);
+        }
+
+        .ornament::before,
+        .ornament::after {
+            content: '';
+            width: 40px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .ornament span {
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        /* ==============================
+           ANIMATIONS
+           ============================== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+            50% { transform: translateY(-6px) rotate(-1deg); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+            50% { box-shadow: 0 0 0 12px rgba(198, 93, 62, 0); }
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+
+        /* ==============================
+           NAV
+           ============================== */
+        nav {
+            position: fixed;
+            top: 3px;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 14px 0;
+            transition: background 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+        }
+
+        nav.scrolled {
+            background: rgba(250, 244, 232, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 1px 8px rgba(44, 24, 16, 0.06);
+            padding: 10px 0;
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            font-family: 'Fraunces', serif;
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-cta {
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 18px;
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ==============================
+           HERO
+           ============================== */
+        .hero {
+            padding: 120px 0 60px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(198, 93, 62, 0.04) 0%, transparent 60%);
+            min-height: 100svh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 0.2s forwards;
+        }
+
+        .hero-title {
+            font-size: 34px;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.5px;
+            margin-bottom: 22px;
+            color: var(--text);
+        }
+
+        .hero-title .word {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .hero-title .word:nth-child(1) { animation-delay: 0.3s; }
+        .hero-title .word:nth-child(2) { animation-delay: 0.38s; }
+        .hero-title .word:nth-child(3) { animation-delay: 0.46s; }
+        .hero-title .word:nth-child(4) { animation-delay: 0.58s; }
+        .hero-title .word:nth-child(5) { animation-delay: 0.66s; }
+        .hero-title .word:nth-child(6) { animation-delay: 0.74s; }
+
+        .hero-title .highlight {
+            color: var(--accent);
+            position: relative;
+        }
+
+        .hero-title .highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: -2px;
+            right: -2px;
+            height: 8px;
+            background: var(--accent-light);
+            border-radius: 4px;
+            z-index: -1;
+        }
+
+        .hero-subtitle {
+            font-size: 17px;
+            line-height: 1.65;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            max-width: 360px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 0.85s forwards;
+        }
+
+        .hero-cta-wrap {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 1s forwards;
+        }
+
+        .btn-primary {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 36px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 16px rgba(198, 93, 62, 0.25);
+            letter-spacing: 0.3px;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(198, 93, 62, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.2s ease;
+        }
+
+        .btn-primary:hover svg {
+            transform: translateX(3px);
+        }
+
+        .hero-note {
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 14px;
+            letter-spacing: 0.2px;
+        }
+
+        .hero-note span {
+            margin: 0 6px;
+            opacity: 0.4;
+        }
+
+        /* ==============================
+           TRUST BAR
+           ============================== */
+        .trust-bar {
+            padding: 32px 0;
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            background: var(--surface-warm);
+        }
+
+        .trust-items {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .trust-item {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .trust-item svg {
+            width: 15px;
+            height: 15px;
+            color: var(--sage);
+            flex-shrink: 0;
+        }
+
+        /* ==============================
+           TRANSFORMATION SECTION
+           ============================== */
+        .transformation {
+            padding: 80px 0;
+            background: var(--bg);
+        }
+
+        .section-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 30px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .section-title em {
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .section-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 40px;
+            max-width: 340px;
+        }
+
+        /* Before Card — Aged Recipe */
+        .card-before {
+            position: relative;
+            background: var(--aged-paper);
+            background-image:
+                repeating-linear-gradient(
+                    transparent,
+                    transparent 29px,
+                    rgba(139, 90, 43, 0.12) 29px,
+                    rgba(139, 90, 43, 0.12) 30px
+                );
+            padding: 28px 22px 24px;
+            border-radius: 2px;
+            transform: rotate(-1.2deg);
+            box-shadow:
+                2px 3px 8px rgba(44, 24, 16, 0.1),
+                inset 0 0 40px rgba(139, 90, 43, 0.05);
+            margin-bottom: 8px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Coffee stain */
+        .card-before::before {
+            content: '';
+            position: absolute;
+            width: 70px;
+            height: 55px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse, var(--coffee-stain) 0%, transparent 70%);
+            top: 12px;
+            right: 18px;
+            transform: rotate(15deg);
+        }
+
+        /* Aged edge darkening */
+        .card-before::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 2px;
+            background:
+                linear-gradient(to right, rgba(100, 60, 20, 0.06), transparent 15%, transparent 85%, rgba(100, 60, 20, 0.06)),
+                linear-gradient(to bottom, rgba(100, 60, 20, 0.04), transparent 10%, transparent 90%, rgba(100, 60, 20, 0.06));
+            pointer-events: none;
+        }
+
+        .card-before-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-before-label::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--gold);
+        }
+
+        .card-before .recipe-title {
+            font-family: 'Caveat', cursive;
+            font-size: 26px;
+            font-weight: 600;
+            color: #3D2B1F;
+            margin-bottom: 6px;
+            line-height: 1.2;
+        }
+
+        .card-before .recipe-text {
+            font-family: 'Caveat', cursive;
+            font-size: 18px;
+            color: #4A3728;
+            line-height: 1.67;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-before .recipe-text .faded {
+            opacity: 0.65;
+        }
+
+        .card-before .recipe-note {
+            font-family: 'Caveat', cursive;
+            font-size: 16px;
+            color: #6B4D35;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(139, 90, 43, 0.2);
+            font-style: italic;
+        }
+
+        /* Tape effect */
+        .tape {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-1deg);
+            width: 80px;
+            height: 22px;
+            background: rgba(255, 252, 220, 0.55);
+            border: 1px solid rgba(200, 190, 150, 0.3);
+            z-index: 2;
+        }
+
+        /* Arrow divider */
+        .transform-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 24px 0;
+            color: var(--accent);
+        }
+
+        .transform-arrow .line {
+            width: 32px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .transform-arrow .icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            border: 1.5px solid rgba(198, 93, 62, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .transform-arrow svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent);
+        }
+
+        .transform-arrow .label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        /* After Card — Beautiful Typeset */
+        .card-after {
+            background: var(--surface);
+            padding: 32px 24px 28px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-after::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--gold));
+        }
+
+        .card-after-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--sage);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-after-label::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--sage);
+        }
+
+        .card-after .recipe-title-after {
+            font-family: 'Fraunces', serif;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .card-after .recipe-collection {
+            font-family: 'Newsreader', serif;
+            font-style: italic;
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .card-after .recipe-divider {
+            width: 40px;
+            height: 1.5px;
+            background: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .card-after .recipe-section-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .card-after .ingredient-list {
+            list-style: none;
+            margin-bottom: 22px;
+        }
+
+        .card-after .ingredient-list li {
+            font-size: 15px;
+            padding: 4px 0;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            color: var(--text);
+            line-height: 1.45;
+        }
+
+        .card-after .ingredient-list li::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+            margin-top: 7px;
+        }
+
+        .card-after .ingredient-qty {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-secondary);
+            min-width: 70px;
+        }
+
+        .card-after .instruction-list {
+            list-style: none;
+            margin-bottom: 20px;
+            counter-reset: steps;
+        }
+
+        .card-after .instruction-list li {
+            font-size: 15px;
+            padding: 6px 0;
+            display: flex;
+            gap: 12px;
+            color: var(--text);
+            line-height: 1.55;
+            counter-increment: steps;
+        }
+
+        .card-after .instruction-list li::before {
+            content: counter(steps);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .card-after .recipe-note-after {
+            background: var(--gold-light);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            color: var(--text-secondary);
+            border-left: 3px solid var(--gold);
+            font-style: italic;
+            line-height: 1.5;
+        }
+
+        .card-after .recipe-note-after strong {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--gold);
+            display: block;
+            margin-bottom: 4px;
+            font-style: normal;
+        }
+
+        /* ==============================
+           HOW IT WORKS
+           ============================== */
+        .how-it-works {
+            background: var(--bg-alt);
+            position: relative;
+        }
+
+        .how-it-works::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+        }
+
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 8px;
+        }
+
+        .step-card {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .step-number {
+            font-family: 'Fraunces', serif;
+            font-weight: 800;
+            font-size: 32px;
+            color: var(--accent);
+            line-height: 1;
+            opacity: 0.3;
+            flex-shrink: 0;
+            width: 36px;
+        }
+
+        .step-content h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .step-content p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        /* ==============================
+           USE CASES
+           ============================== */
+        .use-cases {
+            background: var(--bg);
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        .use-case-card {
+            background: var(--surface);
+            padding: 22px 18px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .use-case-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .use-case-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .use-case-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .use-case-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        /* ==============================
+           BOOK PREVIEW
+           ============================== */
+        .book-section {
+            background: var(--bg-alt);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .book-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+        }
+
+        .book-showcase {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 40px 0 32px;
+        }
+
+        .book-3d {
+            perspective: 800px;
+            width: 200px;
+            height: 270px;
+            position: relative;
+            margin-bottom: 32px;
+        }
+
+        .book-cover {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, var(--accent) 0%, #8B3520 100%);
+            border-radius: 2px 10px 10px 2px;
+            transform: rotateY(-18deg);
+            transform-origin: left center;
+            box-shadow:
+                6px 6px 20px rgba(44, 24, 16, 0.25),
+                2px 0 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 24px;
+            overflow: hidden;
+            transition: transform 0.4s ease;
+        }
+
+        .book-3d:hover .book-cover {
+            transform: rotateY(-10deg);
+        }
+
+        /* Book spine shadow */
+        .book-cover::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 18px;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.05), transparent);
+        }
+
+        /* Book cover decorative border */
+        .book-cover::after {
+            content: '';
+            position: absolute;
+            inset: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 2px 6px 6px 2px;
+            pointer-events: none;
+        }
+
+        .book-cover-ornament {
+            width: 30px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .book-cover-title {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 17px;
+            color: rgba(255, 255, 255, 0.95);
+            text-align: center;
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+
+        .book-cover-subtitle {
+            font-family: 'Newsreader', serif;
+            font-style: italic;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.55);
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .book-cover-ornament-bottom {
+            width: 20px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 16px;
+        }
+
+        /* Page edges */
+        .book-pages {
+            position: absolute;
+            right: -6px;
+            top: 6px;
+            bottom: 6px;
+            width: 12px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #FFFDF7 0px,
+                #FFFDF7 1.5px,
+                #E5D9C8 1.5px,
+                #E5D9C8 2px
+            );
+            border-radius: 0 2px 2px 0;
+            transform: rotateY(-18deg);
+            transform-origin: left center;
+            transition: transform 0.4s ease;
+        }
+
+        .book-3d:hover .book-pages {
+            transform: rotateY(-10deg);
+        }
+
+        .book-description {
+            text-align: center;
+        }
+
+        .book-description h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .book-description p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            max-width: 320px;
+        }
+
+        .book-price-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-top: 16px;
+            padding: 8px 18px;
+            background: var(--surface);
+            border-radius: 100px;
+            border: 1px solid var(--border-light);
+        }
+
+        .book-price-tag strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* ==============================
+           PRICING
+           ============================== */
+        .pricing {
+            background: var(--bg);
+        }
+
+        .pricing-card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .pricing-free {
+            padding: 32px 24px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .pricing-free h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .pricing-free .price {
+            font-family: 'Fraunces', serif;
+            font-size: 42px;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .pricing-free .price span {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .pricing-features {
+            list-style: none;
+        }
+
+        .pricing-features li {
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            padding: 7px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-secondary);
+        }
+
+        .pricing-features li svg {
+            width: 16px;
+            height: 16px;
+            color: var(--sage);
+            flex-shrink: 0;
+        }
+
+        .pricing-upgrade {
+            padding: 24px;
+            background: var(--accent-light);
+        }
+
+        .pricing-upgrade-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pricing-upgrade h4 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .pricing-upgrade p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .pricing-upgrade .price-tag {
+            font-family: 'Fraunces', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .pricing-upgrade .price-tag span {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .pricing-cta {
+            padding: 24px;
+            text-align: center;
+        }
+
+        .pricing .btn-primary {
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* ==============================
+           FINAL CTA
+           ============================== */
+        .final-cta {
+            background: var(--text);
+            color: var(--bg);
+            text-align: center;
+            padding: 80px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-cta::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 100%, rgba(198, 93, 62, 0.15) 0%, transparent 60%);
+        }
+
+        .final-cta .container {
+            position: relative;
+        }
+
+        .final-cta h2 {
+            font-size: 30px;
+            color: var(--bg);
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .final-cta p {
+            font-size: 16px;
+            color: rgba(250, 244, 232, 0.6);
+            margin-bottom: 32px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-light {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 36px;
+            background: var(--bg);
+            color: var(--text);
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            letter-spacing: 0.3px;
+        }
+
+        .btn-light:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-light svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ==============================
+           FOOTER
+           ============================== */
+        footer {
+            background: var(--text);
+            border-top: 1px solid rgba(250, 244, 232, 0.06);
+            padding: 28px 0;
+        }
+
+        .footer-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .footer-logo {
+            font-family: 'Fraunces', serif;
+            font-weight: 800;
+            font-size: 18px;
+            color: rgba(250, 244, 232, 0.6);
+        }
+
+        .footer-logo span {
+            color: var(--accent);
+            opacity: 0.7;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            font-family: 'Outfit', sans-serif;
+            font-size: 13px;
+            color: rgba(250, 244, 232, 0.35);
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: rgba(250, 244, 232, 0.7);
+        }
+
+        .footer-copy {
+            font-family: 'Outfit', sans-serif;
+            font-size: 12px;
+            color: rgba(250, 244, 232, 0.2);
+        }
+
+        /* ==============================
+           STICKY MOBILE CTA
+           ============================== */
+        .sticky-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(250, 244, 232, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            padding: 12px 22px;
+            z-index: 999;
+            transform: translateY(100%);
+            transition: transform 0.35s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sticky-cta.visible {
+            transform: translateY(0);
+        }
+
+        .sticky-cta-text {
+            font-family: 'Fraunces', serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .sticky-cta-text span {
+            display: block;
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        .sticky-cta .btn-sm {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 22px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .sticky-cta .btn-sm:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Bottom padding for sticky bar */
+        footer {
+            padding-bottom: 90px;
+        }
+
+        /* ==============================
+           DESKTOP ENHANCEMENTS
+           ============================== */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 680px;
+                padding: 0 40px;
+            }
+
+            .hero-title {
+                font-size: 52px;
+            }
+
+            .hero-subtitle {
+                font-size: 19px;
+                max-width: 480px;
+            }
+
+            section {
+                padding: 100px 0;
+            }
+
+            .section-title {
+                font-size: 38px;
+            }
+
+            .use-cases-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .final-cta h2 {
+                font-size: 40px;
+            }
+
+            .sticky-cta {
+                display: none;
+            }
+
+            footer {
+                padding-bottom: 28px;
+            }
+
+            .steps {
+                gap: 16px;
+            }
+
+            .book-3d {
+                width: 240px;
+                height: 320px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 800px;
+            }
+
+            .hero-title {
+                font-size: 60px;
+            }
+
+            .transformation-cards {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                align-items: center;
+                gap: 24px;
+            }
+
+            .transform-arrow {
+                flex-direction: column;
+                padding: 0;
+            }
+
+            .transform-arrow .line {
+                width: 1px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================== NAV ======================== -->
+    <nav id="nav">
+        <div class="container nav-inner">
+            <div class="nav-logo">Kept<span>Pages</span></div>
+            <button class="nav-cta" onclick="scrollToSignup()">Join Waitlist</button>
+        </div>
+    </nav>
+
+    <!-- ======================== HERO ======================== -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-label">Preserve What Matters</div>
+            <h1 class="hero-title">
+                <span class="word">Every </span>
+                <span class="word">family </span>
+                <span class="word">has </span>
+                <span class="word">pages </span>
+                <span class="word highlight">worth </span>
+                <span class="word highlight">keeping.</span>
+            </h1>
+            <p class="hero-subtitle">
+                Snap a photo of grandma's handwritten recipes, old letters, or any cherished document. Our AI preserves every word&nbsp;&mdash;&nbsp;beautifully.
+            </p>
+            <div class="hero-cta-wrap">
+                <button class="btn-primary" onclick="scrollToSignup()">
+                    Start Preserving &mdash; Free
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                </button>
+                <p class="hero-note">No credit card required <span>&middot;</span> 25 free scans</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== TRUST BAR ======================== -->
+    <div class="trust-bar">
+        <div class="container">
+            <div class="trust-items">
+                <div class="trust-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                    95%+ Accuracy
+                </div>
+                <div class="trust-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                    Private &amp; Secure
+                </div>
+                <div class="trust-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+                    Free to Start
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== TRANSFORMATION ======================== -->
+    <section class="transformation">
+        <div class="container">
+            <div class="section-label reveal">The Magic</div>
+            <h2 class="section-title reveal reveal-delay-1">From faded ink<br>to <em>forever.</em></h2>
+            <p class="section-subtitle reveal reveal-delay-2">See what happens when AI meets your family's handwriting.</p>
+
+            <div class="transformation-cards">
+                <!-- BEFORE Card -->
+                <div class="card-before reveal reveal-delay-3">
+                    <div class="tape"></div>
+                    <div class="card-before-label">Original</div>
+                    <div class="recipe-title">Grandma Rose's Apple Pie</div>
+                    <div class="recipe-text">
+                        2 cups flour<br>
+                        1 cup butter (cold!)<br>
+                        6 apples - Granny Smith<br>
+                        3/4 cup sugar<br>
+                        1 tsp cinnamon<br>
+                        <span class="faded">pinch of nutmeg</span><br><br>
+                        Mix flour &amp; butter til crumbly.<br>
+                        Press into pan. Peel &amp; slice<br>
+                        apples thin. Mix with sugar<br>
+                        &amp; spices. <span class="faded">Pile high in crust.</span><br>
+                        Dot with butter. Top crust &mdash;<br>
+                        pinch edges. 375&deg; for 45 min.
+                    </div>
+                    <div class="recipe-note">* Use tart apples!! Sweet ones make it too sugary &mdash; Mom always said this was Nana's secret.</div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="transform-arrow reveal reveal-delay-3">
+                    <div class="line"></div>
+                    <div class="icon-circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                    </div>
+                    <div class="label">AI Magic</div>
+                    <div class="line"></div>
+                </div>
+
+                <!-- AFTER Card -->
+                <div class="card-after reveal reveal-delay-4">
+                    <div class="card-after-label">Preserved</div>
+                    <div class="recipe-title-after">Grandma Rose's Apple Pie</div>
+                    <div class="recipe-collection">From the Rose Family Collection</div>
+                    <div class="recipe-divider"></div>
+
+                    <div class="recipe-section-label">Ingredients</div>
+                    <ul class="ingredient-list">
+                        <li><span class="ingredient-qty">2 cups</span> flour</li>
+                        <li><span class="ingredient-qty">1 cup</span> butter, cold</li>
+                        <li><span class="ingredient-qty">6</span> Granny Smith apples</li>
+                        <li><span class="ingredient-qty">&frac34; cup</span> sugar</li>
+                        <li><span class="ingredient-qty">1 tsp</span> cinnamon</li>
+                        <li><span class="ingredient-qty">pinch</span> nutmeg</li>
+                    </ul>
+
+                    <div class="recipe-section-label">Instructions</div>
+                    <ol class="instruction-list">
+                        <li>Mix flour and butter until crumbly. Press into pan.</li>
+                        <li>Peel and thinly slice apples. Toss with sugar, cinnamon, and nutmeg.</li>
+                        <li>Pile filling high in crust. Dot with butter.</li>
+                        <li>Add top crust and pinch edges to seal. Bake at 375&deg;F for 45 minutes.</li>
+                    </ol>
+
+                    <div class="recipe-note-after">
+                        <strong>Family Note</strong>
+                        Use tart apples &mdash; sweet ones make it too sugary. Mom always said this was Nana's secret.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== HOW IT WORKS ======================== -->
+    <section class="how-it-works">
+        <div class="container">
+            <div class="section-label reveal">How It Works</div>
+            <h2 class="section-title reveal reveal-delay-1">Three steps<br>to <em>forever.</em></h2>
+            <p class="section-subtitle reveal reveal-delay-2">No scanning hardware needed. Just your phone.</p>
+
+            <div class="steps">
+                <div class="step-card reveal reveal-delay-2">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Snap a Photo</h3>
+                        <p>Point your phone at any handwritten page. Recipe cards, letters, journal entries &mdash; we handle it all.</p>
+                    </div>
+                </div>
+
+                <div class="step-card reveal reveal-delay-3">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>AI Extracts Every Word</h3>
+                        <p>Our AI reads even faded cursive with 95%+ accuracy. Ingredients, instructions, notes &mdash; all structured instantly.</p>
+                    </div>
+                </div>
+
+                <div class="step-card reveal reveal-delay-4">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Keep &amp; Print</h3>
+                        <p>Edit, organize into collections, and print gorgeous hardcover books &mdash; or share digitally with your whole family.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== USE CASES ======================== -->
+    <section class="use-cases">
+        <div class="container">
+            <div class="section-label reveal">Beyond Recipes</div>
+            <h2 class="section-title reveal reveal-delay-1">More than<br><em>recipes.</em></h2>
+            <p class="section-subtitle reveal reveal-delay-2">Any page worth keeping is a page worth preserving.</p>
+
+            <div class="use-cases-grid">
+                <div class="use-case-card reveal reveal-delay-2">
+                    <span class="use-case-icon" role="img" aria-label="Recipe card">&#x1F4DC;</span>
+                    <h3>Recipe Cards</h3>
+                    <p>Handwritten family recipes, church cookbooks</p>
+                </div>
+                <div class="use-case-card reveal reveal-delay-3">
+                    <span class="use-case-icon" role="img" aria-label="Letter">&#x2709;&#xFE0F;</span>
+                    <h3>Old Letters</h3>
+                    <p>Love letters, wartime correspondence, postcards</p>
+                </div>
+                <div class="use-case-card reveal reveal-delay-3">
+                    <span class="use-case-icon" role="img" aria-label="Journal">&#x1F4D3;</span>
+                    <h3>Journals</h3>
+                    <p>Diaries, travel logs, personal notebooks</p>
+                </div>
+                <div class="use-case-card reveal reveal-delay-4">
+                    <span class="use-case-icon" role="img" aria-label="Art">&#x1F3A8;</span>
+                    <h3>Children's Art</h3>
+                    <p>Drawings, stories, school projects</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== BOOK PREVIEW ======================== -->
+    <section class="book-section">
+        <div class="container">
+            <div class="section-label reveal" style="text-align:center">The Finished Product</div>
+            <h2 class="section-title reveal reveal-delay-1" style="text-align:center">From phone<br>to <em>bookshelf.</em></h2>
+
+            <div class="book-showcase">
+                <div class="book-3d reveal reveal-delay-2">
+                    <div class="book-cover">
+                        <div class="book-cover-ornament"></div>
+                        <div class="book-cover-title">The Rose Family<br>Cookbook</div>
+                        <div class="book-cover-subtitle">Recipes Handed Down<br>Through Generations</div>
+                        <div class="book-cover-ornament-bottom"></div>
+                    </div>
+                    <div class="book-pages"></div>
+                </div>
+
+                <div class="book-description reveal reveal-delay-3">
+                    <h3>A book they'll treasure</h3>
+                    <p>Turn your collection into a gorgeous hardcover &mdash; shipped to your door or gifted to family. Every copy is printed on demand, just&nbsp;for&nbsp;you.</p>
+                    <div class="book-price-tag">
+                        Hardcover from <strong>$79</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== PRICING ======================== -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-label reveal" style="text-align:center">Simple Pricing</div>
+            <h2 class="section-title reveal reveal-delay-1" style="text-align:center">Start free.<br><em>Upgrade when ready.</em></h2>
+            <p class="section-subtitle reveal reveal-delay-2" style="text-align:center; margin-left:auto; margin-right:auto;">No tricks, no hidden fees. Pay only for what you need.</p>
+
+            <div class="pricing-card reveal reveal-delay-3">
+                <div class="pricing-free">
+                    <h3>Free Forever</h3>
+                    <div class="price">$0 <span>to start</span></div>
+                    <ul class="pricing-features">
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            25 free scans
+                        </li>
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            1 collection
+                        </li>
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            PDF export
+                        </li>
+                        <li>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            No credit card required
+                        </li>
+                    </ul>
+                </div>
+                <div class="pricing-upgrade">
+                    <div class="pricing-upgrade-inner">
+                        <div>
+                            <h4>Keeper Plan</h4>
+                            <p>Unlimited scans, collections &amp; sharing</p>
+                        </div>
+                        <div class="price-tag">$39.99 <span>/yr</span></div>
+                    </div>
+                </div>
+                <div class="pricing-cta">
+                    <button class="btn-primary" onclick="scrollToSignup()">
+                        Get Started Free
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== FINAL CTA ======================== -->
+    <section class="final-cta" id="signup">
+        <div class="container">
+            <h2 class="reveal">Your family's pages<br>won't last forever.</h2>
+            <p class="reveal reveal-delay-1">But what's written on them can. Start preserving the handwriting, recipes, and stories that make your family yours.</p>
+
+            <!-- Waitlist Form -->
+            <div class="reveal reveal-delay-2">
+                <div style="display:flex; gap:8px; max-width:340px; margin:0 auto; flex-wrap:wrap;">
+                    <input type="email" id="waitlist-email" placeholder="your@email.com" style="
+                        flex: 1;
+                        min-width: 0;
+                        width: 100%;
+                        font-family: 'Outfit', sans-serif;
+                        font-size: 15px;
+                        padding: 14px 18px;
+                        border: 1px solid rgba(250,244,232,0.15);
+                        border-radius: 100px;
+                        background: rgba(250,244,232,0.08);
+                        color: var(--bg);
+                        outline: none;
+                        transition: border-color 0.2s;
+                    " onfocus="this.style.borderColor='rgba(198,93,62,0.5)'" onblur="this.style.borderColor='rgba(250,244,232,0.15)'">
+                    <button class="btn-light" onclick="joinWaitlist()" style="white-space:nowrap; padding:14px 24px; width:100%;">
+                        Join Waitlist
+                    </button>
+                </div>
+                <p style="font-family:'Outfit',sans-serif; font-size:12px; color:rgba(250,244,232,0.3); margin-top:12px; text-align:center;">
+                    We'll notify you when KeptPages launches. No spam, ever.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================== FOOTER ======================== -->
+    <footer>
+        <div class="container">
+            <div class="footer-inner">
+                <div class="footer-logo">Kept<span>Pages</span></div>
+                <div class="footer-links">
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Contact</a>
+                </div>
+                <div class="footer-copy">&copy; 2026 KeptPages. All rights reserved.</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ======================== STICKY MOBILE CTA ======================== -->
+    <div class="sticky-cta" id="stickyCta">
+        <div class="sticky-cta-text">
+            KeptPages
+            <span>Free to start &middot; No credit card</span>
+        </div>
+        <button class="btn-sm" onclick="scrollToSignup()">Join Waitlist</button>
+    </div>
+
+    <!-- ======================== JAVASCRIPT ======================== -->
+    <script>
+        // Scroll-triggered reveal animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -40px 0px'
+        });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Nav scroll effect
+        const nav = document.getElementById('nav');
+        const stickyCta = document.getElementById('stickyCta');
+        const hero = document.querySelector('.hero');
+
+        let lastScroll = 0;
+
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+
+            // Nav background
+            if (scrollY > 40) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+
+            // Sticky CTA (show after scrolling past hero)
+            const heroBottom = hero.offsetTop + hero.offsetHeight;
+            if (scrollY > heroBottom - 100) {
+                stickyCta.classList.add('visible');
+            } else {
+                stickyCta.classList.remove('visible');
+            }
+
+            lastScroll = scrollY;
+        }, { passive: true });
+
+        // Smooth scroll to signup
+        function scrollToSignup() {
+            document.getElementById('signup').scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+        // Waitlist form handler
+        function joinWaitlist() {
+            const email = document.getElementById('waitlist-email').value;
+            if (!email || !email.includes('@')) {
+                const input = document.getElementById('waitlist-email');
+                input.style.borderColor = 'rgba(198,93,62,0.7)';
+                input.placeholder = 'Please enter a valid email';
+                setTimeout(() => {
+                    input.style.borderColor = 'rgba(250,244,232,0.15)';
+                    input.placeholder = 'your@email.com';
+                }, 2000);
+                return;
+            }
+            // TODO: Connect to backend / Supabase / email service
+            const btn = document.querySelector('.final-cta .btn-light');
+            btn.textContent = 'You\'re In!';
+            btn.style.background = '#5E7652';
+            btn.style.color = '#fff';
+            document.getElementById('waitlist-email').value = '';
+            document.getElementById('waitlist-email').placeholder = 'Welcome to KeptPages!';
+        }
+    </script>
+</body>
+</html>
