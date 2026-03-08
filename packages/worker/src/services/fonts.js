@@ -5,6 +5,7 @@
  */
 
 import { StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 // Font key mapping: fontFamily → KV keys
 const FONT_KEYS = {
@@ -56,6 +57,9 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
       italic: await pdfDoc.embedFont(fallbacks.italic || fallbacks.regular),
     };
   }
+
+  // Register fontkit for custom font embedding
+  pdfDoc.registerFontkit(fontkit);
 
   const results = {};
 

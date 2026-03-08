@@ -170,7 +170,16 @@ books.put(
     if (body.author !== undefined) updatePayload.author = body.author;
     if (body.template !== undefined) updatePayload.template = body.template;
     if (body.chapterOrder !== undefined) updatePayload.chapter_order = body.chapterOrder;
-    if (body.customization !== undefined) updatePayload.customization = body.customization;
+    if (body.customization !== undefined) {
+      updatePayload.customization = body.customization;
+      // Sync coverDesign title/subtitle/author to DB columns for consistency
+      if (body.customization.coverDesign) {
+        const cd = body.customization.coverDesign;
+        if (cd.title) updatePayload.title = cd.title;
+        if (cd.subtitle !== undefined) updatePayload.subtitle = cd.subtitle;
+        if (cd.author !== undefined) updatePayload.author = cd.author;
+      }
+    }
 
     // Only reset to draft if non-customization fields changed (customization saves shouldn't reset status)
     const hasNonCustomizationChanges = body.title !== undefined || body.subtitle !== undefined ||
@@ -434,24 +443,25 @@ books.post('/:id/generate', async (c) => {
       return c.json({ error: 'No documents found in the collection to generate a book' }, 400);
     }
 
+    // Determine if this is a blueprint-based book or legacy
+    const blueprint = book.customization;
+    const isBlueprint = blueprint?.pages?.length > 0;
+
     // Fetch cover photo from R2 if available
     let coverPhotoBytes = null;
     let coverPhotoMimeType = null;
-    if (book.cover_design?.photoKey) {
+    const photoKey = book.cover_design?.photoKey || blueprint?.coverDesign?.photoKey;
+    if (photoKey) {
       try {
-        const photoObj = await env.PROCESSED.get(book.cover_design.photoKey);
+        const photoObj = await env.PROCESSED.get(photoKey);
         if (photoObj) {
           coverPhotoBytes = new Uint8Array(await photoObj.arrayBuffer());
-          coverPhotoMimeType = book.cover_design.photoMimeType || 'image/jpeg';
+          coverPhotoMimeType = book.cover_design?.photoMimeType || blueprint?.coverDesign?.photoMimeType || 'image/jpeg';
         }
       } catch (err) {
         console.error('Cover photo R2 fetch failed:', err?.message || err);
       }
     }
-
-    // Determine if this is a blueprint-based book or legacy
-    const blueprint = book.customization;
-    const isBlueprint = blueprint?.pages?.length > 0;
 
     let interiorPdf;
     let pageCount;
@@ -495,7 +505,10 @@ books.post('/:id/generate', async (c) => {
       await Promise.all(imagePromises);
 
       // Render all pages from blueprint
-      pageCount = await renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap);
+      const coverPhotoData = coverPhotoBytes
+        ? { bytes: coverPhotoBytes, mimeType: coverPhotoMimeType }
+        : null;
+      pageCount = await renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap, coverPhotoData);
 
       interiorPdf = await pdfDoc.save();
     } else {
@@ -513,11 +526,17 @@ books.post('/:id/generate', async (c) => {
       pageCount = result.pageCount;
     }
 
-    // Generate cover PDF
-    const coverPdf = await generateCoverPdf(
-      { title: book.title, subtitle: book.subtitle, author: book.author },
-      pageCount
-    );
+    // Generate cover PDF with blueprint design data
+    const coverPdf = await generateCoverPdf({
+      title: blueprint?.coverDesign?.title || book.title,
+      subtitle: blueprint?.coverDesign?.subtitle || book.subtitle,
+      author: blueprint?.coverDesign?.author || book.author,
+      colorScheme: blueprint?.coverDesign?.colorScheme || 'default',
+      layout: blueprint?.coverDesign?.layout || 'centered',
+      photoBytes: coverPhotoBytes,
+      photoMimeType: coverPhotoMimeType,
+      fontFamily: isBlueprint ? (blueprint.globalSettings?.fontFamily || 'fraunces') : null,
+    }, pageCount, isBlueprint ? env : null);
 
     // Store PDFs in R2
     const interiorKey = `${user.id}/books/${bookId}/interior.pdf`;

@@ -54,7 +54,7 @@ admin.get('/orders', async (c) => {
     .from('books')
     .select(`
       id, title, status, payment_status, lulu_order_id, lulu_project_id,
-      stripe_session_id, quantity, order_cost, shipping_address, print_options,
+      stripe_session_id, quantity, price_cents, shipping_address, print_options,
       error_message, page_count, created_at, updated_at,
       profiles:user_id ( display_name, id )
     `)
@@ -94,7 +94,7 @@ admin.get('/orders', async (c) => {
     luluProjectId: book.lulu_project_id,
     stripeSessionId: book.stripe_session_id,
     quantity: book.quantity,
-    orderCost: book.order_cost,
+    orderCost: book.price_cents,
     shippingAddress: book.shipping_address,
     printOptions: book.print_options,
     errorMessage: book.error_message,

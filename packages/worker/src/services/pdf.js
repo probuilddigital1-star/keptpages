@@ -12,6 +12,7 @@
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { loadAllFonts } from './fonts.js';
 
 // Dimensions in points (1 inch = 72 points)
 const TRIM_WIDTH = 612;   // 8.5"
@@ -721,14 +722,30 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}) {
 }
 
 /**
+ * Cover color scheme definitions matching the frontend designer.
+ */
+const COVER_SCHEMES = {
+  default:  { bg: [0.98, 0.96, 0.91], accent: [0.78, 0.36, 0.24], text: [0.25, 0.17, 0.10], textSub: [0.50, 0.40, 0.35] },
+  midnight: { bg: [0.10, 0.10, 0.18], accent: [0.89, 0.69, 0.29], text: [1, 1, 1],          textSub: [0.85, 0.85, 0.90] },
+  forest:   { bg: [0.94, 0.96, 0.94], accent: [0.18, 0.35, 0.24], text: [0.15, 0.25, 0.15], textSub: [0.30, 0.45, 0.30] },
+  plum:     { bg: [0.97, 0.94, 0.96], accent: [0.48, 0.25, 0.43], text: [0.30, 0.15, 0.27], textSub: [0.50, 0.35, 0.47] },
+  ocean:    { bg: [0.93, 0.96, 0.97], accent: [0.16, 0.39, 0.59], text: [0.12, 0.22, 0.35], textSub: [0.30, 0.42, 0.55] },
+};
+
+function getCoverColorScheme(schemeId) {
+  return COVER_SCHEMES[schemeId] || COVER_SCHEMES.default;
+}
+
+/**
  * Generate a cover PDF for a book.
  * Cover dimensions depend on page count (affects spine width).
  *
- * @param {object} book - Book metadata
+ * @param {object} coverData - { title, subtitle, author, colorScheme, layout, photoBytes, photoMimeType, fontFamily }
  * @param {number} pageCount - Total interior page count
+ * @param {object|null} env - Worker env for loading custom fonts (null for legacy/standard fonts)
  * @returns {Promise<ArrayBuffer>}
  */
-export async function generateCoverPdf(book, pageCount) {
+export async function generateCoverPdf(coverData, pageCount, env) {
   const pdfDoc = await PDFDocument.create();
 
   // Calculate spine width: approximately 0.0025" per page for B&W, 0.002252" per page for color
@@ -742,73 +759,123 @@ export async function generateCoverPdf(book, pageCount) {
 
   const coverPage = pdfDoc.addPage([coverWidth, coverHeight]);
 
-  const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  // Load custom fonts for the cover if a font family and env are provided
+  let fontBold, fontItalic, fontRegular;
+  if (coverData.fontFamily && env) {
+    try {
+      const coverFontMap = await loadAllFonts(pdfDoc, [coverData.fontFamily], env);
+      const customFonts = coverFontMap[coverData.fontFamily];
+      if (customFonts) {
+        fontBold = customFonts.bold || customFonts.regular;
+        fontItalic = customFonts.italic || customFonts.regular;
+        fontRegular = customFonts.regular;
+      }
+    } catch (err) {
+      console.error('Cover font loading failed, using standard fonts:', err?.message || err);
+    }
+  }
+  // Fall back to standard fonts
+  if (!fontBold) fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  if (!fontItalic) fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+  if (!fontRegular) fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
 
-  // Background
-  coverPage.drawRectangle({
-    x: 0,
-    y: 0,
-    width: coverWidth,
-    height: coverHeight,
-    color: rgb(0.15, 0.2, 0.35),
-  });
+  const scheme = getCoverColorScheme(coverData.colorScheme);
+  const bgColor = rgb(...scheme.bg);
+  const textColor = rgb(...scheme.text);
+  const textSubColor = rgb(...scheme.textSub);
+
+  const layout = coverData.layout || 'centered';
+  const titleText = coverData.title || 'Untitled';
 
   // Front cover area starts after back cover + spine
   const frontCoverX = TRIM_WIDTH + coverBleed + spineWidthPt;
   const frontCenterX = frontCoverX + TRIM_WIDTH / 2;
 
-  // Title on front cover
-  const titleSize = 36;
-  const titleText = book.title || 'Untitled';
-  const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
-  coverPage.drawText(titleText, {
-    x: frontCenterX - titleWidth / 2,
-    y: coverHeight * 0.6,
-    size: titleSize,
-    font: fontBold,
-    color: rgb(1, 1, 1),
+  // Background
+  coverPage.drawRectangle({
+    x: 0, y: 0, width: coverWidth, height: coverHeight,
+    color: bgColor,
   });
 
-  // Subtitle on front cover
-  if (book.subtitle) {
-    const subtitleSize = 18;
-    const subtitleWidth = fontRegular.widthOfTextAtSize(book.subtitle, subtitleSize);
-    coverPage.drawText(book.subtitle, {
-      x: frontCenterX - subtitleWidth / 2,
-      y: coverHeight * 0.6 - titleSize - 20,
-      size: subtitleSize,
-      font: fontRegular,
-      color: rgb(0.85, 0.85, 0.9),
-    });
+  // For photo-background layout, embed cover photo as full-bleed front cover
+  if (layout === 'photo-background' && coverData.photoBytes) {
+    try {
+      const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
+      const photo = await pdfDoc[embedFn](coverData.photoBytes);
+      const photoDims = photo.scaleToFit(TRIM_WIDTH + coverBleed, coverHeight);
+      coverPage.drawImage(photo, {
+        x: frontCoverX,
+        y: (coverHeight - photoDims.height) / 2,
+        width: photoDims.width,
+        height: photoDims.height,
+      });
+      // Dark overlay for text readability
+      coverPage.drawRectangle({
+        x: frontCoverX, y: 0, width: TRIM_WIDTH + coverBleed, height: coverHeight,
+        color: rgb(0, 0, 0), opacity: 0.45,
+      });
+    } catch (err) {
+      console.error('Cover photo embed failed:', err?.message || err);
+    }
   }
 
-  // Author on front cover
-  if (book.author) {
-    const authorSize = 16;
-    const authorWidth = fontRegular.widthOfTextAtSize(book.author, authorSize);
-    coverPage.drawText(book.author, {
-      x: frontCenterX - authorWidth / 2,
-      y: coverHeight * 0.3,
-      size: authorSize,
-      font: fontRegular,
-      color: rgb(0.9, 0.9, 0.95),
+  // Text colors for photo-background are always white for readability
+  const frontTextColor = layout === 'photo-background' && coverData.photoBytes ? rgb(1, 1, 1) : textColor;
+  const frontSubColor = layout === 'photo-background' && coverData.photoBytes ? rgb(0.9, 0.9, 0.95) : textSubColor;
+
+  // Title
+  const titleSize = 36;
+  if (layout === 'left-aligned') {
+    const leftPad = frontCoverX + 50;
+    coverPage.drawText(titleText, {
+      x: leftPad, y: coverHeight * 0.6,
+      size: titleSize, font: fontBold, color: frontTextColor,
     });
+    if (coverData.subtitle) {
+      coverPage.drawText(coverData.subtitle, {
+        x: leftPad, y: coverHeight * 0.6 - titleSize - 20,
+        size: 18, font: fontItalic, color: frontSubColor,
+      });
+    }
+    if (coverData.author) {
+      coverPage.drawText(coverData.author, {
+        x: leftPad, y: coverBleed + 60,
+        size: 16, font: fontRegular, color: frontSubColor,
+      });
+    }
+  } else {
+    // centered (and photo-background) layout
+    const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
+    coverPage.drawText(titleText, {
+      x: frontCenterX - titleWidth / 2, y: coverHeight * 0.6,
+      size: titleSize, font: fontBold, color: frontTextColor,
+    });
+    if (coverData.subtitle) {
+      const subtitleSize = 18;
+      const subtitleWidth = fontItalic.widthOfTextAtSize(coverData.subtitle, subtitleSize);
+      coverPage.drawText(coverData.subtitle, {
+        x: frontCenterX - subtitleWidth / 2, y: coverHeight * 0.6 - titleSize - 20,
+        size: subtitleSize, font: fontItalic, color: frontSubColor,
+      });
+    }
+    if (coverData.author) {
+      const authorSize = 16;
+      const authorWidth = fontRegular.widthOfTextAtSize(coverData.author, authorSize);
+      coverPage.drawText(coverData.author, {
+        x: frontCenterX - authorWidth / 2, y: coverHeight * 0.3,
+        size: authorSize, font: fontRegular, color: frontSubColor,
+      });
+    }
   }
 
-  // Spine text (rotated - draw title vertically on spine)
-  // pdf-lib does not easily rotate text, so we draw it horizontally
-  // at a small font size that fits within the spine width
+  // Spine text
   if (spineWidthPt > 20) {
     const spineX = coverBleed + TRIM_WIDTH + spineWidthPt / 2;
     const spineFontSize = Math.min(10, spineWidthPt * 0.6);
-    // Simple spine label
+    const spineTextColor = layout === 'photo-background' && coverData.photoBytes ? rgb(1, 1, 1) : textColor;
     coverPage.drawText(titleText.substring(0, 30), {
-      x: spineX - spineFontSize / 2,
-      y: coverHeight / 2,
-      size: spineFontSize,
-      font: fontBold,
-      color: rgb(1, 1, 1),
+      x: spineX - spineFontSize / 2, y: coverHeight / 2,
+      size: spineFontSize, font: fontBold, color: spineTextColor,
     });
   }
 
@@ -817,11 +884,8 @@ export async function generateCoverPdf(book, pageCount) {
   const backText = 'Created with KeptPages';
   const backTextWidth = fontRegular.widthOfTextAtSize(backText, 12);
   coverPage.drawText(backText, {
-    x: backCenterX - backTextWidth / 2,
-    y: coverBleed + 40,
-    size: 12,
-    font: fontRegular,
-    color: rgb(0.7, 0.7, 0.75),
+    x: backCenterX - backTextWidth / 2, y: coverBleed + 40,
+    size: 12, font: fontRegular, color: textSubColor,
   });
 
   const pdfBytes = await pdfDoc.save();
@@ -1225,9 +1289,10 @@ function drawPhotoFrame(page, x, y, w, h, frameStyle, frameColor) {
  * @param {Array} documents - Collection document data for document pages
  * @param {object} imageMap - Map of imageKey → { bytes, mimeType }
  * @param {object} fontMap - Map of fontFamily → { regular, bold, italic }
+ * @param {object|null} coverPhotoData - { bytes, mimeType } or null
  * @returns {Promise<number>} Number of pages rendered
  */
-export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap) {
+export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap, coverPhotoData) {
   const { globalSettings, pages } = blueprint;
   const styles = getTemplateStyles(globalSettings?.template || 'heritage');
   const globalFont = globalSettings?.fontFamily || 'fraunces';
@@ -1266,6 +1331,42 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
         font: subFont,
         color: styles.subtitleColor,
       });
+    }
+
+    // Author on title page
+    if (blueprint.coverDesign?.author) {
+      const authorFont = fontMap[globalFont]?.regular;
+      if (authorFont) {
+        const authorText = blueprint.coverDesign.author;
+        const authorSize = styles.authorFontSize || 14;
+        const authorWidth = authorFont.widthOfTextAtSize(authorText, authorSize);
+        page.drawText(authorText, {
+          x: CENTER_X - authorWidth / 2,
+          y: PAGE_HEIGHT * 0.48,
+          size: authorSize,
+          font: authorFont,
+          color: styles.subtitleColor,
+        });
+      }
+    }
+
+    // Cover photo on title page (if not using photo-background layout on cover)
+    if (coverPhotoData?.bytes && blueprint.coverDesign?.layout !== 'photo-background') {
+      try {
+        const embedFn = coverPhotoData.mimeType === 'image/png' ? 'embedPng' : 'embedJpg';
+        const photo = await pdfDoc[embedFn](coverPhotoData.bytes);
+        const maxPhotoWidth = TRIM_WIDTH * 0.5;
+        const maxPhotoHeight = PAGE_HEIGHT * 0.3;
+        const photoDims = photo.scaleToFit(maxPhotoWidth, maxPhotoHeight);
+        page.drawImage(photo, {
+          x: CENTER_X - photoDims.width / 2,
+          y: PAGE_HEIGHT * 0.15,
+          width: photoDims.width,
+          height: photoDims.height,
+        });
+      } catch (err) {
+        console.error('Title page photo embed failed:', err?.message || err);
+      }
     }
 
     totalPages++;
