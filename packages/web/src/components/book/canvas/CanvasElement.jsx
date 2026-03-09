@@ -1,7 +1,48 @@
+import { useState, useEffect } from 'react';
 import { Text, Rect, Circle, Line, Image as KonvaImage, Group } from 'react-konva';
-import useImage from 'use-image';
 import { config } from '@/config/env';
+import api from '@/services/api';
 import PhotoFrame from '../elements/PhotoFrame';
+
+// Custom hook that fetches images with auth headers
+function useAuthImage(imageKey) {
+  const [image, setImage] = useState(null);
+
+  useEffect(() => {
+    if (!imageKey) {
+      setImage(null);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl = null;
+
+    (async () => {
+      try {
+        const blob = await api.getBlob(`/images/${imageKey}`);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        const img = new window.Image();
+        img.onload = () => {
+          if (!cancelled) setImage(img);
+        };
+        img.onerror = () => {
+          if (!cancelled) setImage(null);
+        };
+        img.src = objectUrl;
+      } catch {
+        if (!cancelled) setImage(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imageKey]);
+
+  return image;
+}
 
 export default function CanvasElement({
   element,
@@ -74,10 +115,7 @@ export default function CanvasElement({
 }
 
 function ImageElement({ element, ...props }) {
-  const imageUrl = element.imageKey
-    ? `${config.apiUrl}/images/${element.imageKey}`
-    : null;
-  const [image] = useImage(imageUrl, 'anonymous');
+  const image = useAuthImage(element.imageKey);
 
   const { x, y, width, height, rotation, ...restProps } = props;
   const frameStyle = element.frameStyle || 'none';
@@ -115,7 +153,7 @@ function ImageElement({ element, ...props }) {
             strokeWidth={1}
           />
           <Text
-            text="Drop image"
+            text="Double-click to add image"
             width={width}
             height={height}
             align="center"

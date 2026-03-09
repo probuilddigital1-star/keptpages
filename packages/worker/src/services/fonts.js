@@ -68,7 +68,7 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
     try {
       const fontData = await env.FONTS.get(kvKey, 'arrayBuffer');
       if (fontData) {
-        results[weight] = await pdfDoc.embedFont(new Uint8Array(fontData), { subset: false });
+        results[weight] = await pdfDoc.embedFont(new Uint8Array(fontData), { subset: true });
       }
     } catch (err) {
       console.error(`Failed to load font ${kvKey}:`, err?.message || err);

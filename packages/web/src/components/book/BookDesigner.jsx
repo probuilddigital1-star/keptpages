@@ -40,6 +40,20 @@ export default function BookDesigner({ collectionId, bookId }) {
         // Load existing book or create new one
         if (bookId && bookId !== 'new') {
           currentBook = await loadBook(bookId);
+        } else {
+          // Auto-create book so bookId is immediately available
+          try {
+            const title = coverDesign.title || 'Untitled Book';
+            currentBook = await createBook(collectionId, title);
+            // Update URL with bookId so it persists across refreshes
+            if (currentBook?.id) {
+              const url = new URL(window.location);
+              url.searchParams.set('bookId', currentBook.id);
+              window.history.replaceState({}, '', url);
+            }
+          } catch (err) {
+            console.error('Auto-create book failed:', err);
+          }
         }
 
         // Load collection documents
@@ -85,6 +99,10 @@ export default function BookDesigner({ collectionId, bookId }) {
         const title = blueprint?.coverDesign?.title || coverDesign.title || 'Untitled Book';
         const newBook = await createBook(collectionId, title);
         if (newBook?.id) {
+          // Update URL with bookId
+          const url = new URL(window.location);
+          url.searchParams.set('bookId', newBook.id);
+          window.history.replaceState({}, '', url);
           await saveBlueprint(newBook.id);
           toast('Book saved!');
         }
@@ -131,7 +149,7 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
 
         {/* Main canvas area */}
-        <div className="flex-1 bg-gray-100 overflow-auto flex items-start justify-center p-6">
+        <div className="flex-1 bg-gray-100 overflow-auto flex items-start justify-center p-3 md:p-6">
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
@@ -149,7 +167,7 @@ export default function BookDesigner({ collectionId, bookId }) {
       </div>
 
       {/* Mobile sidebar (bottom drawer — expandable) */}
-      <div className="md:hidden border-t border-border-light bg-cream-surface overflow-y-auto max-h-[50vh]">
+      <div className="md:hidden border-t border-border-light bg-cream-surface overflow-y-auto max-h-[40vh]">
         <DesignerSidebar mode={mode} />
       </div>
     </div>

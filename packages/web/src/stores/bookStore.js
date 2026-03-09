@@ -282,13 +282,52 @@ export const useBookStore = create(
         try {
           const result = await api.get(`/collections/${collectionId}`);
           const items = result.items || [];
-          const docs = items.map((item) => ({
-            id: item.id,
-            title: item.scan?.title || item.title || 'Untitled',
-            content: item.scan?.extractedData?.text || item.scan?.extractedData?.content || '',
-            documentType: item.scan?.documentType || 'other',
-            imageKey: item.scan?.r2Key || null,
-          }));
+          const docs = items.map((item) => {
+            const data = item.scan?.extractedData || {};
+            const docType = item.scan?.documentType || 'other';
+            let content = data.text || data.content || '';
+
+            // Format recipe content using structured fields when available
+            if (docType === 'recipe' && (data.ingredients || data.instructions)) {
+              const parts = [];
+              if (data.servings) parts.push(`Serves ${data.servings}`);
+              if (data.prepTime) parts.push(`Prep: ${data.prepTime}`);
+              if (data.cookTime) parts.push(`Cook: ${data.cookTime}`);
+              if (parts.length) content = parts.join('  •  ') + '\n\n';
+              else content = '';
+
+              if (data.ingredients?.length) {
+                content += 'Ingredients\n';
+                for (const ing of data.ingredients) {
+                  if (typeof ing === 'string') {
+                    content += `• ${ing}\n`;
+                  } else {
+                    const amount = [ing.amount, ing.unit].filter(Boolean).join(' ');
+                    content += amount ? `• ${amount} ${ing.item}\n` : `• ${ing.item}\n`;
+                  }
+                }
+              }
+
+              if (data.instructions?.length) {
+                content += '\nInstructions\n';
+                data.instructions.forEach((step, i) => {
+                  content += `${i + 1}. ${step}\n`;
+                });
+              }
+
+              if (data.notes) {
+                content += `\nNotes: ${data.notes}`;
+              }
+            }
+
+            return {
+              id: item.id,
+              title: item.scan?.title || item.title || 'Untitled',
+              content,
+              documentType: docType,
+              imageKey: item.scan?.r2Key || null,
+            };
+          });
           set({ documents: docs });
           return docs;
         } catch (error) {

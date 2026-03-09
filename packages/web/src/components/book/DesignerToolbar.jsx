@@ -47,15 +47,15 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
   }, [bookId]);
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-border-light shrink-0">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 bg-white border-b border-border-light shrink-0">
       {/* Mode tabs */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onModeChange(tab.id)}
             className={clsx(
-              'px-3 py-1.5 rounded-md font-ui text-xs font-medium transition-colors',
+              'px-2.5 py-2 sm:px-3 sm:py-1.5 rounded-md font-ui text-xs font-medium transition-colors',
               mode === tab.id
                 ? 'bg-terracotta text-white'
                 : 'text-walnut-secondary hover:bg-cream-alt hover:text-walnut'
@@ -66,14 +66,14 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
         ))}
       </div>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-0" />
 
       {/* Undo/Redo */}
-      <div className="flex items-center gap-1 border-r border-border-light pr-2 mr-2">
+      <div className="hidden sm:flex items-center gap-1 border-r border-border-light pr-2 mr-2">
         <button
           onClick={() => undo()}
           disabled={!canUndo}
-          className="p-1.5 rounded text-walnut-secondary hover:bg-cream-alt disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 sm:p-1.5 rounded text-walnut-secondary hover:bg-cream-alt disabled:opacity-30 disabled:cursor-not-allowed"
           title="Undo (Ctrl+Z)"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -84,7 +84,7 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
         <button
           onClick={() => redo()}
           disabled={!canRedo}
-          className="p-1.5 rounded text-walnut-secondary hover:bg-cream-alt disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 sm:p-1.5 rounded text-walnut-secondary hover:bg-cream-alt disabled:opacity-30 disabled:cursor-not-allowed"
           title="Redo (Ctrl+Shift+Z)"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -95,7 +95,7 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
       </div>
 
       {/* Save status */}
-      <span className="font-ui text-xs text-walnut-muted mr-2">
+      <span className="hidden sm:inline font-ui text-xs text-walnut-muted mr-2">
         {saveStatus === 'saving' && <><Spinner size="xs" className="inline mr-1" />Saving...</>}
         {saveStatus === 'saved' && 'Saved'}
         {saveStatus === 'unsaved' && 'Unsaved changes'}
@@ -110,8 +110,18 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
         onClick={handleGenerate}
         loading={generatingPdf}
         disabled={!bookId}
+        className="hidden sm:inline-flex"
       >
         Generate PDF
+      </Button>
+      <Button
+        size="sm"
+        onClick={handleGenerate}
+        loading={generatingPdf}
+        disabled={!bookId}
+        className="sm:hidden"
+      >
+        PDF
       </Button>
     </div>
   );

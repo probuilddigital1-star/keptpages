@@ -1,7 +1,41 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { useBookStore } from '@/stores/bookStore';
 import { toast } from '@/components/ui/Toast';
-import { config } from '@/config/env';
+import api from '@/services/api';
+
+// Thumbnail that fetches image with auth headers
+function AuthThumb({ imageKey, alt, className }) {
+  const [src, setSrc] = useState(null);
+
+  useEffect(() => {
+    if (!imageKey) return;
+    let cancelled = false;
+    let url = null;
+    (async () => {
+      try {
+        const blob = await api.getBlob(`/images/${imageKey}`);
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setSrc(url);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [imageKey]);
+
+  if (!src) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <span className="font-ui text-[8px] text-walnut-muted px-1 text-center truncate">{alt}</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} />;
+}
 
 export default function ImageLibraryPanel() {
   const documents = useBookStore((s) => s.documents);
@@ -90,9 +124,7 @@ export default function ImageLibraryPanel() {
                 className="aspect-square rounded border border-border-light bg-cream-alt overflow-hidden hover:ring-1 hover:ring-terracotta/50 transition-all"
                 title={doc.title}
               >
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="font-ui text-[8px] text-walnut-muted px-1 text-center truncate">{doc.title}</span>
-                </div>
+                <AuthThumb imageKey={doc.imageKey} alt={doc.title} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -111,7 +143,7 @@ export default function ImageLibraryPanel() {
                   className="w-full aspect-square rounded border border-border-light bg-cream-alt overflow-hidden hover:ring-1 hover:ring-terracotta/50 transition-all"
                   title={img.originalName}
                 >
-                  <span className="font-ui text-[8px] text-walnut-muted px-1">{img.originalName}</span>
+                  <AuthThumb imageKey={img.key} alt={img.originalName} className="w-full h-full object-cover" />
                 </button>
                 <button
                   onClick={() => book?.id && deleteBookImage(book.id, img.key)}

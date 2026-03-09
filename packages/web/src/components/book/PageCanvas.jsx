@@ -5,6 +5,7 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT, FONTS } from './constants';
 import CanvasElement from './canvas/CanvasElement';
 import PageBackground from './canvas/PageBackground';
 import TextEditOverlay from './canvas/TextEditOverlay';
+import { toast } from '@/components/ui/Toast';
 
 export default function PageCanvas({ page, pageIndex, globalSettings }) {
   const stageRef = useRef(null);
@@ -17,6 +18,10 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
   const setSelectedElement = useBookStore((s) => s.setSelectedElement);
   const updateElement = useBookStore((s) => s.updateElement);
   const deleteElement = useBookStore((s) => s.deleteElement);
+  const uploadBookImage = useBookStore((s) => s.uploadBookImage);
+  const book = useBookStore((s) => s.book);
+  const imageInputRef = useRef(null);
+  const pendingImageElementRef = useRef(null);
 
   // Scale canvas to fit container
   useEffect(() => {
@@ -78,12 +83,48 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
     setEditingText(null);
   }, [setSelectedElement]);
 
-  // Handle element double-click (text editing)
+  // Handle element double-click (text editing or image upload)
   const handleElementDblClick = useCallback((element) => {
     if (element.type === 'text') {
       setEditingText(element);
+    } else if (element.type === 'image' && !element.imageKey) {
+      // Open file picker for empty image placeholders
+      pendingImageElementRef.current = element.id;
+      imageInputRef.current?.click();
     }
   }, []);
+
+  // Handle image file selection for empty image placeholders
+  const handleImageFileSelect = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    const elementId = pendingImageElementRef.current;
+    if (!file || !elementId || !book?.id) return;
+    pendingImageElementRef.current = null;
+
+    try {
+      const img = new Image();
+      const loaded = new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+      img.src = URL.createObjectURL(file);
+      await loaded;
+      URL.revokeObjectURL(img.src);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
+      const jpegFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+
+      const result = await uploadBookImage(book.id, jpegFile);
+      updateElement(pageIndex, elementId, {
+        imageKey: result.key,
+        imageMimeType: result.mimeType || 'image/jpeg',
+      });
+    } catch {
+      toast('Failed to upload image.', 'error');
+    }
+    e.target.value = '';
+  }, [book, pageIndex, updateElement, uploadBookImage]);
 
   // Handle drag end — update position
   const handleDragEnd = useCallback((elementId, e) => {
@@ -245,6 +286,15 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
           onCancel={() => setEditingText(null)}
         />
       )}
+
+      {/* Hidden file input for image element uploads */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageFileSelect}
+      />
     </div>
   );
 }

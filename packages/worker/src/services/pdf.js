@@ -41,24 +41,35 @@ const BORDER_MARGIN = BLEED + 18;
  * Wrap text to fit within a given width, returning an array of lines.
  */
 function wrapText(text, font, fontSize, maxWidth) {
-  const words = text.split(/\s+/);
+  // Split on explicit newlines first to preserve paragraph/line breaks
+  const paragraphs = text.split(/\n/);
   const lines = [];
-  let currentLine = '';
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-
-    if (testWidth > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim();
+    if (trimmed === '') {
+      lines.push(''); // Preserve blank lines as paragraph breaks
+      continue;
     }
-  }
 
-  if (currentLine) {
-    lines.push(currentLine);
+    const words = trimmed.split(/\s+/);
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+      if (testWidth > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
   }
 
   return lines;
@@ -1112,6 +1123,12 @@ function drawBlueprintText(page, element, fontMap, globalFontFamily) {
 
   for (const line of lines) {
     if (textY < y) break; // Don't draw below element bounds
+
+    if (line === '') {
+      // Blank line = paragraph break, add half-line spacing
+      textY -= lineHeight * 0.5;
+      continue;
+    }
 
     let textX = x;
     if (alignment === 'center') {

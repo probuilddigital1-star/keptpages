@@ -159,7 +159,7 @@ function LetterFields({ data, onChange }) {
         onChange={(e) => update('title', e.target.value)}
         placeholder="Letter title or subject"
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           label="From"
           value={data.from || ''}

@@ -19,7 +19,7 @@ export default function StickyMobileCTA({ onCtaClick, onLoginClick }) {
   return (
     <div
       className={clsx(
-        'fixed bottom-0 left-0 right-0 bg-cream/95 backdrop-blur-[12px] border-t border-border py-3 px-[22px] z-[999] flex items-center justify-between transition-transform duration-[0.35s] lg:hidden',
+        'fixed bottom-0 left-0 right-0 bg-cream/95 backdrop-blur-[12px] border-t border-border py-3 pb-[max(12px,env(safe-area-inset-bottom))] px-4 sm:px-[22px] z-[999] flex items-center justify-between transition-transform duration-[0.35s] lg:hidden',
         visible ? 'translate-y-0' : 'translate-y-full'
       )}
     >

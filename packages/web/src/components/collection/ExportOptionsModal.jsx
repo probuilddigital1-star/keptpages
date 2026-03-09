@@ -164,7 +164,7 @@ export default function ExportOptionsModal({
         {/* Color Theme */}
         <fieldset>
           <legend className="font-ui text-sm font-medium text-walnut mb-2">Color Theme</legend>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {COLOR_THEMES.map((t) => (
               <button
                 key={t.value}
@@ -315,7 +315,7 @@ export default function ExportOptionsModal({
         </fieldset>
 
         {/* Actions */}
-        <div className="flex gap-3 justify-end pt-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
           <Button
             variant="ghost"
             onClick={() => {

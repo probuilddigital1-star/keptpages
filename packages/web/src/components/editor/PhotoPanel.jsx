@@ -85,30 +85,30 @@ export default function PhotoPanel({ imageUrl }) {
           <button
             onClick={handleZoomOut}
             disabled={zoom <= MIN_ZOOM}
-            className="p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2.5 sm:p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label="Zoom out"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
             </svg>
           </button>
           <button
             onClick={handleZoomIn}
             disabled={zoom >= MAX_ZOOM}
-            className="p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="p-2.5 sm:p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label="Zoom in"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
             </svg>
           </button>
           <div className="w-px h-5 bg-border mx-1" />
           <button
             onClick={handleFit}
-            className="p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt transition-colors"
+            className="p-2.5 sm:p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt transition-colors"
             aria-label="Fit to view"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
             </svg>
           </button>

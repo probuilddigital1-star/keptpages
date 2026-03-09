@@ -251,6 +251,37 @@ protectedApi.use('*', authMiddleware());
 // Rate limiting middleware
 protectedApi.use('*', rateLimitMiddleware());
 
+// Serve R2 images for book designer canvas (authenticated)
+protectedApi.get('/images/*', async (c) => {
+  const user = c.get('user');
+  const key = c.req.path.replace(/^\/api\/images\//, '');
+
+  if (!key) {
+    return c.json({ error: 'Missing image key' }, 400);
+  }
+
+  // Verify the key belongs to this user
+  if (!key.startsWith(`${user.id}/`)) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  // Try PROCESSED bucket first (book images, cover photos), then UPLOADS (scan originals)
+  let obj = await c.env.PROCESSED.get(key);
+  if (!obj) {
+    obj = await c.env.UPLOADS.get(key);
+  }
+  if (!obj) {
+    return c.json({ error: 'Image not found' }, 404);
+  }
+
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg',
+      'Cache-Control': 'private, max-age=3600',
+    },
+  });
+});
+
 // Mount route groups
 protectedApi.route('/scan', scanRoutes);
 protectedApi.route('/collections', collectionsRoutes);
