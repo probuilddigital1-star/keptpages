@@ -23,12 +23,15 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
   const imageInputRef = useRef(null);
   const pendingImageElementRef = useRef(null);
 
-  // Scale canvas to fit container
+  // Scale canvas to fit container (both width and height)
   useEffect(() => {
     const updateScale = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.offsetWidth - 32;
-      const newScale = Math.min(1, containerWidth / CANVAS_WIDTH);
+      const containerHeight = containerRef.current.offsetHeight - 16;
+      const scaleByWidth = containerWidth / CANVAS_WIDTH;
+      const scaleByHeight = containerHeight > 100 ? containerHeight / CANVAS_HEIGHT : scaleByWidth;
+      const newScale = Math.min(1, scaleByWidth, scaleByHeight);
       setScale(newScale);
     };
     updateScale();
@@ -215,7 +218,7 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
       <div
         style={{
           width: CANVAS_WIDTH * scale,

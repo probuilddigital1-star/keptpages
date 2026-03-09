@@ -12,6 +12,7 @@ const MODES = ['pages', 'settings', 'cover', 'order'];
 export default function BookDesigner({ collectionId, bookId }) {
   const [mode, setMode] = useState('cover');
   const [initializing, setInitializing] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const autoSaveRef = useRef(null);
 
   const book = useBookStore((s) => s.book);
@@ -149,7 +150,7 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
 
         {/* Main canvas area */}
-        <div className="flex-1 bg-gray-100 overflow-auto flex items-start justify-center p-3 md:p-6">
+        <div className="flex-1 bg-gray-100 overflow-auto flex items-center justify-center p-2 md:p-6">
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
@@ -166,9 +167,25 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
       </div>
 
-      {/* Mobile sidebar (bottom drawer — expandable) */}
-      <div className="md:hidden border-t border-border-light bg-cream-surface overflow-y-auto max-h-[40vh]">
-        <DesignerSidebar mode={mode} />
+      {/* Mobile sidebar (collapsible bottom drawer) */}
+      <div className="md:hidden border-t border-border-light bg-cream-surface shrink-0">
+        <button
+          onClick={() => setMobileDrawerOpen((v) => !v)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 font-ui text-xs font-medium text-walnut-secondary hover:bg-cream-alt transition-colors"
+        >
+          <svg
+            className={`w-3.5 h-3.5 transition-transform ${mobileDrawerOpen ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+          </svg>
+          {mobileDrawerOpen ? 'Hide Panel' : 'Show Panel'}
+        </button>
+        {mobileDrawerOpen && (
+          <div className="overflow-y-auto max-h-[45vh] border-t border-border-light">
+            <DesignerSidebar mode={mode} />
+          </div>
+        )}
       </div>
     </div>
   );
