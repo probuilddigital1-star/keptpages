@@ -150,13 +150,30 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
 
         {/* Main canvas area */}
-        <div className="flex-1 bg-gray-100 overflow-auto p-2 pb-12 md:p-6 md:pb-6">
+        <div className="flex-1 bg-gray-100 overflow-auto p-2 pb-24 md:p-6 md:pb-6">
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
             <div className="flex items-start justify-center min-h-full">
               <CoverPreview coverDesign={blueprint?.coverDesign} />
             </div>
+          ) : mode === 'settings' ? (
+            <>
+              {/* Mobile: show settings inline since sidebar is hidden */}
+              <div className="md:hidden bg-cream-surface rounded-lg border border-border-light">
+                <DesignerSidebar mode="settings" />
+              </div>
+              {/* Desktop: show page canvas (settings are in sidebar) */}
+              <div className="hidden md:flex items-start justify-center min-h-full">
+                {currentPage && (
+                  <PageCanvas
+                    page={currentPage}
+                    pageIndex={selectedPageIndex}
+                    globalSettings={blueprint?.globalSettings}
+                  />
+                )}
+              </div>
+            </>
           ) : (
             currentPage && (
               <div className="flex items-start justify-center min-h-full">
@@ -171,8 +188,8 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
       </div>
 
-      {/* Mobile sidebar (fixed bottom drawer) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-cream-surface border-t border-border-light shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
+      {/* Mobile sidebar (fixed above bottom tabs) */}
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-50 bg-cream-surface border-t border-border-light shadow-[0_-2px_8px_rgba(0,0,0,0.08)] rounded-t-xl">
         <button
           onClick={() => setMobileDrawerOpen((v) => !v)}
           className="w-full flex items-center justify-center gap-1.5 py-2.5 font-ui text-xs font-medium text-walnut-secondary active:bg-cream-alt transition-colors"
@@ -186,7 +203,7 @@ export default function BookDesigner({ collectionId, bookId }) {
           {mobileDrawerOpen ? 'Hide Panel' : 'Show Panel'}
         </button>
         {mobileDrawerOpen && (
-          <div className="overflow-y-auto max-h-[45vh] border-t border-border-light">
+          <div className="overflow-y-auto max-h-[40vh] border-t border-border-light">
             <DesignerSidebar mode={mode} />
           </div>
         )}
