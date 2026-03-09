@@ -134,7 +134,7 @@ export default function BookDesigner({ collectionId, bookId }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100dvh-4rem)]">
       <DesignerToolbar
         mode={mode}
         onModeChange={setMode}
@@ -150,18 +150,22 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
 
         {/* Main canvas area */}
-        <div className="flex-1 bg-gray-100 overflow-auto flex items-center justify-center p-2 md:p-6">
+        <div className="flex-1 bg-gray-100 overflow-auto p-2 md:p-6">
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
-            <CoverPreview coverDesign={blueprint?.coverDesign} />
+            <div className="flex items-start justify-center min-h-full">
+              <CoverPreview coverDesign={blueprint?.coverDesign} />
+            </div>
           ) : (
             currentPage && (
-              <PageCanvas
-                page={currentPage}
-                pageIndex={selectedPageIndex}
-                globalSettings={blueprint?.globalSettings}
-              />
+              <div className="flex items-start justify-center min-h-full">
+                <PageCanvas
+                  page={currentPage}
+                  pageIndex={selectedPageIndex}
+                  globalSettings={blueprint?.globalSettings}
+                />
+              </div>
             )
           )}
         </div>

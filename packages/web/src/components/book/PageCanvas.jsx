@@ -23,14 +23,16 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
   const imageInputRef = useRef(null);
   const pendingImageElementRef = useRef(null);
 
-  // Scale canvas to fit container (both width and height)
+  // Scale canvas to fit container width and available viewport height
   useEffect(() => {
     const updateScale = () => {
       if (!containerRef.current) return;
-      const containerWidth = containerRef.current.offsetWidth - 32;
-      const containerHeight = containerRef.current.offsetHeight - 16;
+      const containerWidth = containerRef.current.offsetWidth - 16;
       const scaleByWidth = containerWidth / CANVAS_WIDTH;
-      const scaleByHeight = containerHeight > 100 ? containerHeight / CANVAS_HEIGHT : scaleByWidth;
+      // Measure available height from container's parent (the scrollable area)
+      const scrollParent = containerRef.current.closest('.overflow-auto');
+      const availableHeight = scrollParent ? scrollParent.clientHeight - 16 : window.innerHeight * 0.6;
+      const scaleByHeight = availableHeight > 100 ? availableHeight / CANVAS_HEIGHT : scaleByWidth;
       const newScale = Math.min(1, scaleByWidth, scaleByHeight);
       setScale(newScale);
     };
@@ -218,7 +220,7 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
+    <div ref={containerRef} className="relative w-full">
       <div
         style={{
           width: CANVAS_WIDTH * scale,
