@@ -134,7 +134,7 @@ export default function BookDesigner({ collectionId, bookId }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
       <DesignerToolbar
         mode={mode}
         onModeChange={setMode}
@@ -150,7 +150,7 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
 
         {/* Main canvas area */}
-        <div className="flex-1 bg-gray-100 overflow-auto p-2 md:p-6">
+        <div className="flex-1 bg-gray-100 overflow-auto p-2 pb-12 md:p-6 md:pb-6">
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
@@ -171,11 +171,11 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
       </div>
 
-      {/* Mobile sidebar (collapsible bottom drawer) */}
-      <div className="md:hidden border-t border-border-light bg-cream-surface shrink-0">
+      {/* Mobile sidebar (fixed bottom drawer) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-cream-surface border-t border-border-light shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
         <button
           onClick={() => setMobileDrawerOpen((v) => !v)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 font-ui text-xs font-medium text-walnut-secondary hover:bg-cream-alt transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 font-ui text-xs font-medium text-walnut-secondary active:bg-cream-alt transition-colors"
         >
           <svg
             className={`w-3.5 h-3.5 transition-transform ${mobileDrawerOpen ? 'rotate-180' : ''}`}
