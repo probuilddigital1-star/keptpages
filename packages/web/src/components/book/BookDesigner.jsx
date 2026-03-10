@@ -188,26 +188,28 @@ export default function BookDesigner({ collectionId, bookId }) {
         </div>
       </div>
 
-      {/* Mobile sidebar (fixed above bottom tabs) */}
-      <div className="md:hidden fixed bottom-16 left-0 right-0 z-50 bg-cream-surface border-t border-border-light shadow-[0_-2px_8px_rgba(0,0,0,0.08)] rounded-t-xl">
-        <button
-          onClick={() => setMobileDrawerOpen((v) => !v)}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 font-ui text-xs font-medium text-walnut-secondary active:bg-cream-alt transition-colors"
-        >
-          <svg
-            className={`w-3.5 h-3.5 transition-transform ${mobileDrawerOpen ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"
+      {/* Mobile sidebar (fixed above bottom tabs) — hidden in settings/cover mode where content is shown inline */}
+      {mode !== 'settings' && mode !== 'cover' && (
+        <div className="md:hidden fixed bottom-16 left-0 right-0 z-50 bg-cream-surface border-t border-border-light shadow-[0_-2px_8px_rgba(0,0,0,0.08)] rounded-t-xl">
+          <button
+            onClick={() => setMobileDrawerOpen((v) => !v)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 font-ui text-xs font-medium text-walnut-secondary active:bg-cream-alt transition-colors"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-          </svg>
-          {mobileDrawerOpen ? 'Hide Panel' : 'Show Panel'}
-        </button>
-        {mobileDrawerOpen && (
-          <div className="overflow-y-auto max-h-[40vh] border-t border-border-light">
-            <DesignerSidebar mode={mode} />
-          </div>
-        )}
-      </div>
+            <svg
+              className={`w-3.5 h-3.5 transition-transform ${mobileDrawerOpen ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            </svg>
+            {mobileDrawerOpen ? 'Hide Panel' : 'Show Panel'}
+          </button>
+          {mobileDrawerOpen && (
+            <div className="overflow-y-auto max-h-[40vh] border-t border-border-light">
+              <DesignerSidebar mode={mode} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
