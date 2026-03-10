@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-07
+Last Updated: 2026-03-10
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -96,12 +96,33 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BOOK-11 | Order panel & book ordering | DONE | OrderPanel with generate/download, shipping form, quantity, pricing, Stripe checkout integration |
 | US-BOOK-12 | Auto-save, undo/redo & keyboard shortcuts | DONE | zundo temporal middleware, Ctrl+Z/Shift+Z, Delete/arrow nudge, 5s auto-save, save status indicator |
 | US-BOOK-13 | Testing & production polish | DONE | 11 blueprint PDF tests, hexToRgb 3-char fix, responsive sidebar, 642 total tests passing, clean build |
+| US-UX-1 | Toast notifications mobile positioning | TODO | Toasts hidden behind bottom nav on mobile |
+| US-UX-2 | Collection action buttons mobile layout | TODO | 5 buttons overflow/wrap awkwardly on narrow screens |
+| US-UX-3 | Document card mobile action layout | TODO | Reorder buttons stack tall, making cards oversized on mobile |
+| US-UX-4 | Camera controls safe-area padding | TODO | Capture button behind home indicator on notched phones |
+| US-UX-5 | Export modal state persistence | TODO | Modal resets all customization when accidentally dismissed |
+| US-UX-6 | DropZone mobile optimization | TODO | Oversized padding + irrelevant drag text on mobile |
+| US-UX-7 | Document removal confirmation | TODO | No confirm before removing document from collection |
+| US-UX-8 | Scan page header responsive layout | TODO | Heading and badge overlap on <360px screens |
+| US-UX-9 | Error toast auto-dismiss timing | TODO | Error toasts dismiss at same 4s as success — too fast |
+| US-UX-10 | TopBar dropdown overflow guard | TODO | 176px menu clips off-screen on narrow phones |
+| US-UX-11 | Loading skeleton placeholders | TODO | Spinner-only loading feels broken, no skeleton states |
+| US-UX-12 | Collection name edit discoverability | TODO | No visual cue name is tappable on mobile (hover-only) |
+| US-UX-13 | Upload photo card click handler | TODO | Card does nothing when not at scan limit |
+| US-UX-14 | Back-to-collection after scanning | TODO | No obvious return path after scanning from collection |
+| US-UX-15 | Delete collection soft-delete | TODO | Permanent deletion with no undo or recovery option |
+| US-UX-16 | Toast container mobile width | TODO | Fixed 320px width clips on phones narrower than 360px |
+| US-UX-17 | Export modal reorder tap targets | TODO | Up/down arrows only 22px — below touch target minimum |
+| US-UX-18 | Signup password strength indicator | TODO | No minimum length or strength feedback on signup |
+| US-UX-19 | Avatar upload progress indicator | TODO | No spinner/progress during avatar upload |
+| US-UX-20 | Upgrade link deep-linking | TODO | Mobile upgrade pill goes to Settings, user must scroll to find card |
 
-**Completed: 66/85** | **Remaining: 19**
+**Completed: 66/105** | **Remaining: 39**
 
 ### Prioritized Roadmap (as of 2026-03-07)
 
 **DONE — Phases 1–3, 5.5, 6:** Export, QA, Book Designer, Print Options, Order Tracking & Admin
+**Phase 3.5 — UX Polish (NEW):** US-UX-1→20 (mobile/desktop friction fixes)
 **Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
 **Phase 5 — Launch Readiness:** US-QA-10→12 (pre-launch)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
@@ -138,7 +159,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
 | **QA** — Testing & Launch Readiness | 12 | 8 | 4 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
-| **Total** | **85** | **66** | **19** |
+| **UX** — Mobile & Desktop Friction Fixes | 20 | 0 | 20 |
+| **Total** | **105** | **66** | **39** |
 
 ---
 
@@ -1439,3 +1461,402 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Dependencies:** US-QA-1, US-QA-4, US-QA-9, US-QA-10, US-QA-11
 **Estimate:** XL
+
+---
+
+## Epic 8: Mobile & Desktop UX Friction Fixes (UX)
+
+> Identified via expert UI/UX audit of all pages, components, and layouts on 2026-03-10.
+> Priority: P0 (Critical) → P1 (High Impact) → P2 (Medium Polish).
+> All stories are frontend-only changes (no API/DB work required).
+
+---
+
+### US-UX-1: Toast notifications mobile positioning (P0 Critical)
+**As a** mobile user
+**I want to** see toast notifications above the bottom navigation bar
+**So that** I don't miss important success/error feedback
+
+**Problem:** Toasts render at `bottom-6 right-6` (fixed position) but the `BottomTabs` nav bar occupies the bottom of the screen at `z-40`. On mobile, toasts overlap or hide behind the tab bar.
+
+**Acceptance Criteria:**
+- [ ] Toasts appear above the bottom tab bar on mobile (minimum `bottom-20`)
+- [ ] Toasts remain right-aligned at `bottom-6 right-6` on desktop (≥1024px)
+- [ ] Toast container is full-width on mobile with horizontal padding
+- [ ] No z-index conflicts with bottom tabs or modals
+- [ ] Tested at 360px, 390px, and 414px viewport widths
+
+**File:** `packages/web/src/components/ui/Toast.jsx:98`
+**Fix:** Change container classes to `fixed bottom-20 lg:bottom-6 right-4 left-4 sm:left-auto sm:right-6 sm:w-80 z-[9999]`
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-2: Collection action buttons mobile layout (P0 Critical)
+**As a** mobile user viewing a collection
+**I want to** see clearly organized action buttons that don't overflow
+**So that** I can easily find and use Add, Scan, Export, and Delete functions
+
+**Problem:** The collection page has 5 action buttons (Add Document, Scan New, Export PDF, Create Book, Delete) in a `flex-wrap` row. On narrow screens they wrap unpredictably with inconsistent sizing.
+
+**Acceptance Criteria:**
+- [ ] Buttons stack vertically on mobile (<640px) with full-width primary actions
+- [ ] Buttons display in a horizontal row on desktop (≥640px)
+- [ ] Primary actions (Scan New) are visually prominent
+- [ ] Destructive action (Delete) is visually separated from other actions
+- [ ] Tested at 320px and 375px widths
+
+**File:** `packages/web/src/pages/Collection/index.jsx:316`
+**Fix:** Change `flex flex-wrap` to `flex flex-col sm:flex-row flex-wrap` and add `w-full sm:w-auto` to primary buttons
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-3: Document card mobile action layout (P0 Critical)
+**As a** mobile user managing documents in a collection
+**I want to** easily reorder and remove documents without the card becoming too tall
+**So that** I can manage my collection efficiently on a small screen
+
+**Problem:** Up/down/remove buttons are stacked vertically (3 buttons × 44px = 132px column) beside each document card. This makes cards very tall on mobile, reducing the number of visible items.
+
+**Acceptance Criteria:**
+- [ ] On mobile, action buttons display in a horizontal row below the card content
+- [ ] On desktop, action buttons remain in the vertical column layout
+- [ ] All buttons maintain 44px minimum touch targets
+- [ ] Card layout is compact enough to show 3+ cards on a mobile viewport
+
+**File:** `packages/web/src/components/collection/DocumentCard.jsx:107`
+**Fix:** Wrap action buttons in responsive layout: `flex flex-row sm:flex-col` and move below content on mobile
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-4: Camera controls safe-area padding (P0 Critical)
+**As a** mobile user scanning a document on a notched/pill-shaped phone
+**I want to** access the capture button without it being behind the home indicator
+**So that** I can take photos without struggling with the UI
+
+**Problem:** Camera controls have `py-6` padding but no `env(safe-area-inset-bottom)` padding. On iPhones with the home indicator bar, the capture button sits behind it.
+
+**Acceptance Criteria:**
+- [ ] Camera capture button clears the home indicator on all iOS devices
+- [ ] Safe area padding is applied to the bottom of camera controls
+- [ ] No visual regression on Android devices or non-notched phones
+- [ ] Tested in Chrome DevTools with iPhone 14/15 Pro frame
+
+**File:** `packages/web/src/components/scan/CameraCapture.jsx`
+**Fix:** Add `pb-[calc(1.5rem+env(safe-area-inset-bottom))]` to camera controls container
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-5: Export modal state persistence (P0 Critical)
+**As a** Keeper user customizing a PDF export
+**I want to** keep my template/font/document selections if I accidentally close the modal
+**So that** I don't have to redo all my customization choices
+
+**Problem:** `resetState()` is called in the `onClose` handler, so accidentally clicking the backdrop or pressing Escape erases all template, font, and document selections.
+
+**Acceptance Criteria:**
+- [ ] Closing the modal (backdrop click, Escape, Cancel button) preserves selections
+- [ ] Reopening the modal shows previously chosen options
+- [ ] State resets only after a successful export completes
+- [ ] State resets when navigating away from the collection page
+
+**File:** `packages/web/src/components/collection/ExportOptionsModal.jsx:156-159`
+**Fix:** Remove `resetState()` from close handler; call it only inside the `handleSubmit` success path
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-6: DropZone mobile optimization (P0 Critical)
+**As a** mobile user uploading a document photo
+**I want to** see a compact upload area with mobile-appropriate instructions
+**So that** the interface doesn't waste screen space with irrelevant desktop features
+
+**Problem:** DropZone has `p-10` (40px) padding making it very tall on mobile. The "Drop your photo here" copy references drag-and-drop which doesn't exist on mobile browsers.
+
+**Acceptance Criteria:**
+- [ ] Padding reduced to `p-6` on mobile, `p-10` on desktop
+- [ ] Mobile copy reads "Tap to choose a photo" instead of "Drop your photo here or click to browse"
+- [ ] Desktop copy remains "Drop your photo here or click to browse"
+- [ ] Upload icon is smaller on mobile (single icon instead of two)
+
+**File:** `packages/web/src/components/scan/DropZone.jsx:73,120`
+**Fix:** Responsive padding `p-6 sm:p-10`, conditional text via media query or responsive classes
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-7: Document removal confirmation (P0 Critical)
+**As a** user managing a collection
+**I want to** confirm before a document is removed from the collection
+**So that** I don't accidentally lose documents due to a mis-tap
+
+**Problem:** Tapping the remove (X) button immediately removes the document with no confirmation. On mobile, fat-finger taps can accidentally trigger removal.
+
+**Acceptance Criteria:**
+- [ ] Tapping remove shows a confirmation prompt (inline toast with undo, or small modal)
+- [ ] User must confirm before removal executes
+- [ ] Confirmation auto-dismisses after 5 seconds if no action taken (for toast approach)
+- [ ] Desktop behavior matches mobile
+
+**File:** `packages/web/src/pages/Collection/index.jsx:127-133`
+**Fix:** Add confirmation modal or implement "undo" toast pattern with delayed API call
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-8: Scan page header responsive layout (P0 Critical)
+**As a** mobile user on a very narrow screen
+**I want to** see the scan page heading and usage badge without overlap
+**So that** I can clearly read both the page title and my remaining scan count
+
+**Problem:** The header uses `flex justify-between` causing the "New Scan" heading and "23 of 25 scans used" badge to collide on screens narrower than 360px.
+
+**Acceptance Criteria:**
+- [ ] Header stacks vertically on narrow screens (<640px)
+- [ ] Badge appears below the heading with proper spacing
+- [ ] Horizontal layout preserved on desktop
+
+**File:** `packages/web/src/pages/Scan/index.jsx`
+**Fix:** Change to `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-9: Error toast auto-dismiss timing (P0 Critical)
+**As a** user who encounters an error
+**I want to** have enough time to read and understand error messages
+**So that** I can take appropriate action (retry, contact support, etc.)
+
+**Problem:** All toast variants (success, error, info) auto-dismiss after 4 seconds. Error messages like "Failed to export PDF" or "Failed to save profile" need more time to read and comprehend.
+
+**Acceptance Criteria:**
+- [ ] Success toasts auto-dismiss after 4 seconds (unchanged)
+- [ ] Error toasts auto-dismiss after 7 seconds
+- [ ] Info toasts auto-dismiss after 5 seconds
+- [ ] Manual dismiss still works for all variants
+
+**File:** `packages/web/src/components/ui/Toast.jsx:47`
+**Fix:** Add variant-based timing: `const DURATIONS = { success: 4000, error: 7000, info: 5000 }`
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-10: TopBar dropdown overflow guard (P0 Critical)
+**As a** mobile user tapping their profile avatar
+**I want to** see the dropdown menu fully on screen
+**So that** I can access Settings and Sign Out without horizontal scrolling
+
+**Problem:** The user dropdown menu is `w-44` (176px) with `absolute right-0`. On very narrow screens (<360px), the menu may clip or cause horizontal overflow.
+
+**Acceptance Criteria:**
+- [ ] Dropdown menu never extends beyond viewport edges
+- [ ] Max width constrained to available viewport width minus padding
+- [ ] Menu positioning works correctly at 320px viewport width
+
+**File:** `packages/web/src/components/layout/AppLayout.jsx:227`
+**Fix:** Add `max-w-[calc(100vw-2rem)]` to the dropdown div
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-11: Loading skeleton placeholders (P1 High Impact)
+**As a** user waiting for the dashboard or collection to load
+**I want to** see skeleton placeholders that match the final layout
+**So that** the page doesn't feel broken or empty during loading
+
+**Problem:** Both Dashboard and Collection pages show only a centered `<Spinner>` inside a `py-20` container. Users see a blank cream page with a small spinner, which feels broken.
+
+**Acceptance Criteria:**
+- [ ] Dashboard loading shows skeleton card grid (pulsing rectangles matching CollectionCard dimensions)
+- [ ] Collection loading shows skeleton document list
+- [ ] Skeleton matches the actual grid layout (1/2/3 columns responsive)
+- [ ] Spinner is removed in favor of skeleton
+- [ ] Skeleton uses `animate-pulse bg-cream-alt` styling
+
+**Files:** `packages/web/src/pages/Dashboard/index.jsx:125`, `packages/web/src/pages/Collection/index.jsx:207`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-UX-12: Collection name edit discoverability on mobile (P1 High Impact)
+**As a** mobile user viewing a collection
+**I want to** know that I can tap the collection name to edit it
+**So that** I can rename my collection without guessing
+
+**Problem:** The collection name is a clickable `<h1>` with only `cursor-pointer` and `:hover` color change as edit affordances. On mobile there is no hover state — users have no visual cue the name is editable.
+
+**Acceptance Criteria:**
+- [ ] A small pencil/edit icon appears next to the collection name
+- [ ] Icon is subtle (muted color) but visible on mobile
+- [ ] Tapping the name or icon enters edit mode
+- [ ] Same treatment applied to the description field
+
+**File:** `packages/web/src/pages/Collection/index.jsx:272-311`
+**Fix:** Add inline SVG pencil icon with `text-walnut-muted` after the name/description text
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-13: Upload photo card click handler (P1 High Impact)
+**As a** user on the scan page
+**I want to** click the "Upload Photo" card to immediately open the file picker
+**So that** I don't have to scroll to find a separate upload zone
+
+**Problem:** The "Upload Photo" card has an `onClick` that only triggers the upgrade modal when at the scan limit. When NOT at the limit, clicking the card does nothing — the user must use the separate DropZone below.
+
+**Acceptance Criteria:**
+- [ ] Clicking "Upload Photo" card opens the native file picker when scans are available
+- [ ] When at the scan limit, clicking shows the upgrade prompt (unchanged)
+- [ ] File picker accepts same formats as DropZone (JPEG, PNG, HEIC)
+
+**File:** `packages/web/src/pages/Scan/index.jsx`
+**Fix:** Add `onClick` handler that calls `inputRef.current.click()` when not at limit
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-14: Back-to-collection navigation after scanning (P1 High Impact)
+**As a** user who started scanning from a collection page
+**I want to** easily navigate back to that collection after the scan completes
+**So that** I don't lose my place in the workflow
+
+**Problem:** When scanning from a collection (via `Link state={{ collectionId }}`), the scan detail page may not provide a clear back-navigation link to the originating collection.
+
+**Acceptance Criteria:**
+- [ ] Scan detail page shows "Back to [Collection Name]" link when `fromCollection` state is present
+- [ ] Link navigates to `/app/collection/:id`
+- [ ] When no `fromCollection` state, shows generic "Back to Scans" link
+
+**File:** `packages/web/src/pages/Scan/ScanDetail.jsx`
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-15: Delete collection with recovery option (P1 High Impact)
+**As a** user who accidentally deleted a collection
+**I want to** have a way to recover it within a reasonable timeframe
+**So that** I don't permanently lose my organized work
+
+**Problem:** Collection deletion is permanent. The confirmation modal exists but there's no undo or recovery mechanism. A toast says "Collection deleted" but there's no way to reverse it.
+
+**Acceptance Criteria:**
+- [ ] After deletion, show a toast with "Undo" button (5-second window)
+- [ ] If "Undo" is clicked, the deletion is cancelled and user stays on the collection page
+- [ ] If timer expires, deletion proceeds as normal
+- [ ] Alternative: implement soft-delete with a 30-day recovery in Settings
+
+**Files:** `packages/web/src/pages/Collection/index.jsx:171`, `packages/web/src/components/ui/Toast.jsx`
+**Dependencies:** May require API changes for soft-delete approach
+**Estimate:** M (toast undo) or L (soft-delete)
+
+---
+
+### US-UX-16: Toast container mobile width (P2 Medium Polish)
+**As a** mobile user with a narrow screen
+**I want to** see toast notifications that fit within my screen width
+**So that** messages are fully readable without horizontal clipping
+
+**Problem:** Toast container has fixed `w-80` (320px) which is wider than some small phones (e.g., iPhone SE at 320px viewport).
+
+**Acceptance Criteria:**
+- [ ] Toast container is full-width with padding on mobile
+- [ ] Toast container is `w-80` right-aligned on desktop
+- [ ] No horizontal scrollbar triggered by toasts
+
+**File:** `packages/web/src/components/ui/Toast.jsx:98`
+**Fix:** Change to `w-[calc(100vw-2rem)] sm:w-80`
+**Note:** Can be combined with US-UX-1 (same file, same element)
+**Dependencies:** US-UX-1
+**Estimate:** XS
+
+---
+
+### US-UX-17: Export modal reorder tap targets (P2 Medium Polish)
+**As a** mobile user reordering documents in the export modal
+**I want to** easily tap the up/down arrows without mis-tapping
+**So that** I can arrange documents in my preferred order
+
+**Problem:** The up/down arrows in the export document list are `w-3.5 h-3.5` with `p-1`, resulting in ~22px touch targets — well below the 44px WCAG minimum.
+
+**Acceptance Criteria:**
+- [ ] Reorder buttons have minimum 44px × 44px touch area
+- [ ] Buttons remain visually compact but with expanded tap area via padding
+- [ ] No overlap between adjacent touch targets
+
+**File:** `packages/web/src/components/collection/ExportOptionsModal.jsx:293-310`
+**Fix:** Increase padding to `p-2.5` and add `min-w-[44px] min-h-[44px]` to button elements
+**Dependencies:** None
+**Estimate:** XS
+
+---
+
+### US-UX-18: Signup password strength indicator (P2 Medium Polish)
+**As a** new user creating an account
+**I want to** see password strength feedback as I type
+**So that** I create a secure password and understand the requirements
+
+**Problem:** The signup form validates email format but only checks if a password exists (any length, any complexity). No minimum length or strength feedback is provided.
+
+**Acceptance Criteria:**
+- [ ] Minimum password length of 8 characters enforced
+- [ ] Visual strength bar shows weak/fair/strong based on character mix
+- [ ] Validation error shown if password is too short
+- [ ] Strength indicator does not block form submission (advisory only above minimum)
+
+**File:** `packages/web/src/pages/Auth/Signup.jsx`
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-19: Avatar upload progress indicator (P2 Medium Polish)
+**As a** user changing their profile photo
+**I want to** see upload progress while my avatar is being saved
+**So that** I know the upload is working and don't click away prematurely
+
+**Problem:** `handleAvatarChange` reads the file and `api.upload` runs with no visual feedback. The user sees the preview immediately (via FileReader) but doesn't know if the server upload succeeded until "Profile updated!" toast appears.
+
+**Acceptance Criteria:**
+- [ ] Spinner or progress ring overlays the avatar during upload
+- [ ] Upload state is visually distinct from the saved state
+- [ ] Error state shown if upload fails
+
+**File:** `packages/web/src/pages/Settings/index.jsx:77-84`
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-UX-20: Upgrade link deep-linking (P2 Medium Polish)
+**As a** free-tier mobile user tapping "Upgrade"
+**I want to** be taken directly to the upgrade card
+**So that** I don't have to scroll through the Settings page to find it
+
+**Problem:** The "UPGRADE" pill in the mobile TopBar navigates to `/app/settings`. The upgrade card is inside the Subscription section, which may require scrolling past the Profile section.
+
+**Acceptance Criteria:**
+- [ ] Upgrade link navigates to `/app/settings#subscription` or equivalent
+- [ ] Settings page auto-scrolls to the subscription section when hash is present
+- [ ] Smooth scroll animation to the target section
+
+**File:** `packages/web/src/components/layout/AppLayout.jsx:213`, `packages/web/src/pages/Settings/index.jsx`
+**Fix:** Add `id="subscription"` to subscription section, update link to `/app/settings#subscription`, add `useEffect` scroll-to-hash
+**Dependencies:** None
+**Estimate:** S
