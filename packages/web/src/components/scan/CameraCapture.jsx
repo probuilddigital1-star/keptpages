@@ -145,7 +145,7 @@ export default function CameraCapture({ onCapture, onClose }) {
       </div>
 
       {/* Controls */}
-      <div className="bg-walnut/90 backdrop-blur-sm px-6 py-6 flex items-center justify-between">
+      <div className="bg-walnut/90 backdrop-blur-sm px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex items-center justify-between">
         {/* Close */}
         <button
           onClick={handleClose}

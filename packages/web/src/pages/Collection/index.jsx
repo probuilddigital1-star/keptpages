@@ -50,6 +50,8 @@ export default function CollectionPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [removeDocId, setRemoveDocId] = useState(null);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     if (collections.length === 0) {
@@ -124,14 +126,26 @@ export default function CollectionPage() {
     [documents, id, reorderDocuments],
   );
 
-  const handleRemove = useCallback(
+  const handleRemoveRequest = useCallback(
     (docId) => {
-      removeFromCollection(id, docId).catch(() =>
-        toast('Failed to remove document', 'error'),
-      );
+      setRemoveDocId(docId);
     },
-    [id, removeFromCollection],
+    [],
   );
+
+  const handleRemoveConfirm = useCallback(async () => {
+    if (!removeDocId) return;
+    setRemoving(true);
+    try {
+      await removeFromCollection(id, removeDocId);
+      toast('Document removed');
+    } catch {
+      toast('Failed to remove document', 'error');
+    } finally {
+      setRemoving(false);
+      setRemoveDocId(null);
+    }
+  }, [id, removeDocId, removeFromCollection]);
 
   // Export PDF — accepts optional options object (Keeper customization)
   const handleExport = useCallback(async (options) => {
@@ -478,7 +492,7 @@ export default function CollectionPage() {
                   onMoveDown={
                     index < documents.length - 1 ? handleMoveDown : undefined
                   }
-                  onRemove={handleRemove}
+                  onRemove={handleRemoveRequest}
                   onClick={() => navigate(`/app/scan/${doc.id}`, { state: { fromCollection: id } })}
                 />
 
@@ -537,6 +551,36 @@ export default function CollectionPage() {
               loading={deleting}
             >
               Delete Collection
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Remove Document Confirmation Modal */}
+      <Modal
+        open={removeDocId !== null}
+        onClose={() => setRemoveDocId(null)}
+        title="Remove Document"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="font-body text-walnut-secondary">
+            Remove this document from the collection? The scan itself will not be deleted.
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              variant="ghost"
+              onClick={() => setRemoveDocId(null)}
+              disabled={removing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleRemoveConfirm}
+              loading={removing}
+            >
+              Remove
             </Button>
           </div>
         </div>

@@ -34,6 +34,12 @@ const variantStyles = {
   info: 'border-terracotta/30 bg-terracotta-light text-terracotta',
 };
 
+const DISMISS_DURATIONS = {
+  success: 4000,
+  error: 7000,
+  info: 5000,
+};
+
 function ToastItem({ id, message, variant = 'success', onDismiss }) {
   const [exiting, setExiting] = useState(false);
 
@@ -42,11 +48,11 @@ function ToastItem({ id, message, variant = 'success', onDismiss }) {
     setTimeout(() => onDismiss(id), 200);
   }, [id, onDismiss]);
 
-  // Auto-dismiss after 4 seconds
+  // Auto-dismiss with variant-based timing
   useEffect(() => {
-    const timer = setTimeout(dismiss, 4000);
+    const timer = setTimeout(dismiss, DISMISS_DURATIONS[variant] || 4000);
     return () => clearTimeout(timer);
-  }, [dismiss]);
+  }, [dismiss, variant]);
 
   return (
     <div
@@ -95,7 +101,7 @@ export function ToastContainer() {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 w-80"
+      className="fixed bottom-20 lg:bottom-6 right-4 left-4 sm:left-auto sm:right-6 z-[9999] flex flex-col gap-2 w-auto sm:w-80"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} {...t} onDismiss={remove} />

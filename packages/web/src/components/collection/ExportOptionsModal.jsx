@@ -146,6 +146,9 @@ export default function ExportOptionsModal({
       includeOriginalScans,
       documentIds,
     });
+
+    // Only reset after successful export
+    resetState();
   }
 
   const valid = selectedIds.size > 0;
@@ -153,10 +156,7 @@ export default function ExportOptionsModal({
   return (
     <Modal
       open={open}
-      onClose={() => {
-        resetState();
-        onClose();
-      }}
+      onClose={onClose}
       title="Export Options"
       size="md"
     >
@@ -294,7 +294,7 @@ export default function ExportOptionsModal({
                     type="button"
                     onClick={() => moveUp(idx)}
                     disabled={idx === 0}
-                    className="p-1 rounded text-walnut-muted hover:text-walnut disabled:opacity-30 disabled:pointer-events-none"
+                    className="p-2.5 rounded text-walnut-muted hover:text-walnut disabled:opacity-30 disabled:pointer-events-none min-w-[44px] min-h-[44px] flex items-center justify-center"
                     aria-label="Move up"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="18 15 12 9 6 15" /></svg>
@@ -303,7 +303,7 @@ export default function ExportOptionsModal({
                     type="button"
                     onClick={() => moveDown(idx)}
                     disabled={idx === orderedDocs.length - 1}
-                    className="p-1 rounded text-walnut-muted hover:text-walnut disabled:opacity-30 disabled:pointer-events-none"
+                    className="p-2.5 rounded text-walnut-muted hover:text-walnut disabled:opacity-30 disabled:pointer-events-none min-w-[44px] min-h-[44px] flex items-center justify-center"
                     aria-label="Move down"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="6 9 12 15 18 9" /></svg>
@@ -318,10 +318,7 @@ export default function ExportOptionsModal({
         <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2">
           <Button
             variant="ghost"
-            onClick={() => {
-              resetState();
-              onClose();
-            }}
+            onClick={onClose}
             disabled={exporting}
           >
             Cancel
