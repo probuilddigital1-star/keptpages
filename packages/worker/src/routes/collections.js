@@ -654,6 +654,7 @@ collections.post('/:id/export', async (c) => {
       },
       documents,
       pdfOptions,
+      c.env,
     );
 
     // Store the PDF in R2

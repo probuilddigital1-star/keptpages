@@ -455,9 +455,10 @@ const FONT_FAMILIES = {
  * @param {object} book - Book metadata (title, subtitle, author)
  * @param {object[]} documents - Array of documents with extracted data
  * @param {string|object} optionsOrTemplate - Options object or legacy template string
+ * @param {object} [env] - Worker env with FONTS KV binding (optional, enables custom fonts)
  * @returns {Promise<ArrayBuffer>} The generated PDF as an ArrayBuffer
  */
-export async function generateBookPdf(book, documents, optionsOrTemplate = {}) {
+export async function generateBookPdf(book, documents, optionsOrTemplate = {}, env = null) {
   // Backward compatibility: accept a string as the template name
   const opts = typeof optionsOrTemplate === 'string'
     ? { template: optionsOrTemplate }
@@ -474,11 +475,37 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}) {
 
   const pdfDoc = await PDFDocument.create();
 
-  const fontDef = FONT_FAMILIES[fontFamily] || FONT_FAMILIES.serif;
-  const fontRegular = await pdfDoc.embedFont(fontDef.regular);
-  const fontBold = await pdfDoc.embedFont(fontDef.bold);
-  const fontItalic = await pdfDoc.embedFont(fontDef.italic);
-  const fonts = { regular: fontRegular, bold: fontBold, italic: fontItalic };
+  // Try to load custom fonts from KV (with subset: false to prevent character spacing issues)
+  let fonts;
+  if (env?.FONTS && fontFamily) {
+    try {
+      const customFontMap = await loadAllFonts(pdfDoc, [fontFamily], env);
+      const customFonts = customFontMap[fontFamily];
+      if (customFonts?.regular) {
+        fonts = {
+          regular: customFonts.regular,
+          bold: customFonts.bold || customFonts.regular,
+          italic: customFonts.italic || customFonts.regular,
+        };
+      }
+    } catch (err) {
+      console.error('Custom font loading failed, falling back to standard fonts:', err?.message || err);
+    }
+  }
+
+  // Fall back to standard fonts
+  if (!fonts) {
+    const fontDef = FONT_FAMILIES[fontFamily] || FONT_FAMILIES.serif;
+    fonts = {
+      regular: await pdfDoc.embedFont(fontDef.regular),
+      bold: await pdfDoc.embedFont(fontDef.bold),
+      italic: await pdfDoc.embedFont(fontDef.italic),
+    };
+  }
+
+  const fontRegular = fonts.regular;
+  const fontBold = fonts.bold;
+  const fontItalic = fonts.italic;
 
   const styles = getTemplateStyles(template);
 

@@ -522,7 +522,7 @@ books.post('/:id/generate', async (c) => {
         _coverPhotoMimeType: coverPhotoMimeType,
       };
       const templateToUse = book.template || 'classic';
-      const result = await generateBookPdf(bookMeta, documents, templateToUse);
+      const result = await generateBookPdf(bookMeta, documents, templateToUse, env);
       interiorPdf = result.buffer;
       pageCount = result.pageCount;
     }
