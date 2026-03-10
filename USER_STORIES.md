@@ -81,7 +81,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-QA-8 | Mobile QA | DONE | Fixed: Modal scroll overflow, touch targets (44px min), CollectionCard hover-only delete, delete button visibility |
 | US-QA-9 | Security review | DONE | Fixed: path traversal in R2 downloads, JWKS stale-fallback, avatar_url validation. Noted: shares RLS policy, waitlist rate limit, MIME sniffing |
 | US-QA-10 | Pre-launch checklist | TODO | |
-| US-QA-11 | Clean up artifacts | TODO | |
+| US-QA-11 | Clean up artifacts | DONE | Moved static HTML landing pages + duplicate design system to docs/archive/ |
 | US-QA-12 | Production validation | TODO | |
 | US-BOOK-1 | Book designer shell & page navigation | DONE | BookDesigner replaces 4-step wizard, 2-column layout, sortable page list, GlobalSettingsPanel, migration 011 |
 | US-BOOK-2 | Konva canvas page renderer | DONE | PageCanvas with Konva Stage 850x1100, background/content layers, PageBackground with textures, PageThumbnail |
@@ -96,28 +96,28 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BOOK-11 | Order panel & book ordering | DONE | OrderPanel with generate/download, shipping form, quantity, pricing, Stripe checkout integration |
 | US-BOOK-12 | Auto-save, undo/redo & keyboard shortcuts | DONE | zundo temporal middleware, Ctrl+Z/Shift+Z, Delete/arrow nudge, 5s auto-save, save status indicator |
 | US-BOOK-13 | Testing & production polish | DONE | 11 blueprint PDF tests, hexToRgb 3-char fix, responsive sidebar, 642 total tests passing, clean build |
-| US-UX-1 | Toast notifications mobile positioning | TODO | Toasts hidden behind bottom nav on mobile |
+| US-UX-1 | Toast notifications mobile positioning | DONE | Toasts clear bottom nav on mobile (`bottom-20 lg:bottom-6`), full-width on small screens |
 | US-UX-2 | Collection action buttons mobile layout | TODO | 5 buttons overflow/wrap awkwardly on narrow screens |
 | US-UX-3 | Document card mobile action layout | TODO | Reorder buttons stack tall, making cards oversized on mobile |
-| US-UX-4 | Camera controls safe-area padding | TODO | Capture button behind home indicator on notched phones |
-| US-UX-5 | Export modal state persistence | TODO | Modal resets all customization when accidentally dismissed |
+| US-UX-4 | Camera controls safe-area padding | DONE | Added `pb-[calc(1.5rem+env(safe-area-inset-bottom))]` to camera controls |
+| US-UX-5 | Export modal state persistence | DONE | Removed resetState from close handler, only resets after successful export |
 | US-UX-6 | DropZone mobile optimization | TODO | Oversized padding + irrelevant drag text on mobile |
-| US-UX-7 | Document removal confirmation | TODO | No confirm before removing document from collection |
+| US-UX-7 | Document removal confirmation | DONE | Confirmation modal before removing document from collection |
 | US-UX-8 | Scan page header responsive layout | TODO | Heading and badge overlap on <360px screens |
-| US-UX-9 | Error toast auto-dismiss timing | TODO | Error toasts dismiss at same 4s as success — too fast |
+| US-UX-9 | Error toast auto-dismiss timing | DONE | Variant-based timing: success 4s, info 5s, error 7s |
 | US-UX-10 | TopBar dropdown overflow guard | TODO | 176px menu clips off-screen on narrow phones |
 | US-UX-11 | Loading skeleton placeholders | TODO | Spinner-only loading feels broken, no skeleton states |
 | US-UX-12 | Collection name edit discoverability | TODO | No visual cue name is tappable on mobile (hover-only) |
 | US-UX-13 | Upload photo card click handler | TODO | Card does nothing when not at scan limit |
 | US-UX-14 | Back-to-collection after scanning | TODO | No obvious return path after scanning from collection |
 | US-UX-15 | Delete collection soft-delete | TODO | Permanent deletion with no undo or recovery option |
-| US-UX-16 | Toast container mobile width | TODO | Fixed 320px width clips on phones narrower than 360px |
-| US-UX-17 | Export modal reorder tap targets | TODO | Up/down arrows only 22px — below touch target minimum |
+| US-UX-16 | Toast container mobile width | DONE | Full-width on mobile with padding, 320px on desktop (combined with UX-1) |
+| US-UX-17 | Export modal reorder tap targets | DONE | Increased to `p-2.5` with 44px min touch targets |
 | US-UX-18 | Signup password strength indicator | TODO | No minimum length or strength feedback on signup |
 | US-UX-19 | Avatar upload progress indicator | TODO | No spinner/progress during avatar upload |
 | US-UX-20 | Upgrade link deep-linking | TODO | Mobile upgrade pill goes to Settings, user must scroll to find card |
 
-**Completed: 66/105** | **Remaining: 39**
+**Completed: 74/105** | **Remaining: 31**
 
 ### Prioritized Roadmap (as of 2026-03-07)
 
@@ -157,10 +157,10 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **PAY** — Payments & Subscriptions | 16 | 16 | 0 |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
-| **QA** — Testing & Launch Readiness | 12 | 8 | 4 |
+| **QA** — Testing & Launch Readiness | 12 | 9 | 3 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
-| **UX** — Mobile & Desktop Friction Fixes | 20 | 0 | 20 |
-| **Total** | **105** | **66** | **39** |
+| **UX** — Mobile & Desktop Friction Fixes | 20 | 7 | 13 |
+| **Total** | **105** | **74** | **31** |
 
 ---
 

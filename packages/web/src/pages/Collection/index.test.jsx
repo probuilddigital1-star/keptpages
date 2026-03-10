@@ -203,13 +203,21 @@ describe('CollectionPage', () => {
     expect(within(lastDoc).queryByText('Move Down')).not.toBeInTheDocument();
   });
 
-  it('calls removeFromCollection when Remove is clicked', () => {
+  it('calls removeFromCollection after confirmation when Remove is clicked', async () => {
     mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test' }];
     mockDocumentsStore.documents = {
       'col-1': [{ id: 'doc-1', title: 'Recipe', type: 'recipe' }],
     };
     renderCollection();
+    // Click Remove button on the document card — opens confirmation modal
     fireEvent.click(screen.getByText('Remove'));
+    // Confirmation modal should appear
+    expect(screen.getByText('Remove Document')).toBeInTheDocument();
+    expect(screen.getByText(/Remove this document from the collection/)).toBeInTheDocument();
+    // Click the confirm "Remove" button in the modal
+    const modalButtons = screen.getAllByRole('button', { name: /Remove/i });
+    const confirmBtn = modalButtons.find((btn) => btn.closest('[role="dialog"]'));
+    fireEvent.click(confirmBtn);
     expect(mockDocumentsStore.removeFromCollection).toHaveBeenCalledWith('col-1', 'doc-1');
   });
 
