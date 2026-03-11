@@ -97,27 +97,27 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-BOOK-12 | Auto-save, undo/redo & keyboard shortcuts | DONE | zundo temporal middleware, Ctrl+Z/Shift+Z, Delete/arrow nudge, 5s auto-save, save status indicator |
 | US-BOOK-13 | Testing & production polish | DONE | 11 blueprint PDF tests, hexToRgb 3-char fix, responsive sidebar, 642 total tests passing, clean build |
 | US-UX-1 | Toast notifications mobile positioning | DONE | Toasts clear bottom nav on mobile (`bottom-20 lg:bottom-6`), full-width on small screens |
-| US-UX-2 | Collection action buttons mobile layout | TODO | 5 buttons overflow/wrap awkwardly on narrow screens |
-| US-UX-3 | Document card mobile action layout | TODO | Reorder buttons stack tall, making cards oversized on mobile |
+| US-UX-2 | Collection action buttons mobile layout | DONE | flex-col on mobile, sm:flex-row on desktop, full-width buttons |
+| US-UX-3 | Document card mobile action layout | DONE | flex-row on mobile, md:flex-col on desktop |
 | US-UX-4 | Camera controls safe-area padding | DONE | Added `pb-[calc(1.5rem+env(safe-area-inset-bottom))]` to camera controls |
 | US-UX-5 | Export modal state persistence | DONE | Removed resetState from close handler, only resets after successful export |
-| US-UX-6 | DropZone mobile optimization | TODO | Oversized padding + irrelevant drag text on mobile |
+| US-UX-6 | DropZone mobile optimization | DONE | p-6 sm:p-10, "Tap to choose a photo" on mobile |
 | US-UX-7 | Document removal confirmation | DONE | Confirmation modal before removing document from collection |
-| US-UX-8 | Scan page header responsive layout | TODO | Heading and badge overlap on <360px screens |
+| US-UX-8 | Scan page header responsive layout | DONE | flex-col items-start on mobile, sm:flex-row sm:items-center on desktop |
 | US-UX-9 | Error toast auto-dismiss timing | DONE | Variant-based timing: success 4s, info 5s, error 7s |
-| US-UX-10 | TopBar dropdown overflow guard | TODO | 176px menu clips off-screen on narrow phones |
+| US-UX-10 | TopBar dropdown overflow guard | DONE | max-w-[calc(100vw-2rem)] on dropdown menu |
 | US-UX-11 | Loading skeleton placeholders | TODO | Spinner-only loading feels broken, no skeleton states |
-| US-UX-12 | Collection name edit discoverability | TODO | No visual cue name is tappable on mobile (hover-only) |
-| US-UX-13 | Upload photo card click handler | TODO | Card does nothing when not at scan limit |
+| US-UX-12 | Collection name edit discoverability | DONE | Pencil icon always visible next to collection name |
+| US-UX-13 | Upload photo card click handler | DONE | Opens file picker when not at limit, upgrade modal at limit |
 | US-UX-14 | Back-to-collection after scanning | TODO | No obvious return path after scanning from collection |
 | US-UX-15 | Delete collection soft-delete | TODO | Permanent deletion with no undo or recovery option |
 | US-UX-16 | Toast container mobile width | DONE | Full-width on mobile with padding, 320px on desktop (combined with UX-1) |
 | US-UX-17 | Export modal reorder tap targets | DONE | Increased to `p-2.5` with 44px min touch targets |
 | US-UX-18 | Signup password strength indicator | TODO | No minimum length or strength feedback on signup |
-| US-UX-19 | Avatar upload progress indicator | TODO | No spinner/progress during avatar upload |
-| US-UX-20 | Upgrade link deep-linking | TODO | Mobile upgrade pill goes to Settings, user must scroll to find card |
+| US-UX-19 | Avatar upload progress indicator | DONE | Spinner overlay on avatar during upload with uploadingAvatar state |
+| US-UX-20 | Upgrade link deep-linking | DONE | Navigates to /app/settings#subscription, auto-scrolls to card |
 
-**Completed: 74/105** | **Remaining: 31**
+**Completed: 83/105** | **Remaining: 22**
 
 ### Prioritized Roadmap (as of 2026-03-07)
 
@@ -159,8 +159,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
 | **QA** — Testing & Launch Readiness | 12 | 9 | 3 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
-| **UX** — Mobile & Desktop Friction Fixes | 20 | 7 | 13 |
-| **Total** | **105** | **74** | **31** |
+| **UX** — Mobile & Desktop Friction Fixes | 20 | 16 | 4 |
+| **Total** | **105** | **83** | **22** |
 
 ---
 

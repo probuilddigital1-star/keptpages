@@ -284,7 +284,7 @@ export default function CollectionPage() {
           />
         ) : (
           <h1
-            className="font-display text-2xl sm:text-3xl font-bold text-walnut cursor-pointer hover:text-terracotta transition-colors"
+            className="font-display text-2xl sm:text-3xl font-bold text-walnut cursor-pointer hover:text-terracotta transition-colors inline-flex items-center gap-1.5"
             onClick={() => setEditingName(true)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingName(true); } }}
             role="button"
@@ -292,6 +292,20 @@ export default function CollectionPage() {
             title="Click to edit"
           >
             {collection.name}
+            <svg
+              aria-label="Edit collection name"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4 text-stone-400 flex-shrink-0"
+            >
+              <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
           </h1>
         )}
 
@@ -327,7 +341,7 @@ export default function CollectionPage() {
       </div>
 
       {/* Action buttons */}
-      <div className="flex flex-wrap items-center gap-3 mb-8">
+      <div data-testid="action-buttons" className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-8 w-full sm:w-auto">
         <Button variant="secondary" onClick={() => setShowDocPicker(true)}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -345,8 +359,8 @@ export default function CollectionPage() {
           Add Document
         </Button>
 
-        <Link to="/app/scan" state={{ collectionId: id, collectionName: collection?.name }}>
-          <Button variant="primary">
+        <Link to="/app/scan" state={{ collectionId: id, collectionName: collection?.name }} className="sm:w-auto">
+          <Button variant="primary" className="w-full sm:w-auto">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"

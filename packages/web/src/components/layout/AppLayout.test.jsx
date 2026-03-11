@@ -165,4 +165,28 @@ describe('AppLayout', () => {
     renderLayout();
     expect(screen.queryByText('Upgrade')).not.toBeInTheDocument();
   });
+
+  it('dropdown menu has overflow guard class', async () => {
+    setupMocks();
+    renderLayout();
+    const user = userEvent.setup();
+
+    // Open the topbar avatar dropdown (the button element, not the sidebar div)
+    const avatarButtons = screen.getAllByText('A');
+    const clickable = avatarButtons.find((el) => el.tagName === 'BUTTON');
+    await user.click(clickable);
+
+    // The dropdown should contain Sign Out and have the overflow guard
+    const signOut = screen.getByText('Sign Out');
+    const dropdown = signOut.closest('div.absolute');
+    expect(dropdown).toHaveClass('max-w-[calc(100vw-2rem)]');
+    expect(dropdown).toHaveClass('right-0');
+  });
+
+  it('upgrade link href includes #subscription', () => {
+    setupMocks({ tier: 'free' });
+    renderLayout();
+    const upgradeLink = screen.getByText('Upgrade');
+    expect(upgradeLink.closest('a')).toHaveAttribute('href', '/app/settings#subscription');
+  });
 });

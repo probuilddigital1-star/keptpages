@@ -34,6 +34,7 @@ export default function Settings() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Modals
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -47,6 +48,16 @@ export default function Settings() {
   useEffect(() => {
     fetchSubscription().catch(() => {});
   }, [fetchSubscription]);
+
+  // Scroll to subscription card when navigated with #subscription hash
+  useEffect(() => {
+    if (window.location.hash === '#subscription') {
+      const el = document.getElementById('subscription');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -74,13 +85,22 @@ export default function Settings() {
   }, [displayName, avatarFile]);
 
   // Handle avatar file selection
-  const handleAvatarChange = useCallback((e) => {
+  const handleAvatarChange = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = () => setAvatarPreview(reader.result);
     reader.readAsDataURL(file);
+    setUploadingAvatar(true);
+    try {
+      const uploadResult = await api.upload('/user/avatar', file);
+      setAvatarPreview(uploadResult.url);
+    } catch {
+      toast('Failed to upload avatar.', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
   }, []);
 
   // Upgrade
@@ -184,11 +204,21 @@ export default function Settings() {
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Avatar */}
             <div className="flex flex-col items-center gap-2">
-              <Avatar
-                src={avatarPreview}
-                name={displayName || email}
-                size="lg"
-              />
+              <div className="relative">
+                <Avatar
+                  src={avatarPreview}
+                  name={displayName || email}
+                  size="lg"
+                />
+                {uploadingAvatar && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40"
+                    data-testid="avatar-upload-spinner"
+                  >
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                )}
+              </div>
               <label className="font-ui text-xs text-terracotta cursor-pointer hover:text-terracotta-hover transition-colors">
                 Change photo
                 <input
@@ -230,7 +260,7 @@ export default function Settings() {
       {/* ================================================================= */}
       <section className="mb-10">
         <h2 className="section-label mb-4">Subscription</h2>
-        <Card className="p-6">
+        <Card id="subscription" className="p-6">
           <div className="flex items-center gap-3 mb-6">
             <span className="font-ui text-sm font-medium text-walnut">
               Current Plan:

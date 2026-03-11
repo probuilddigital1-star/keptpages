@@ -136,4 +136,18 @@ describe('DocumentCard', () => {
     render(<DocumentCard document={baseDocument} />);
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
+
+  it('action button container has responsive flex classes for mobile/desktop layout', () => {
+    render(
+      <DocumentCard
+        document={baseDocument}
+        onMoveUp={vi.fn()}
+        onMoveDown={vi.fn()}
+        onRemove={vi.fn()}
+      />
+    );
+    const container = screen.getByTestId('action-buttons');
+    expect(container.className).toContain('flex-row');
+    expect(container.className).toContain('md:flex-col');
+  });
 });

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useScanStore } from '@/stores/scanStore';
@@ -33,6 +33,7 @@ export default function ScanPage() {
     fetchSubscription().catch(() => {});
   }, [fetchSubscription]);
 
+  const fileInputRef = useRef(null);
   const [step, setStep] = useState(STEP_CHOOSE);
   const [rawFile, setRawFile] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -44,6 +45,20 @@ export default function ScanPage() {
   const atLimit = !canScan();
 
   // ---- Handlers ----
+
+  function handleUploadClick() {
+    if (atLimit) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  function handleFileInputChange(e) {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelected(file);
+    e.target.value = '';
+  }
 
   function handleStartCamera() {
     if (atLimit) {
@@ -136,7 +151,7 @@ export default function ScanPage() {
   return (
     <div className="max-w-container-md mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div data-testid="scan-header" className="flex flex-col items-start sm:flex-row sm:items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="font-display text-section font-semibold text-walnut">
             New Scan
@@ -209,12 +224,16 @@ export default function ScanPage() {
             <Card
               hover
               className={clsx('p-6 text-center', atLimit && 'opacity-60')}
-              onClick={() => {
-                if (atLimit) {
-                  setShowUpgradeModal(true);
-                }
-              }}
+              onClick={handleUploadClick}
             >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/heic,image/heif"
+                onChange={handleFileInputChange}
+                className="hidden"
+                data-testid="upload-file-input"
+              />
               <div className="mx-auto w-14 h-14 rounded-full bg-sage-light flex items-center justify-center mb-4">
                 <svg className="h-7 w-7 text-sage" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />

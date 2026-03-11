@@ -238,3 +238,32 @@ describe('CollectionPage', () => {
 
 // Need within for scoped queries
 import { within } from '@testing-library/react';
+
+describe('Collection action buttons responsive layout', () => {
+  beforeEach(() => {
+    mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test Collection' }];
+    mockDocumentsStore.documents = {};
+    mockNavigate.mockReset();
+  });
+
+  it('has responsive classes for vertical stacking on mobile and horizontal on desktop', () => {
+    renderCollection();
+    const container = screen.getByTestId('action-buttons');
+    expect(container.className).toContain('flex-col');
+    expect(container.className).toContain('sm:flex-row');
+    expect(container.className).toContain('w-full');
+    expect(container.className).toContain('sm:w-auto');
+    expect(container.className).toContain('items-stretch');
+    expect(container.className).toContain('sm:items-center');
+  });
+});
+
+describe('Edit icon discoverability (US-UX-12)', () => {
+  it('shows a pencil edit icon next to the collection name', () => {
+    mockCollectionsStore.collections = [{ id: 'col-1', name: 'My Collection' }];
+    renderCollection();
+    const editIcon = screen.getByLabelText('Edit collection name');
+    expect(editIcon).toBeInTheDocument();
+    expect(editIcon.tagName.toLowerCase()).toBe('svg');
+  });
+});

@@ -70,7 +70,7 @@ export default function DropZone({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={clsx(
-        'relative flex flex-col items-center justify-center gap-4 p-10 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-200',
+        'relative flex flex-col items-center justify-center gap-4 p-6 sm:p-10 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-200',
         dragOver
           ? 'border-terracotta bg-terracotta-light scale-[1.01]'
           : 'border-border bg-cream-alt hover:border-terracotta/40 hover:bg-cream-warm',
@@ -117,8 +117,11 @@ export default function DropZone({
       </div>
 
       <div className="text-center">
-        <p className="font-ui text-sm font-medium text-walnut">
+        <p className="font-ui text-sm font-medium text-walnut hidden sm:block">
           Drop your photo here or click to browse
+        </p>
+        <p className="font-ui text-sm font-medium text-walnut block sm:hidden">
+          Tap to choose a photo
         </p>
         <p className="font-ui text-xs text-walnut-muted mt-1">
           Supports JPEG, PNG, and HEIC

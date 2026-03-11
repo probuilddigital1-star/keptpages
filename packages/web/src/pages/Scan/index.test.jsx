@@ -101,6 +101,15 @@ describe('ScanPage', () => {
     expect(screen.getByText('New Scan')).toBeInTheDocument();
   });
 
+  it('header stacks vertically on mobile and horizontally on sm+', () => {
+    renderScan();
+    const header = screen.getByTestId('scan-header');
+    expect(header.className).toContain('flex-col');
+    expect(header.className).toContain('items-start');
+    expect(header.className).toContain('sm:flex-row');
+    expect(header.className).toContain('sm:items-center');
+  });
+
   it('shows scan counter for free tier', () => {
     renderScan();
     expect(screen.getByText('5 of 25 scans used')).toBeInTheDocument();
@@ -181,5 +190,37 @@ describe('ScanPage', () => {
     expect(screen.getByText('Unlimited scans')).toBeInTheDocument();
     expect(screen.getByText('Unlimited collections')).toBeInTheDocument();
     expect(screen.getByText('AI reprocessing')).toBeInTheDocument();
+  });
+
+  describe('Upload Photo card click handler', () => {
+    it('triggers file input when not at scan limit', () => {
+      renderScan();
+      const fileInput = screen.getByTestId('upload-file-input');
+      const clickSpy = vi.spyOn(fileInput, 'click');
+
+      fireEvent.click(screen.getByText('Upload Photo'));
+
+      expect(clickSpy).toHaveBeenCalled();
+      clickSpy.mockRestore();
+    });
+
+    it('shows upgrade modal when at scan limit', () => {
+      mockSubscriptionStore.canScan.mockReturnValue(false);
+      renderScan();
+
+      fireEvent.click(screen.getByText('Upload Photo'));
+
+      expect(screen.getByText('Upgrade to Keeper')).toBeInTheDocument();
+    });
+
+    it('transitions to preview when a file is selected via Upload Photo input', () => {
+      renderScan();
+      const fileInput = screen.getByTestId('upload-file-input');
+      const file = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      expect(screen.getByTestId('preprocessor')).toBeInTheDocument();
+    });
   });
 });

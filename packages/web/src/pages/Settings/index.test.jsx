@@ -226,4 +226,11 @@ describe('Settings page', () => {
     renderSettings();
     expect(mockFetchSubscription).toHaveBeenCalledTimes(1);
   });
+
+  it('subscription card has id="subscription"', () => {
+    renderSettings();
+    const subscriptionCard = document.getElementById('subscription');
+    expect(subscriptionCard).toBeInTheDocument();
+    expect(subscriptionCard).toHaveTextContent('Current Plan:');
+  });
 });
