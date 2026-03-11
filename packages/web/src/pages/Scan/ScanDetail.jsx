@@ -40,8 +40,11 @@ export default function ScanDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromCollection = location.state?.fromCollection;
+  const fromCollectionName = location.state?.fromCollectionName;
   const backPath = fromCollection ? `/app/collection/${fromCollection}` : '/app';
-  const backLabel = fromCollection ? 'Back to collection' : 'Back';
+  const backLabel = fromCollection
+    ? `Back to ${fromCollectionName || 'collection'}`
+    : 'Back to Scans';
 
   const { getScan, reprocessScan, deleteScan, processing: reprocessing } = useScanStore();
   const {

@@ -30,13 +30,7 @@
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
 ## Current Status (2026-03-11)
-- **83/105 user stories complete**
-- Phase 3.5 UX Polish: 16/20 done (4 medium-effort stories remain: US-UX-11, 14, 15, 18)
-- All tests passing (789 tests, 70 files)
-- Remaining work: Blog (13 stories), Launch readiness (3), Medium UX stories (4), Claude API fallback (1)
-
-## Remaining UX Stories (Medium Effort)
-- US-UX-11: Loading skeleton placeholders (replace spinners)
-- US-UX-14: Back-to-collection navigation after scanning
-- US-UX-15: Delete collection with undo/recovery option
-- US-UX-18: Signup password strength indicator
+- **87/105 user stories complete**
+- Phase 3.5 UX Polish: **20/20 COMPLETE**
+- All tests passing (1,416 tests: 789 frontend + 627 worker, 88 files)
+- Remaining work: Blog (13 stories), Launch readiness (2), Claude API fallback (1 parked)

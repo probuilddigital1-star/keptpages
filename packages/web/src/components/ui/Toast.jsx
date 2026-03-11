@@ -21,8 +21,9 @@ export const useToastStore = create((set) => ({
 // Convenience function -- call from anywhere:
 //   toast('Saved!');
 //   toast('Oops', 'error');
-export function toast(message, variant = 'success') {
-  return useToastStore.getState().add({ message, variant });
+//   toast('Deleted', 'info', { label: 'Undo', onClick: () => {} });
+export function toast(message, variant = 'success', action = null) {
+  return useToastStore.getState().add({ message, variant, action });
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ const DISMISS_DURATIONS = {
   info: 5000,
 };
 
-function ToastItem({ id, message, variant = 'success', onDismiss }) {
+function ToastItem({ id, message, variant = 'success', action, onDismiss }) {
   const [exiting, setExiting] = useState(false);
 
   const dismiss = useCallback(() => {
@@ -50,9 +51,10 @@ function ToastItem({ id, message, variant = 'success', onDismiss }) {
 
   // Auto-dismiss with variant-based timing
   useEffect(() => {
-    const timer = setTimeout(dismiss, DISMISS_DURATIONS[variant] || 4000);
+    const duration = action ? 6000 : (DISMISS_DURATIONS[variant] || 4000);
+    const timer = setTimeout(dismiss, duration);
     return () => clearTimeout(timer);
-  }, [dismiss, variant]);
+  }, [dismiss, variant, action]);
 
   return (
     <div
@@ -67,6 +69,14 @@ function ToastItem({ id, message, variant = 'success', onDismiss }) {
       )}
     >
       <span className="flex-1">{message}</span>
+      {action && (
+        <button
+          onClick={() => { action.onClick(); dismiss(); }}
+          className="font-medium underline underline-offset-2 hover:opacity-80 transition-opacity shrink-0"
+        >
+          {action.label}
+        </button>
+      )}
       <button
         onClick={dismiss}
         aria-label="Dismiss"

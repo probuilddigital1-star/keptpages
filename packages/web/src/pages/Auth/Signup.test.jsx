@@ -106,7 +106,7 @@ describe('Signup page', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(
-      await screen.findByText(/password must be at least 6 characters/i),
+      await screen.findByText(/password must be at least 8 characters/i),
     ).toBeInTheDocument();
     expect(mockSignup).not.toHaveBeenCalled();
   });

@@ -6,6 +6,19 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { toast } from '@/components/ui/Toast';
 
+function getPasswordStrength(pw) {
+  if (!pw || pw.length < 8) return { score: 0, label: 'Too short', color: 'bg-red-400' };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^a-zA-Z0-9]/.test(pw)) score++;
+  if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-400' };
+  if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-yellow-400' };
+  return { score: 3, label: 'Strong', color: 'bg-sage' };
+}
+
 export default function Signup() {
   const navigate = useNavigate();
   const { signup, loginWithGoogle, loading, error, clearError } = useAuthStore();
@@ -16,6 +29,8 @@ export default function Signup() {
   const [validationErrors, setValidationErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
+  const strength = getPasswordStrength(password);
+
   function validate() {
     const errors = {};
     if (!name.trim()) errors.name = 'Full name is required';
@@ -23,8 +38,8 @@ export default function Signup() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errors.email = 'Enter a valid email address';
     if (!password) errors.password = 'Password is required';
-    else if (password.length < 6)
-      errors.password = 'Password must be at least 6 characters';
+    else if (password.length < 8)
+      errors.password = 'Password must be at least 8 characters';
     return errors;
   }
 
@@ -154,21 +169,38 @@ export default function Signup() {
               disabled={loading}
             />
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (validationErrors.password) {
-                  setValidationErrors((prev) => ({ ...prev, password: undefined }));
-                }
-              }}
-              error={validationErrors.password}
-              autoComplete="new-password"
-              disabled={loading}
-            />
+            <div>
+              <Input
+                label="Password"
+                type="password"
+                placeholder="At least 8 characters"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (validationErrors.password) {
+                    setValidationErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
+                error={validationErrors.password}
+                autoComplete="new-password"
+                disabled={loading}
+              />
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          i <= strength.score ? strength.color : 'bg-cream-alt'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="font-ui text-xs text-walnut-muted mt-1">{strength.label}</p>
+                </div>
+              )}
+            </div>
 
             <Button type="submit" loading={loading} className="w-full" size="lg">
               Create Account

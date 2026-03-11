@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-10
+Last Updated: 2026-03-11
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -106,18 +106,18 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-UX-8 | Scan page header responsive layout | DONE | flex-col items-start on mobile, sm:flex-row sm:items-center on desktop |
 | US-UX-9 | Error toast auto-dismiss timing | DONE | Variant-based timing: success 4s, info 5s, error 7s |
 | US-UX-10 | TopBar dropdown overflow guard | DONE | max-w-[calc(100vw-2rem)] on dropdown menu |
-| US-UX-11 | Loading skeleton placeholders | TODO | Spinner-only loading feels broken, no skeleton states |
+| US-UX-11 | Loading skeleton placeholders | DONE | SkeletonCard grid on Dashboard, skeleton document list on Collection page |
 | US-UX-12 | Collection name edit discoverability | DONE | Pencil icon always visible next to collection name |
 | US-UX-13 | Upload photo card click handler | DONE | Opens file picker when not at limit, upgrade modal at limit |
-| US-UX-14 | Back-to-collection after scanning | TODO | No obvious return path after scanning from collection |
-| US-UX-15 | Delete collection soft-delete | TODO | Permanent deletion with no undo or recovery option |
+| US-UX-14 | Back-to-collection after scanning | DONE | Shows "Back to [Collection Name]" with fromCollectionName state |
+| US-UX-15 | Delete collection soft-delete | DONE | Toast with "Undo" button, 5s delayed deletion, works on both Dashboard and Collection page |
 | US-UX-16 | Toast container mobile width | DONE | Full-width on mobile with padding, 320px on desktop (combined with UX-1) |
 | US-UX-17 | Export modal reorder tap targets | DONE | Increased to `p-2.5` with 44px min touch targets |
-| US-UX-18 | Signup password strength indicator | TODO | No minimum length or strength feedback on signup |
+| US-UX-18 | Signup password strength indicator | DONE | 8-char minimum, 3-bar visual strength indicator (weak/fair/strong), advisory only |
 | US-UX-19 | Avatar upload progress indicator | DONE | Spinner overlay on avatar during upload with uploadingAvatar state |
 | US-UX-20 | Upgrade link deep-linking | DONE | Navigates to /app/settings#subscription, auto-scrolls to card |
 
-**Completed: 83/105** | **Remaining: 22**
+**Completed: 87/105** | **Remaining: 18**
 
 ### Prioritized Roadmap (as of 2026-03-07)
 
@@ -159,8 +159,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
 | **QA** — Testing & Launch Readiness | 12 | 9 | 3 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
-| **UX** — Mobile & Desktop Friction Fixes | 20 | 16 | 4 |
-| **Total** | **105** | **83** | **22** |
+| **UX** — Mobile & Desktop Friction Fixes | 20 | 20 | 0 |
+| **Total** | **105** | **87** | **18** |
 
 ---
 
