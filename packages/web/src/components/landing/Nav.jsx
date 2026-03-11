@@ -32,7 +32,7 @@ export default function Nav({ onCtaClick, onLoginClick }) {
           <Link
             to="/between-the-pages"
             className={clsx(
-              'hidden sm:inline font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
+              'font-ui text-[11px] sm:text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
               isArticlesPage
                 ? 'text-terracotta'
                 : 'text-walnut-secondary hover:text-walnut'
@@ -42,17 +42,6 @@ export default function Nav({ onCtaClick, onLoginClick }) {
           </Link>
         </div>
         <div className="flex items-center gap-2.5 sm:gap-4">
-          <Link
-            to="/between-the-pages"
-            className={clsx(
-              'sm:hidden font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
-              isArticlesPage
-                ? 'text-terracotta'
-                : 'text-walnut-secondary hover:text-walnut'
-            )}
-          >
-            Guides
-          </Link>
           <button
             onClick={onLoginClick}
             className="font-ui text-[13px] font-medium text-walnut-secondary tracking-[0.3px] bg-transparent border-none cursor-pointer transition-colors duration-200 hover:text-walnut py-1.5"
