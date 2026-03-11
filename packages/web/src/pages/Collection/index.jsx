@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { useCollectionsStore } from '@/stores/collectionsStore';
@@ -181,19 +181,36 @@ export default function CollectionPage() {
     }
   }, [tier, handleExport]);
 
-  // Delete collection
-  const handleDeleteCollection = useCallback(async () => {
-    setDeleting(true);
-    try {
-      await deleteCollection(id);
-      toast('Collection deleted');
-      navigate('/app');
-    } catch {
-      toast('Failed to delete collection', 'error');
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  }, [id, deleteCollection, navigate]);
+  // Delete collection with undo window
+  const deleteTimerRef = useRef(null);
+  const handleDeleteCollection = useCallback(() => {
+    setShowDeleteConfirm(false);
+    const collectionName = collection?.name || 'Collection';
+
+    // Navigate away immediately
+    navigate('/app');
+
+    let cancelled = false;
+
+    // Show toast with undo action — actual deletion happens after 5s
+    toast(`"${collectionName}" deleted`, 'info', {
+      label: 'Undo',
+      onClick: () => { cancelled = true; },
+    });
+
+    deleteTimerRef.current = setTimeout(async () => {
+      if (cancelled) {
+        // User clicked undo — navigate back
+        navigate(`/app/collection/${id}`);
+        return;
+      }
+      try {
+        await deleteCollection(id);
+      } catch {
+        toast('Failed to delete collection', 'error');
+      }
+    }, 5000);
+  }, [id, collection?.name, deleteCollection, navigate]);
 
   // Add section title
   const handleAddSection = useCallback(
@@ -217,11 +234,29 @@ export default function CollectionPage() {
     [sectionTitle],
   );
 
-  // Loading state if collections haven't loaded yet
+  // Loading skeleton if collections haven't loaded yet
   if (!collection && collectionsLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner size="lg" />
+      <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-container-lg mx-auto animate-pulse">
+        <div className="h-4 bg-cream-alt rounded w-32 mb-4" />
+        <div className="h-8 bg-cream-alt rounded w-2/3 mb-2" />
+        <div className="h-4 bg-cream-alt rounded w-1/2 mb-8" />
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
+          <div className="h-9 bg-cream-alt rounded w-32" />
+          <div className="h-9 bg-cream-alt rounded w-28" />
+          <div className="h-9 bg-cream-alt rounded w-24" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-cream-surface border border-border-light rounded-lg p-4 flex items-center gap-4">
+              <div className="w-10 h-10 bg-cream-alt rounded" />
+              <div className="flex-1">
+                <div className="h-4 bg-cream-alt rounded w-1/2 mb-2" />
+                <div className="h-3 bg-cream-alt rounded w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

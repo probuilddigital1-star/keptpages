@@ -117,7 +117,7 @@ export default function ScanPage() {
       }
 
       navigate(`/app/scan/${result.id}`, {
-        state: collectionId ? { fromCollection: collectionId } : undefined,
+        state: collectionId ? { fromCollection: collectionId, fromCollectionName: collectionName } : undefined,
       });
     } catch (err) {
       setUploadError(err.message || 'Upload failed. Please try again.');

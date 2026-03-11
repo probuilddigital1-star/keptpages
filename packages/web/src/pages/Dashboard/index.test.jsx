@@ -124,12 +124,14 @@ describe('Dashboard page', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows loading spinner when loading=true', () => {
+  it('shows loading skeleton when loading=true', () => {
     setupCollectionsStore({ loading: true, collections: [] });
 
     renderDashboard();
 
-    expect(screen.getByRole('status', { name: /loading/i })).toBeInTheDocument();
+    // Skeleton cards render as pulsing placeholders instead of a spinner
+    const skeletons = document.querySelectorAll('.animate-pulse');
+    expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it('shows scan usage bar for free tier users', () => {

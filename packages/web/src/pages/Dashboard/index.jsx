@@ -9,6 +9,20 @@ import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import CollectionCard from '@/components/collection/CollectionCard';
 
+function SkeletonCard() {
+  return (
+    <div className="bg-cream-surface border border-border-light rounded-lg p-5 animate-pulse">
+      <div className="h-5 bg-cream-alt rounded w-3/4 mb-3" />
+      <div className="h-3 bg-cream-alt rounded w-full mb-2" />
+      <div className="h-3 bg-cream-alt rounded w-2/3 mb-4" />
+      <div className="flex gap-2">
+        <div className="h-6 bg-cream-alt rounded-full w-16" />
+        <div className="h-6 bg-cream-alt rounded-full w-20" />
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -121,10 +135,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Loading state */}
+      {/* Loading skeleton */}
       {collectionsLoading && collections.length === 0 && (
-        <div className="flex items-center justify-center py-20">
-          <Spinner size="lg" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       )}
 
@@ -176,9 +195,20 @@ export default function Dashboard() {
             <CollectionCard
               key={collection.id}
               collection={collection}
-              onDelete={async (id) => {
-                await deleteCollection(id);
-                toast('Collection deleted');
+              onDelete={(collectionId) => {
+                let cancelled = false;
+                toast(`"${collection.name}" deleted`, 'info', {
+                  label: 'Undo',
+                  onClick: () => { cancelled = true; },
+                });
+                setTimeout(async () => {
+                  if (cancelled) return;
+                  try {
+                    await deleteCollection(collectionId);
+                  } catch {
+                    toast('Failed to delete collection', 'error');
+                  }
+                }, 5000);
               }}
             />
           ))}

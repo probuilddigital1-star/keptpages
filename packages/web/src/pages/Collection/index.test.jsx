@@ -91,10 +91,10 @@ describe('CollectionPage', () => {
     mockSubscriptionStore.tier = 'free';
   });
 
-  it('shows spinner when collections are loading', () => {
+  it('shows loading skeleton when collections are loading', () => {
     mockCollectionsStore.loading = true;
     renderCollection();
-    expect(document.querySelector('.animate-spin')).toBeTruthy();
+    expect(document.querySelector('.animate-pulse')).toBeTruthy();
   });
 
   it('shows not found when collection does not exist', () => {
@@ -171,7 +171,8 @@ describe('CollectionPage', () => {
     expect(screen.getByText(/Are you sure you want to delete/)).toBeInTheDocument();
   });
 
-  it('calls deleteCollection and navigates on confirm delete', async () => {
+  it('calls deleteCollection after undo window on confirm delete', async () => {
+    vi.useFakeTimers();
     mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test' }];
     mockCollectionsStore.deleteCollection.mockResolvedValue();
     renderCollection();
@@ -180,9 +181,12 @@ describe('CollectionPage', () => {
     const buttons = screen.getAllByRole('button');
     const deleteBtn = buttons.find((b) => b.textContent === 'Delete Collection');
     fireEvent.click(deleteBtn);
-    await waitFor(() => {
-      expect(mockCollectionsStore.deleteCollection).toHaveBeenCalledWith('col-1');
-    });
+    // Navigates immediately, deletion delayed by 5s undo window
+    expect(mockNavigate).toHaveBeenCalledWith('/app');
+    // Fast-forward past the 5s undo window
+    await vi.advanceTimersByTimeAsync(5100);
+    expect(mockCollectionsStore.deleteCollection).toHaveBeenCalledWith('col-1');
+    vi.useRealTimers();
   });
 
   it('first document has no Move Up, last has no Move Down', () => {
