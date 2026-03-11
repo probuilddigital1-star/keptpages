@@ -63,8 +63,9 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
 
   const results = {};
 
-  // Load all available weights in parallel
-  const loadPromises = Object.entries(keys).map(async ([weight, kvKey]) => {
+  // Load weights sequentially — concurrent embedFont calls with fontkit
+  // cause race conditions that corrupt glyph tables (character spacing bug)
+  for (const [weight, kvKey] of Object.entries(keys)) {
     try {
       const fontData = await env.FONTS.get(kvKey, 'arrayBuffer');
       if (fontData) {
@@ -73,9 +74,7 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
     } catch (err) {
       console.error(`Failed to load font ${kvKey}:`, err?.message || err);
     }
-  });
-
-  await Promise.all(loadPromises);
+  }
 
   // Ensure required weights exist with fallbacks
   if (!results.regular) {
@@ -97,16 +96,19 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
 }
 
 /**
- * Load multiple font families in parallel.
+ * Load multiple font families sequentially.
  * Returns a map of { fontFamily: { regular, bold, italic } }
+ *
+ * NOTE: Must be sequential, not parallel. fontkit shares internal state
+ * on the pdfDoc instance — concurrent embedFont calls corrupt glyph tables,
+ * causing the "Swee t & Sou r" character spacing bug.
  */
 export async function loadAllFonts(pdfDoc, fontFamilies, env) {
   const unique = [...new Set(fontFamilies)];
-  const entries = await Promise.all(
-    unique.map(async (family) => {
-      const fonts = await loadFonts(pdfDoc, family, env);
-      return [family, fonts];
-    })
-  );
-  return Object.fromEntries(entries);
+  const result = {};
+  for (const family of unique) {
+    const fonts = await loadFonts(pdfDoc, family, env);
+    result[family] = fonts;
+  }
+  return result;
 }
