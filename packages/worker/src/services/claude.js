@@ -4,15 +4,27 @@
  * reprocessing with the higher-quality model.
  */
 
+import { arrayBufferToBase64 } from './gemini.js';
+
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+
+const MULTI_PAGE_PROMPT_PREFIX = `You are analyzing multiple pages/images of the SAME document. Combine all content into a single unified extraction. For recipes, merge all ingredients into one list and all instructions into one sequential list. For letters or documents, combine the text in page order into one continuous document.
+
+`;
 
 /**
  * Build the extraction prompt, optionally including context from a prior
  * Gemini result that had issues.
  */
-function buildPrompt(previousResult) {
-  let prompt = `You are an expert document analyzer specializing in recipes, handwritten notes, and printed text.
+function buildPrompt(previousResult, isMultiPage) {
+  let prompt = '';
+
+  if (isMultiPage) {
+    prompt += MULTI_PAGE_PROMPT_PREFIX;
+  }
+
+  prompt += `You are an expert document analyzer specializing in recipes, handwritten notes, and printed text.
 
 Analyze this image carefully and extract all text content into structured JSON format.`;
 
@@ -73,57 +85,53 @@ Important guidelines:
 }
 
 /**
- * Send an image to Claude Sonnet for text extraction.
+ * Send one or more images to Claude Sonnet for text extraction.
  * This is the higher-quality fallback model used for reprocessing.
  *
- * @param {ArrayBuffer} imageBuffer - The raw image data
- * @param {string} mimeType - The MIME type of the image (e.g., 'image/jpeg')
+ * @param {Array<{buffer: ArrayBuffer, mimeType: string}>} images - Array of image data
  * @param {object|null} previousResult - Previous Gemini result for context
  * @param {object} env - Worker environment bindings
  * @returns {Promise<object>} Parsed extraction result
  */
-export async function sendToClaude(imageBuffer, mimeType, previousResult, env) {
+export async function sendToClaude(images, previousResult, env) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  // Convert image buffer to base64
-  const uint8Array = new Uint8Array(imageBuffer);
-  let binary = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
-  }
-  const base64Image = btoa(binary);
-
   // Validate supported media types for Claude
   const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!supportedTypes.includes(mimeType)) {
-    throw new Error(`Unsupported image type for Claude: ${mimeType}. Supported: ${supportedTypes.join(', ')}`);
+  for (const img of images) {
+    if (!supportedTypes.includes(img.mimeType)) {
+      throw new Error(`Unsupported image type for Claude: ${img.mimeType}. Supported: ${supportedTypes.join(', ')}`);
+    }
   }
 
-  const prompt = buildPrompt(previousResult);
+  const isMultiPage = images.length > 1;
+  const prompt = buildPrompt(previousResult, isMultiPage);
+
+  // Build content array: image blocks then text
+  const contentParts = images.map((img) => ({
+    type: 'image',
+    source: {
+      type: 'base64',
+      media_type: img.mimeType,
+      data: arrayBufferToBase64(img.buffer),
+    },
+  }));
+
+  contentParts.push({
+    type: 'text',
+    text: prompt,
+  });
 
   const requestBody = {
     model: CLAUDE_MODEL,
-    max_tokens: 4096,
+    max_tokens: isMultiPage ? 8192 : 4096,
     messages: [
       {
         role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mimeType,
-              data: base64Image,
-            },
-          },
-          {
-            type: 'text',
-            text: prompt,
-          },
-        ],
+        content: contentParts,
       },
     ],
   };

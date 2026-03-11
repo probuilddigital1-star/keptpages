@@ -12,7 +12,7 @@
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { loadAllFonts } from './fonts.js';
+import { loadAllFonts, fixCIDFontWidths } from './fonts.js';
 
 // Dimensions in points (1 inch = 72 points)
 const TRIM_WIDTH = 612;   // 8.5"
@@ -755,8 +755,8 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
     }
   }
 
-  const pdfBytes = await pdfDoc.save();
-  return { buffer: pdfBytes.buffer, pageCount: pdfDoc.getPageCount() };
+  const pdfBytes = await fixCIDFontWidths(pdfDoc);
+  return { buffer: pdfBytes.buffer || pdfBytes, pageCount: pdfDoc.getPageCount() };
 }
 
 /**
@@ -962,8 +962,8 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     size: 12, font: fontRegular, color: textSubColor,
   });
 
-  const pdfBytes = await pdfDoc.save();
-  return pdfBytes.buffer;
+  const pdfBytes = await fixCIDFontWidths(pdfDoc);
+  return pdfBytes.buffer || pdfBytes;
 }
 
 /**

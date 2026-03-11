@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
 import { validate } from '../middleware/validate.js';
 import { generateBookPdf, generateCoverPdf, renderBlueprintBook } from '../services/pdf.js';
-import { loadAllFonts } from '../services/fonts.js';
+import { loadAllFonts, fixCIDFontWidths } from '../services/fonts.js';
 import { PDFDocument } from 'pdf-lib';
 import { getOrderStatus } from '../services/lulu.js';
 import { createBookCheckoutSession } from '../services/stripe.js';
@@ -511,7 +511,7 @@ books.post('/:id/generate', async (c) => {
         : null;
       pageCount = await renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap, coverPhotoData);
 
-      interiorPdf = await pdfDoc.save();
+      interiorPdf = await fixCIDFontWidths(pdfDoc);
     } else {
       // Legacy rendering
       const bookMeta = {

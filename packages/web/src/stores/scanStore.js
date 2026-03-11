@@ -7,6 +7,8 @@ export const useScanStore = create((set, get) => ({
   uploadProgress: 0,
   processing: false,
   scans: [],
+  // Multi-page staging
+  pages: [], // Array of { blob, previewUrl }
 
   // Actions
   fetchScans: async () => {
@@ -36,6 +38,11 @@ export const useScanStore = create((set, get) => ({
       set({ uploadProgress: 0 });
       throw error;
     }
+  },
+
+  addPage: async (scanId, file) => {
+    const scan = await api.upload(`/scan/${scanId}/add-page`, file);
+    return scan;
   },
 
   processScan: async (scanId) => {
@@ -105,11 +112,43 @@ export const useScanStore = create((set, get) => ({
     }
   },
 
+  // Multi-page staging actions
+  addStagedPage: (blob) => {
+    const previewUrl = URL.createObjectURL(blob);
+    set((state) => ({
+      pages: [...state.pages, { blob, previewUrl }],
+    }));
+  },
+
+  removeStagedPage: (index) => {
+    set((state) => {
+      const pages = [...state.pages];
+      const removed = pages.splice(index, 1);
+      if (removed[0]?.previewUrl) {
+        URL.revokeObjectURL(removed[0].previewUrl);
+      }
+      return { pages };
+    });
+  },
+
+  clearStagedPages: () => {
+    const { pages } = get();
+    pages.forEach((p) => {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    });
+    set({ pages: [] });
+  },
+
   reset: () => {
+    const { pages } = get();
+    pages.forEach((p) => {
+      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
+    });
     set({
       currentScan: null,
       uploadProgress: 0,
       processing: false,
+      pages: [],
     });
   },
 }));

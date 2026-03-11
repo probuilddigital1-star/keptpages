@@ -18,6 +18,7 @@ import ImagePreprocessor from '@/components/scan/ImagePreprocessor';
 const STEP_CHOOSE = 'choose'; // Pick camera or upload
 const STEP_CAMERA = 'camera'; // Live camera
 const STEP_PREVIEW = 'preview'; // Image preprocessor
+const STEP_PAGES = 'pages'; // Multi-page staging
 const STEP_UPLOADING = 'uploading'; // Upload + process
 
 export default function ScanPage() {
@@ -25,7 +26,17 @@ export default function ScanPage() {
   const location = useLocation();
   const collectionId = location.state?.collectionId;
   const collectionName = location.state?.collectionName;
-  const { uploadScan, processScan, uploadProgress, processing } = useScanStore();
+  const {
+    uploadScan,
+    addPage,
+    processScan,
+    uploadProgress,
+    processing,
+    pages,
+    addStagedPage,
+    removeStagedPage,
+    clearStagedPages,
+  } = useScanStore();
   const addToCollection = useDocumentsStore((s) => s.addToCollection);
   const { tier, usage, limits, canScan, upgrade, loading: upgradeLoading, fetchSubscription } = useSubscriptionStore();
 
@@ -33,7 +44,13 @@ export default function ScanPage() {
     fetchSubscription().catch(() => {});
   }, [fetchSubscription]);
 
+  // Cleanup staged pages on unmount
+  useEffect(() => {
+    return () => clearStagedPages();
+  }, [clearStagedPages]);
+
   const fileInputRef = useRef(null);
+  const addPageFileRef = useRef(null);
   const [step, setStep] = useState(STEP_CHOOSE);
   const [rawFile, setRawFile] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -94,24 +111,59 @@ export default function ScanPage() {
     setStep(STEP_CHOOSE);
   }
 
-  async function handlePreprocessConfirm(processedBlob) {
+  function handlePreprocessConfirm(processedBlob) {
+    // Add to pages array and move to PAGES step
+    addStagedPage(processedBlob);
+    setRawFile(null);
+    setStep(STEP_PAGES);
+  }
+
+  function handleAddAnotherPage() {
+    // Go back to choose mode to capture/upload another page
+    setStep(STEP_CHOOSE);
+  }
+
+  function handleAddPageFileChange(e) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setRawFile(file);
+      setStep(STEP_PREVIEW);
+    }
+    e.target.value = '';
+  }
+
+  async function handleProcessPages() {
+    if (pages.length === 0) return;
+
     setStep(STEP_UPLOADING);
     setUploadError(null);
 
     try {
-      const file = new File([processedBlob], `scan-${Date.now()}.jpg`, {
+      // Upload first page as the primary scan
+      const firstFile = new File([pages[0].blob], `scan-${Date.now()}.jpg`, {
         type: 'image/jpeg',
       });
+      const scan = await uploadScan(firstFile);
 
-      const scan = await uploadScan(file);
+      // Upload additional pages
+      for (let i = 1; i < pages.length; i++) {
+        const pageFile = new File([pages[i].blob], `scan-${Date.now()}-page${i + 1}.jpg`, {
+          type: 'image/jpeg',
+        });
+        await addPage(scan.id, pageFile);
+      }
+
+      // Process all pages together
       const result = await processScan(scan.id);
+
+      // Clean up staged pages
+      clearStagedPages();
 
       // If we came from a collection, auto-add the scan to it
       if (collectionId) {
         try {
           await addToCollection(collectionId, result.id);
         } catch {
-          // Non-fatal — scan was created, just not linked
           toast('Scan saved but could not add to collection automatically', 'error');
         }
       }
@@ -121,7 +173,7 @@ export default function ScanPage() {
       });
     } catch (err) {
       setUploadError(err.message || 'Upload failed. Please try again.');
-      setStep(STEP_PREVIEW);
+      setStep(STEP_PAGES);
       toast('Scan failed. Please try again.', 'error');
     }
   }
@@ -195,9 +247,26 @@ export default function ScanPage() {
         </Card>
       )}
 
-      {/* Choose mode or preview */}
+      {/* Choose mode */}
       {step === STEP_CHOOSE && (
         <div className="flex flex-col gap-6">
+          {/* Show page count badge if we have staged pages */}
+          {pages.length > 0 && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-sage-light rounded-lg border border-sage/20">
+              <Badge variant="sage">{pages.length} {pages.length === 1 ? 'page' : 'pages'} staged</Badge>
+              <p className="font-ui text-sm text-walnut-secondary">
+                Add another page or{' '}
+                <button
+                  type="button"
+                  onClick={() => setStep(STEP_PAGES)}
+                  className="text-terracotta font-medium hover:underline"
+                >
+                  review &amp; process
+                </button>
+              </p>
+            </div>
+          )}
+
           {/* Option cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Take Photo */}
@@ -275,6 +344,94 @@ export default function ScanPage() {
         </Card>
       )}
 
+      {/* Multi-page staging */}
+      {step === STEP_PAGES && (
+        <Card className="p-6">
+          <h2 className="font-display text-lg font-semibold text-walnut mb-4">
+            Multi-Page Scan
+          </h2>
+          <p className="font-body text-sm text-walnut-secondary mb-4">
+            {pages.length} {pages.length === 1 ? 'page' : 'pages'} ready. Add more pages or process now.
+          </p>
+
+          {uploadError && (
+            <div className="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-600 font-ui mb-4">
+              {uploadError}
+            </div>
+          )}
+
+          {/* Thumbnail grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-6">
+            {pages.map((page, index) => (
+              <div key={index} className="relative group">
+                <div className="aspect-[3/4] rounded-lg overflow-hidden border border-border-light bg-cream-alt">
+                  <img
+                    src={page.previewUrl}
+                    alt={`Page ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="absolute top-1 left-1 bg-walnut/70 text-white text-xs font-ui px-1.5 py-0.5 rounded">
+                  {index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeStagedPage(index)}
+                  className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label={`Remove page ${index + 1}`}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {/* Add page placeholder */}
+            {pages.length < 10 && (
+              <button
+                type="button"
+                onClick={handleAddAnotherPage}
+                className="aspect-[3/4] rounded-lg border-2 border-dashed border-border hover:border-terracotta/40 bg-cream-alt hover:bg-cream-surface flex flex-col items-center justify-center gap-1 transition-colors"
+              >
+                <svg className="h-6 w-6 text-walnut-muted" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                <span className="font-ui text-xs text-walnut-muted">Add Page</span>
+              </button>
+            )}
+          </div>
+
+          {/* Hidden file input for adding pages */}
+          <input
+            ref={addPageFileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/heic,image/heif"
+            onChange={handleAddPageFileChange}
+            className="hidden"
+          />
+
+          {/* Action buttons */}
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                clearStagedPages();
+                setStep(STEP_CHOOSE);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessPages}
+              disabled={pages.length === 0}
+            >
+              Process {pages.length} {pages.length === 1 ? 'Page' : 'Pages'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Uploading / Processing */}
       {step === STEP_UPLOADING && (
         <Card className="p-8">
@@ -287,8 +444,12 @@ export default function ScanPage() {
               </h2>
               <p className="font-ui text-sm text-walnut-muted">
                 {processing
-                  ? 'Extracting text and identifying content'
-                  : 'Sending your photo securely'}
+                  ? pages.length > 1
+                    ? `Analyzing ${pages.length} pages and combining content`
+                    : 'Extracting text and identifying content'
+                  : pages.length > 1
+                    ? `Uploading ${pages.length} pages securely`
+                    : 'Sending your photo securely'}
               </p>
             </div>
 

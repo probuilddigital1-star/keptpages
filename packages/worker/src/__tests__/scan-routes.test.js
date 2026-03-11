@@ -251,6 +251,7 @@ describe('GET /scan - list scans', () => {
         confidence_score: 0.92,
         original_filename: 'cake.jpg',
         status: 'completed',
+        additional_r2_keys: null,
         created_at: '2025-06-01T00:00:00Z',
       },
       {
@@ -260,6 +261,7 @@ describe('GET /scan - list scans', () => {
         confidence_score: 0.85,
         original_filename: 'bread.png',
         status: 'uploaded',
+        additional_r2_keys: [{ r2Key: 'key1' }],
         created_at: '2025-05-31T00:00:00Z',
       },
     ];
@@ -279,9 +281,11 @@ describe('GET /scan - list scans', () => {
       confidence: 0.92,
       originalFilename: 'cake.jpg',
       status: 'completed',
+      pageCount: 1,
       createdAt: '2025-06-01T00:00:00Z',
     });
     expect(data.scans[1].id).toBe('scan-2');
+    expect(data.scans[1].pageCount).toBe(2);
   });
 
   it('returns 500 on database error', async () => {
@@ -467,7 +471,10 @@ describe('POST /scan/:id/process - Gemini processing', () => {
     expect(data.confidence).toBe(0.9);
     expect(data.aiModel).toBe('gemini-2.5-flash');
     expect(data.extractedData).toEqual(extractedData);
-    expect(sendToGemini).toHaveBeenCalledWith(imageBody, 'image/jpeg', expect.anything());
+    expect(sendToGemini).toHaveBeenCalledWith(
+      [{ buffer: imageBody, mimeType: 'image/jpeg' }],
+      expect.anything()
+    );
     expect(calculateConfidence).toHaveBeenCalledWith(extractedData);
     expect(processed.put).toHaveBeenCalledTimes(1);
   });
@@ -501,7 +508,7 @@ describe('POST /scan/:id/process - Gemini processing', () => {
     expect(data.error).toBe('Scan is already being processed');
   });
 
-  it('returns 404 when image is not in R2', async () => {
+  it('returns 500 when image is not in R2', async () => {
     const fetchBuilder = createQueryBuilder({ data: scanRecord, error: null });
     const claimBuilder = createQueryBuilder({ data: { id: scanId }, error: null });
     const errorUpdateBuilder = createQueryBuilder({ data: null, error: null });
@@ -519,8 +526,9 @@ describe('POST /scan/:id/process - Gemini processing', () => {
     const { app } = buildTestApp({ uploads });
     const { status, data } = await callJson(app, 'POST', `/scan/${scanId}/process`);
 
-    expect(status).toBe(404);
-    expect(data.error).toBe('Image not found in storage');
+    expect(status).toBe(500);
+    expect(data.error).toBe('Processing failed');
+    expect(data.details).toContain('Primary image not found');
   });
 
   it('returns 500 and sets error status on processing error', async () => {
@@ -611,8 +619,7 @@ describe('POST /scan/:id/reprocess - Claude reprocessing', () => {
     expect(data.warnings).toEqual(['minor_warning']);
     expect(data.aiModel).toBe('claude-sonnet');
     expect(sendToClaude).toHaveBeenCalledWith(
-      imageBody,
-      'image/jpeg',
+      [{ buffer: imageBody, mimeType: 'image/jpeg' }],
       scanRecord.extracted_data,
       expect.anything()
     );
@@ -719,6 +726,7 @@ describe('GET /scan/:id - get single scan', () => {
       extractedData: { type: 'recipe', title: 'Chocolate Cake' },
       aiModel: 'gemini-2.5-flash',
       errorMessage: null,
+      pageCount: 1,
       createdAt: '2025-06-01T00:00:00Z',
       processedAt: '2025-06-01T01:00:00Z',
     });
@@ -742,6 +750,7 @@ describe('GET /scan/:id/image - serve image', () => {
   const scanRecord = {
     r2_key: 'user-abc-123/photo.png',
     mime_type: 'image/png',
+    additional_r2_keys: null,
   };
 
   it('serves the image with correct Content-Type header', async () => {
@@ -923,7 +932,7 @@ describe('DELETE /scan/:id - soft delete', () => {
 
   it('soft-deletes a scan successfully', async () => {
     const fetchBuilder = createQueryBuilder({
-      data: { id: scanId, r2_key: 'user-abc-123/file.jpg' },
+      data: { id: scanId, r2_key: 'user-abc-123/file.jpg', additional_r2_keys: null },
       error: null,
     });
     const collectionBuilder = createQueryBuilder({ data: null, error: null });
@@ -946,7 +955,7 @@ describe('DELETE /scan/:id - soft delete', () => {
 
   it('removes scan from collections before deleting', async () => {
     const fetchBuilder = createQueryBuilder({
-      data: { id: scanId, r2_key: 'user-abc-123/file.jpg' },
+      data: { id: scanId, r2_key: 'user-abc-123/file.jpg', additional_r2_keys: null },
       error: null,
     });
     const collectionBuilder = createQueryBuilder({ data: null, error: null });
@@ -985,7 +994,7 @@ describe('DELETE /scan/:id - soft delete', () => {
 
   it('returns 500 on database error during soft-delete', async () => {
     const fetchBuilder = createQueryBuilder({
-      data: { id: scanId, r2_key: 'user-abc-123/file.jpg' },
+      data: { id: scanId, r2_key: 'user-abc-123/file.jpg', additional_r2_keys: null },
       error: null,
     });
     const collectionBuilder = createQueryBuilder({ data: null, error: null });

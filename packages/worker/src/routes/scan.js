@@ -1,7 +1,7 @@
 /**
  * Scan pipeline routes.
  * Handles image uploads, AI processing (Gemini + Claude fallback),
- * and scan result management.
+ * multi-page scan support, and scan result management.
  */
 
 import { Hono } from 'hono';
@@ -12,11 +12,57 @@ import { calculateConfidence } from '../services/confidence.js';
 
 const scan = new Hono();
 
+const MAX_PAGES = 10;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'];
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+
 /**
  * Helper to get a Supabase client from the worker environment.
  */
 function getSupabase(env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+}
+
+/**
+ * Compute page count from a scan record.
+ */
+function getPageCount(scanRecord) {
+  const additional = scanRecord.additional_r2_keys;
+  return 1 + (Array.isArray(additional) ? additional.length : 0);
+}
+
+/**
+ * Fetch all page images from R2 for a scan record.
+ * Returns array of { buffer, mimeType }.
+ */
+async function fetchAllPageImages(scanRecord, env) {
+  const images = [];
+
+  // Page 0: primary image
+  const primaryObj = await env.UPLOADS.get(scanRecord.r2_key);
+  if (!primaryObj) {
+    throw new Error('Primary image not found in storage');
+  }
+  images.push({
+    buffer: await primaryObj.arrayBuffer(),
+    mimeType: scanRecord.mime_type,
+  });
+
+  // Additional pages
+  const additionalKeys = scanRecord.additional_r2_keys;
+  if (Array.isArray(additionalKeys)) {
+    for (const page of additionalKeys) {
+      const obj = await env.UPLOADS.get(page.r2Key);
+      if (obj) {
+        images.push({
+          buffer: await obj.arrayBuffer(),
+          mimeType: page.mimeType,
+        });
+      }
+    }
+  }
+
+  return images;
 }
 
 /**
@@ -29,7 +75,7 @@ scan.get('/', async (c) => {
 
   const { data: scans, error } = await supabase
     .from('scans')
-    .select('id, title, document_type, confidence_score, original_filename, status, created_at')
+    .select('id, title, document_type, confidence_score, original_filename, status, additional_r2_keys, created_at')
     .eq('user_id', user.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
@@ -47,6 +93,7 @@ scan.get('/', async (c) => {
       confidence: s.confidence_score,
       originalFilename: s.original_filename,
       status: s.status,
+      pageCount: getPageCount(s),
       createdAt: s.created_at,
     })),
   });
@@ -74,16 +121,14 @@ scan.post('/', async (c) => {
   }
 
   // Validate file type
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'];
-  if (!allowedTypes.includes(file.type)) {
+  if (!ALLOWED_TYPES.includes(file.type)) {
     return c.json(
-      { error: `Unsupported file type: ${file.type}. Allowed: ${allowedTypes.join(', ')}` },
+      { error: `Unsupported file type: ${file.type}. Allowed: ${ALLOWED_TYPES.join(', ')}` },
       400
     );
   }
 
   // Validate file size (max 20MB)
-  const MAX_SIZE = 20 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
     return c.json({ error: 'File too large. Maximum size is 20MB.' }, 400);
   }
@@ -139,8 +184,116 @@ scan.post('/', async (c) => {
 });
 
 /**
+ * POST /scan/:id/add-page
+ * Add an additional page image to an existing scan.
+ * Scan must be in 'uploaded' status and have fewer than MAX_PAGES pages.
+ */
+scan.post('/:id/add-page', async (c) => {
+  const user = c.get('user');
+  const scanId = c.req.param('id');
+  const env = c.env;
+  const supabase = getSupabase(env);
+
+  // Fetch scan record
+  const { data: scanRecord, error: fetchError } = await supabase
+    .from('scans')
+    .select('*')
+    .eq('id', scanId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (fetchError || !scanRecord) {
+    return c.json({ error: 'Scan not found' }, 404);
+  }
+
+  if (scanRecord.status !== 'uploaded') {
+    return c.json({ error: 'Can only add pages to scans with status "uploaded"' }, 400);
+  }
+
+  // Check page limit
+  const currentPageCount = getPageCount(scanRecord);
+  if (currentPageCount >= MAX_PAGES) {
+    return c.json({ error: `Maximum ${MAX_PAGES} pages per scan` }, 400);
+  }
+
+  // Parse form data
+  let formData;
+  try {
+    formData = await c.req.formData();
+  } catch {
+    return c.json({ error: 'Invalid multipart form data' }, 400);
+  }
+
+  const file = formData.get('image');
+  if (!file || !(file instanceof File)) {
+    return c.json({ error: 'Missing "image" field in upload' }, 400);
+  }
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return c.json(
+      { error: `Unsupported file type: ${file.type}. Allowed: ${ALLOWED_TYPES.join(', ')}` },
+      400
+    );
+  }
+
+  if (file.size > MAX_SIZE) {
+    return c.json({ error: 'File too large. Maximum size is 20MB.' }, 400);
+  }
+
+  // Upload to R2
+  const timestamp = Date.now();
+  const ext = file.name?.split('.').pop() || 'jpg';
+  const r2Key = `${user.id}/${timestamp}-${crypto.randomUUID()}.${ext}`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  await env.UPLOADS.put(r2Key, arrayBuffer, {
+    httpMetadata: { contentType: file.type },
+    customMetadata: {
+      userId: user.id,
+      originalName: file.name || 'upload',
+    },
+  });
+
+  // Append to additional_r2_keys
+  const existingKeys = Array.isArray(scanRecord.additional_r2_keys)
+    ? scanRecord.additional_r2_keys
+    : [];
+
+  const newPageEntry = {
+    r2Key,
+    mimeType: file.type,
+    originalFilename: file.name || 'upload',
+    fileSize: file.size,
+  };
+
+  const updatedKeys = [...existingKeys, newPageEntry];
+
+  const { error: updateError } = await supabase
+    .from('scans')
+    .update({ additional_r2_keys: updatedKeys })
+    .eq('id', scanId);
+
+  if (updateError) {
+    await env.UPLOADS.delete(r2Key).catch(() => {});
+    console.error('Failed to update scan with additional page:', updateError);
+    return c.json({ error: 'Failed to add page' }, 500);
+  }
+
+  return c.json(
+    {
+      id: scanId,
+      pageIndex: updatedKeys.length, // 0-indexed: page 0 is primary, this is the new page index
+      pageCount: 1 + updatedKeys.length,
+      r2Key,
+      originalFilename: file.name || 'upload',
+    },
+    201
+  );
+});
+
+/**
  * POST /scan/:id/process
- * Fetch the uploaded image from R2 and send it to Gemini Flash for extraction.
+ * Fetch the uploaded image(s) from R2 and send them to Gemini Flash for extraction.
  */
 scan.post('/:id/process', async (c) => {
   const user = c.get('user');
@@ -174,17 +327,11 @@ scan.post('/:id/process', async (c) => {
   }
 
   try {
-    // Fetch image from R2
-    const r2Object = await env.UPLOADS.get(scanRecord.r2_key);
-    if (!r2Object) {
-      await supabase.from('scans').update({ status: 'error', error_message: 'Image not found in storage' }).eq('id', scanId);
-      return c.json({ error: 'Image not found in storage' }, 404);
-    }
-
-    const imageBuffer = await r2Object.arrayBuffer();
+    // Fetch all page images from R2
+    const images = await fetchAllPageImages(scanRecord, env);
 
     // Send to Gemini Flash
-    const extractedData = await sendToGemini(imageBuffer, scanRecord.mime_type, env);
+    const extractedData = await sendToGemini(images, env);
 
     // Calculate adjusted confidence
     const { score: confidenceScore, warnings } = calculateConfidence(extractedData);
@@ -281,20 +428,14 @@ scan.post('/:id/reprocess', async (c) => {
   }
 
   try {
-    // Fetch image from R2
-    const r2Object = await env.UPLOADS.get(scanRecord.r2_key);
-    if (!r2Object) {
-      await supabase.from('scans').update({ status: 'error', error_message: 'Image not found in storage' }).eq('id', scanId);
-      return c.json({ error: 'Image not found in storage' }, 404);
-    }
-
-    const imageBuffer = await r2Object.arrayBuffer();
+    // Fetch all page images from R2
+    const images = await fetchAllPageImages(scanRecord, env);
 
     // Previous result for context
     const previousResult = scanRecord.extracted_data || null;
 
     // Send to Claude Sonnet
-    const extractedData = await sendToClaude(imageBuffer, scanRecord.mime_type, previousResult, env);
+    const extractedData = await sendToClaude(images, previousResult, env);
 
     // Calculate adjusted confidence
     const { score: confidenceScore, warnings } = calculateConfidence(extractedData);
@@ -387,6 +528,7 @@ scan.get('/:id', async (c) => {
     extractedData: scanRecord.extracted_data,
     aiModel: scanRecord.ai_model,
     errorMessage: scanRecord.error_message,
+    pageCount: getPageCount(scanRecord),
     createdAt: scanRecord.created_at,
     processedAt: scanRecord.processed_at,
   });
@@ -394,7 +536,8 @@ scan.get('/:id', async (c) => {
 
 /**
  * GET /scan/:id/image
- * Serve the original scan image from R2.
+ * Serve a scan page image from R2.
+ * Query param: ?page=N (0=primary, 1+=additional). Defaults to 0.
  */
 scan.get('/:id/image', async (c) => {
   const user = c.get('user');
@@ -402,9 +545,12 @@ scan.get('/:id/image', async (c) => {
   const env = c.env;
   const supabase = getSupabase(env);
 
+  const pageParam = c.req.query('page');
+  const pageIndex = pageParam !== undefined && pageParam !== null ? parseInt(pageParam, 10) : 0;
+
   const { data: scanRecord, error } = await supabase
     .from('scans')
-    .select('r2_key, mime_type')
+    .select('r2_key, mime_type, additional_r2_keys')
     .eq('id', scanId)
     .eq('user_id', user.id)
     .single();
@@ -413,14 +559,32 @@ scan.get('/:id/image', async (c) => {
     return c.json({ error: 'Scan not found' }, 404);
   }
 
-  const r2Object = await env.UPLOADS.get(scanRecord.r2_key);
+  let r2Key;
+  let mimeType;
+
+  if (isNaN(pageIndex) || pageIndex === 0) {
+    // Primary image
+    r2Key = scanRecord.r2_key;
+    mimeType = scanRecord.mime_type;
+  } else {
+    // Additional page
+    const additional = scanRecord.additional_r2_keys;
+    const pageEntry = Array.isArray(additional) ? additional[pageIndex - 1] : null;
+    if (!pageEntry) {
+      return c.json({ error: 'Page not found' }, 404);
+    }
+    r2Key = pageEntry.r2Key;
+    mimeType = pageEntry.mimeType;
+  }
+
+  const r2Object = await env.UPLOADS.get(r2Key);
   if (!r2Object) {
     return c.json({ error: 'Image not found in storage' }, 404);
   }
 
   return new Response(r2Object.body, {
     headers: {
-      'Content-Type': scanRecord.mime_type || 'image/jpeg',
+      'Content-Type': mimeType || 'image/jpeg',
       'Cache-Control': 'private, max-age=3600',
     },
   });
@@ -510,6 +674,7 @@ scan.put('/:id', async (c) => {
 /**
  * DELETE /scan/:id
  * Soft-delete a scan (sets deleted_at timestamp).
+ * Also cleans up additional R2 page objects.
  */
 scan.delete('/:id', async (c) => {
   const user = c.get('user');
@@ -519,7 +684,7 @@ scan.delete('/:id', async (c) => {
   // Verify ownership
   const { data: scanRecord, error: fetchError } = await supabase
     .from('scans')
-    .select('id, r2_key')
+    .select('id, r2_key, additional_r2_keys')
     .eq('id', scanId)
     .eq('user_id', user.id)
     .is('deleted_at', null)

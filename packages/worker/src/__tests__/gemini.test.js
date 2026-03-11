@@ -55,7 +55,7 @@ describe('sendToGemini', () => {
       };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(responseData));
 
-      await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
@@ -79,7 +79,7 @@ describe('sendToGemini', () => {
       };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(responseData));
 
-      await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -113,7 +113,7 @@ describe('sendToGemini', () => {
       };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(responseData));
 
-      const result = await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      const result = await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(result.type).toBe('recipe');
       expect(result.title).toBe('Chocolate Chip Cookies');
@@ -154,7 +154,7 @@ describe('sendToGemini', () => {
         }),
       });
 
-      const result = await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      const result = await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(result.type).toBe('document');
       expect(result.title).toBe('Test Doc');
@@ -167,7 +167,7 @@ describe('sendToGemini', () => {
       const sparseResponse = { title: 'Sparse' };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(sparseResponse));
 
-      const result = await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      const result = await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(result.type).toBe('document');
       expect(result.title).toBe('Sparse');
@@ -187,7 +187,7 @@ describe('sendToGemini', () => {
       const data = { confidence: 'high', title: 'Test' };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(data));
 
-      const result = await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      const result = await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(result.confidence).toBe(0.5);
     });
@@ -196,7 +196,7 @@ describe('sendToGemini', () => {
       const data = { content: 'some text' };
       globalThis.fetch.mockResolvedValue(mockGeminiResponse(data));
 
-      const result = await sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv);
+      const result = await sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv);
 
       expect(result.title).toBe('Untitled');
     });
@@ -212,7 +212,7 @@ describe('sendToGemini', () => {
       });
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('Gemini API error (403): API key invalid');
     });
 
@@ -223,7 +223,7 @@ describe('sendToGemini', () => {
       });
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('No candidates returned from Gemini');
     });
 
@@ -236,7 +236,7 @@ describe('sendToGemini', () => {
       });
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('No text content in Gemini response');
     });
 
@@ -251,13 +251,13 @@ describe('sendToGemini', () => {
       });
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('Failed to parse Gemini response as JSON');
     });
 
     it('throws when GEMINI_API_KEY is not configured', async () => {
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, {})
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], {})
       ).rejects.toThrow('GEMINI_API_KEY is not configured');
     });
   });
@@ -268,7 +268,7 @@ describe('sendToGemini', () => {
       globalThis.fetch.mockRejectedValue(new Error('Network request failed'));
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('Network request failed');
     });
 
@@ -276,7 +276,7 @@ describe('sendToGemini', () => {
       globalThis.fetch.mockRejectedValue(new Error('Request timed out'));
 
       await expect(
-        sendToGemini(fakeImageBuffer, fakeMimeType, fakeEnv)
+        sendToGemini([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], fakeEnv)
       ).rejects.toThrow('Request timed out');
     });
   });

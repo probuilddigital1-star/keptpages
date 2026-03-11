@@ -318,15 +318,22 @@ user.delete('/account', async (c) => {
   const supabase = getSupabase(c.env);
 
   try {
-    // Delete scans from R2 first
+    // Delete scans from R2 first (including additional page images)
     const { data: scans } = await supabase
       .from('scans')
-      .select('r2_key, processed_key')
+      .select('r2_key, processed_key, additional_r2_keys')
       .eq('user_id', authUser.id);
 
     if (scans?.length) {
       const r2Keys = scans
-        .flatMap((s) => [s.r2_key, s.processed_key])
+        .flatMap((s) => {
+          const keys = [s.r2_key, s.processed_key];
+          // Include additional page R2 keys
+          if (Array.isArray(s.additional_r2_keys)) {
+            keys.push(...s.additional_r2_keys.map((p) => p.r2Key));
+          }
+          return keys;
+        })
         .filter(Boolean);
 
       // Delete R2 objects in batches

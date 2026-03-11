@@ -1,7 +1,7 @@
 /**
  * Gemini 2.0 Flash integration for fast document/recipe extraction.
- * Sends an image to the Gemini API with a structured prompt and returns
- * parsed JSON extraction results.
+ * Sends one or more images to the Gemini API with a structured prompt
+ * and returns parsed JSON extraction results.
  */
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -50,47 +50,62 @@ Important guidelines:
 - For recipes, try to separate ingredients from instructions even if they are not clearly delineated
 - Return ONLY valid JSON, no markdown or other formatting`;
 
+const MULTI_PAGE_PROMPT_PREFIX = `You are analyzing multiple pages/images of the SAME document. Combine all content into a single unified extraction. For recipes, merge all ingredients into one list and all instructions into one sequential list. For letters or documents, combine the text in page order into one continuous document.
+
+`;
+
 /**
- * Send an image to Gemini 2.0 Flash for text extraction.
+ * Convert an ArrayBuffer to a base64 string.
+ */
+export function arrayBufferToBase64(buffer) {
+  const uint8Array = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Send one or more images to Gemini 2.5 Flash for text extraction.
  *
- * @param {ArrayBuffer} imageBuffer - The raw image data
- * @param {string} mimeType - The MIME type of the image (e.g., 'image/jpeg')
+ * @param {Array<{buffer: ArrayBuffer, mimeType: string}>} images - Array of image data
  * @param {object} env - Worker environment bindings
  * @returns {Promise<object>} Parsed extraction result
  */
-export async function sendToGemini(imageBuffer, mimeType, env) {
+export async function sendToGemini(images, env) {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  // Convert image buffer to base64
-  const uint8Array = new Uint8Array(imageBuffer);
-  let binary = '';
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
-  }
-  const base64Image = btoa(binary);
+  // Build image parts
+  const imageParts = images.map((img) => ({
+    inlineData: {
+      mimeType: img.mimeType,
+      data: arrayBufferToBase64(img.buffer),
+    },
+  }));
+
+  const isMultiPage = images.length > 1;
+  const prompt = isMultiPage
+    ? MULTI_PAGE_PROMPT_PREFIX + EXTRACTION_PROMPT
+    : EXTRACTION_PROMPT;
 
   const requestBody = {
     contents: [
       {
         parts: [
+          ...imageParts,
           {
-            inlineData: {
-              mimeType,
-              data: base64Image,
-            },
-          },
-          {
-            text: EXTRACTION_PROMPT,
+            text: prompt,
           },
         ],
       },
     ],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 4096,
+      maxOutputTokens: isMultiPage ? 8192 : 4096,
       responseMimeType: 'application/json',
     },
   };

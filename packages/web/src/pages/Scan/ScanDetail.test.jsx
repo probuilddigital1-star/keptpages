@@ -28,7 +28,7 @@ vi.mock('@/stores/scanStore', () => ({
 
 vi.mock('@/stores/editorStore', () => {
   const fn = vi.fn();
-  fn.getState = vi.fn(() => ({ originalImage: null }));
+  fn.getState = vi.fn(() => ({ originalImage: null, originalImages: [] }));
   fn.setState = vi.fn();
   return { useEditorStore: fn };
 });
@@ -89,11 +89,16 @@ function setupScanStore(overrides = {}) {
 function setupEditorStore(overrides = {}) {
   const defaults = {
     originalImage: 'https://example.com/scan.jpg',
+    originalImages: [],
+    currentPageIndex: 0,
+    pageCount: 1,
     editedData: { title: 'Test Recipe' },
     confidence: 0.85,
     isDirty: false,
     saving: false,
     loadScan: mockLoadScan,
+    setOriginalImages: vi.fn(),
+    setCurrentPage: vi.fn(),
     updateField: mockUpdateField,
     save: mockSave,
   };

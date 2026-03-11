@@ -15,9 +15,14 @@ vi.mock('react-router-dom', async () => {
 
 const mockScanStore = {
   uploadScan: vi.fn(),
+  addPage: vi.fn(),
   processScan: vi.fn(),
   uploadProgress: 0,
   processing: false,
+  pages: [],
+  addStagedPage: vi.fn(),
+  removeStagedPage: vi.fn(),
+  clearStagedPages: vi.fn(),
 };
 
 const mockDocumentsStore = {
@@ -168,19 +173,13 @@ describe('ScanPage', () => {
     expect(screen.getByText('Take Photo')).toBeInTheDocument();
   });
 
-  it('uploads and processes on confirm', async () => {
-    mockScanStore.uploadScan.mockResolvedValue({ id: 'scan-1' });
-    mockScanStore.processScan.mockResolvedValue({ id: 'scan-1' });
-
+  it('transitions to pages step on confirm', async () => {
     renderScan();
     fireEvent.click(screen.getByTestId('dropzone'));
     fireEvent.click(screen.getByText('Confirm'));
 
-    await waitFor(() => {
-      expect(mockScanStore.uploadScan).toHaveBeenCalled();
-      expect(mockScanStore.processScan).toHaveBeenCalledWith('scan-1');
-      expect(mockNavigate).toHaveBeenCalledWith('/app/scan/scan-1', expect.anything());
-    });
+    // After confirming the preprocessor, addStagedPage is called and we go to STEP_PAGES
+    expect(mockScanStore.addStagedPage).toHaveBeenCalled();
   });
 
   it('shows upgrade modal features list', () => {

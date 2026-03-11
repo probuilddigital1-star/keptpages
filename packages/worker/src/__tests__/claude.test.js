@@ -50,7 +50,7 @@ describe('sendToClaude', () => {
       };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
-      await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
@@ -66,7 +66,7 @@ describe('sendToClaude', () => {
       const responseData = { type: 'document', title: 'Test', confidence: 0.8 };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
-      await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -81,7 +81,7 @@ describe('sendToClaude', () => {
       const responseData = { type: 'document', title: 'Test', confidence: 0.8 };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
-      await sendToClaude(fakeImageBuffer, 'image/png', null, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: 'image/png' }], null, fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -97,7 +97,7 @@ describe('sendToClaude', () => {
 
     it('rejects unsupported MIME types', async () => {
       await expect(
-        sendToClaude(fakeImageBuffer, 'image/tiff', null, fakeEnv)
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: 'image/tiff' }], null, fakeEnv)
       ).rejects.toThrow('Unsupported image type for Claude: image/tiff');
     });
 
@@ -107,7 +107,7 @@ describe('sendToClaude', () => {
       for (const mime of ['image/jpeg', 'image/png', 'image/gif', 'image/webp']) {
         globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
         await expect(
-          sendToClaude(fakeImageBuffer, mime, null, fakeEnv)
+          sendToClaude([{ buffer: fakeImageBuffer, mimeType: mime }], null, fakeEnv)
         ).resolves.toBeDefined();
       }
     });
@@ -126,7 +126,7 @@ describe('sendToClaude', () => {
         warnings: ['Could not read ingredient list'],
       };
 
-      await sendToClaude(fakeImageBuffer, fakeMimeType, previousResult, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], previousResult, fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -142,7 +142,7 @@ describe('sendToClaude', () => {
       const responseData = { type: 'document', title: 'Fresh Scan', confidence: 0.85 };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
-      await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -157,7 +157,7 @@ describe('sendToClaude', () => {
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
       // Pass undefined explicitly
-      await sendToClaude(fakeImageBuffer, fakeMimeType, undefined, fakeEnv);
+      await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], undefined, fakeEnv);
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -188,7 +188,7 @@ describe('sendToClaude', () => {
       };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(responseData));
 
-      const result = await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      const result = await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       expect(result.type).toBe('recipe');
       expect(result.title).toBe('Banana Bread');
@@ -206,7 +206,7 @@ describe('sendToClaude', () => {
       const sparseData = { title: 'Minimal' };
       globalThis.fetch.mockResolvedValue(mockClaudeResponse(sparseData));
 
-      const result = await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      const result = await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       expect(result.type).toBe('document');
       expect(result.title).toBe('Minimal');
@@ -236,7 +236,7 @@ describe('sendToClaude', () => {
         }),
       });
 
-      const result = await sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv);
+      const result = await sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv);
 
       expect(result.title).toBe('Fenced');
       expect(result.confidence).toBe(0.85);
@@ -253,7 +253,7 @@ describe('sendToClaude', () => {
       });
 
       await expect(
-        sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv)
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv)
       ).rejects.toThrow('Claude API error (429): Rate limit exceeded');
     });
 
@@ -266,7 +266,7 @@ describe('sendToClaude', () => {
       });
 
       await expect(
-        sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv)
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv)
       ).rejects.toThrow('No text content in Claude response');
     });
 
@@ -279,13 +279,13 @@ describe('sendToClaude', () => {
       });
 
       await expect(
-        sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv)
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv)
       ).rejects.toThrow('Failed to parse Claude response as JSON');
     });
 
     it('throws when ANTHROPIC_API_KEY is not configured', async () => {
       await expect(
-        sendToClaude(fakeImageBuffer, fakeMimeType, null, {})
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, {})
       ).rejects.toThrow('ANTHROPIC_API_KEY is not configured');
     });
   });
@@ -296,7 +296,7 @@ describe('sendToClaude', () => {
       globalThis.fetch.mockRejectedValue(new Error('fetch failed'));
 
       await expect(
-        sendToClaude(fakeImageBuffer, fakeMimeType, null, fakeEnv)
+        sendToClaude([{ buffer: fakeImageBuffer, mimeType: fakeMimeType }], null, fakeEnv)
       ).rejects.toThrow('fetch failed');
     });
   });

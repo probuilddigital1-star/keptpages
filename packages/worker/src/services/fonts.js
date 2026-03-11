@@ -2,9 +2,15 @@
  * Font loading service for PDF generation.
  * Loads TTF fonts from Cloudflare KV for embedding in PDFs.
  * Falls back to StandardFonts if KV is unavailable.
+ *
+ * IMPORTANT: pdf-lib has a bug where CIDFontType2 W arrays have gaps
+ * for some glyph IDs. Missing CIDs default to 1000 units width (per PDF spec),
+ * causing character spacing issues. fixCIDFontWidths() must be called instead
+ * of pdfDoc.save() to patch these gaps. See: packages/worker/fonts/ for static
+ * font files that MUST be uploaded to the FONTS KV namespace (not variable fonts).
  */
 
-import { StandardFonts } from 'pdf-lib';
+import { PDFDocument, StandardFonts, PDFName, PDFDict, PDFArray, PDFNumber } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
 // Font key mapping: fontFamily → KV keys
@@ -111,4 +117,131 @@ export async function loadAllFonts(pdfDoc, fontFamilies, env) {
     result[family] = fonts;
   }
   return result;
+}
+
+/**
+ * Decompress FlateDecode data using the DecompressionStream Web API.
+ * Works in Cloudflare Workers and modern browsers (no Node.js zlib needed).
+ */
+async function decompressFlate(compressed) {
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  writer.write(compressed);
+  writer.close();
+
+  const reader = ds.readable.getReader();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+
+  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return result;
+}
+
+/**
+ * Fix pdf-lib bug: CIDFontType2 W arrays have gaps for some glyph IDs.
+ * Without /DW, missing CIDs default to 1000 units (full em width), causing
+ * huge character spacing (e.g. "Un titled Book" instead of "Untitled Book").
+ *
+ * Strategy: save → reload → for each CIDFontType2, decompress the embedded
+ * TTF from FontFile2, parse with fontkit to get ALL glyph widths, rebuild
+ * the W array to be complete, then re-save.
+ *
+ * @param {PDFDocument} pdfDoc - The pdf-lib document (before saving)
+ * @returns {Promise<Uint8Array>} - The saved PDF bytes with fixed widths
+ */
+export async function fixCIDFontWidths(pdfDoc) {
+  const bytes = await pdfDoc.save();
+  const fixed = await PDFDocument.load(bytes);
+
+  // Collect all CIDFontType2 objects that need patching
+  const toPatch = [];
+  fixed.context.enumerateIndirectObjects().forEach(([ref, obj]) => {
+    if (!(obj instanceof PDFDict)) return;
+    const subtype = obj.lookup(PDFName.of('Subtype'));
+    if (subtype?.toString() !== '/CIDFontType2') return;
+
+    const descriptorRef = obj.get(PDFName.of('FontDescriptor'));
+    const descriptor = fixed.context.lookup(descriptorRef);
+    if (!(descriptor instanceof PDFDict)) return;
+
+    const fontFileRef = descriptor.get(PDFName.of('FontFile2'));
+    const fontFileStream = fixed.context.lookup(fontFileRef);
+    if (!fontFileStream || typeof fontFileStream.getContents !== 'function') return;
+
+    let compressedData;
+    try {
+      compressedData = fontFileStream.getContents();
+    } catch {
+      return;
+    }
+
+    const filter = fontFileStream.dict?.get(PDFName.of('Filter'));
+    toPatch.push({ obj, compressedData, isFlate: filter?.toString() === '/FlateDecode' });
+  });
+
+  if (toPatch.length === 0) return bytes;
+
+  // Decompress and patch all fonts in parallel
+  let patchCount = 0;
+  await Promise.all(toPatch.map(async ({ obj, compressedData, isFlate }) => {
+    let ttfData = compressedData;
+    if (isFlate) {
+      try {
+        ttfData = await decompressFlate(compressedData);
+      } catch (err) {
+        console.error('Font decompression failed:', err?.message || err);
+        return;
+      }
+    }
+
+    let fkFont;
+    try {
+      fkFont = fontkit.create(ttfData);
+    } catch (err) {
+      console.error('fontkit parse failed:', err?.message || err);
+      return;
+    }
+
+    const numGlyphs = fkFont.numGlyphs;
+    const unitsPerEm = fkFont.unitsPerEm || 1000;
+    const scale = 1000 / unitsPerEm;
+
+    // Build complete W array: [0 [w0 w1 w2 ... wN]]
+    const widths = [];
+    for (let gid = 0; gid < numGlyphs; gid++) {
+      try {
+        const glyph = fkFont.getGlyph(gid);
+        const width = glyph ? Math.round(glyph.advanceWidth * scale * 2) / 2 : 0;
+        widths.push(PDFNumber.of(width));
+      } catch {
+        widths.push(PDFNumber.of(0));
+      }
+    }
+
+    const wInner = PDFArray.withContext(fixed.context);
+    widths.forEach((w) => wInner.push(w));
+
+    const wArray = PDFArray.withContext(fixed.context);
+    wArray.push(PDFNumber.of(0));
+    wArray.push(wInner);
+
+    obj.set(PDFName.of('W'), wArray);
+    obj.set(PDFName.of('DW'), PDFNumber.of(0));
+    patchCount++;
+  }));
+
+  if (patchCount > 0) {
+    return fixed.save();
+  }
+  return bytes;
 }

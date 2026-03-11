@@ -35,6 +35,9 @@ function normalizeExtractedData(data) {
 export const useEditorStore = create((set, get) => ({
   // State
   originalImage: null,
+  originalImages: [], // Multi-page: array of blob URLs
+  currentPageIndex: 0,
+  pageCount: 1,
   extractedData: null,
   editedData: null,
   confidence: 0,
@@ -46,12 +49,32 @@ export const useEditorStore = create((set, get) => ({
     const normalized = normalizeExtractedData(scan.extractedData);
     set({
       originalImage: scan.imageUrl || scan.originalImage || null,
+      originalImages: [],
+      currentPageIndex: 0,
+      pageCount: scan.pageCount || 1,
       extractedData: normalized || null,
       editedData: normalized ? { ...normalized } : null,
       confidence: scan.confidence || 0,
       isDirty: false,
       saving: false,
     });
+  },
+
+  setOriginalImages: (images) => {
+    set({
+      originalImages: images,
+      originalImage: images[0] || null,
+    });
+  },
+
+  setCurrentPage: (index) => {
+    const { originalImages } = get();
+    if (index >= 0 && index < originalImages.length) {
+      set({
+        currentPageIndex: index,
+        originalImage: originalImages[index] || null,
+      });
+    }
   },
 
   updateField: (field, value) => {

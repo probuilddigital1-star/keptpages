@@ -58,6 +58,7 @@ vi.mock('../services/pdf.js', () => ({
 
 vi.mock('../services/fonts.js', () => ({
   loadAllFonts: vi.fn(() => Promise.resolve(new Map())),
+  fixCIDFontWidths: vi.fn((pdfDoc) => pdfDoc.save()),
 }));
 
 vi.mock('../services/lulu.js', () => ({

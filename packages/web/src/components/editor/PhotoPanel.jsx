@@ -5,12 +5,26 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 5;
 const ZOOM_STEP = 0.25;
 
-export default function PhotoPanel({ imageUrl }) {
+export default function PhotoPanel({
+  imageUrl,
+  images = [],
+  currentPageIndex = 0,
+  pageCount = 1,
+  onPageChange,
+}) {
   const containerRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  const hasMultiplePages = images.length > 1;
+
+  // Reset zoom/pan when page changes
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [currentPageIndex]);
 
   function handleZoomIn() {
     setZoom((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
@@ -23,6 +37,18 @@ export default function PhotoPanel({ imageUrl }) {
   function handleFit() {
     setZoom(1);
     setPan({ x: 0, y: 0 });
+  }
+
+  function handlePrevPage() {
+    if (onPageChange && currentPageIndex > 0) {
+      onPageChange(currentPageIndex - 1);
+    }
+  }
+
+  function handleNextPage() {
+    if (onPageChange && currentPageIndex < images.length - 1) {
+      onPageChange(currentPageIndex + 1);
+    }
   }
 
   // Mouse wheel zoom
@@ -78,10 +104,49 @@ export default function PhotoPanel({ imageUrl }) {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 bg-cream-surface border-b border-border-light rounded-t-lg">
-        <span className="font-ui text-xs text-walnut-muted">
-          {Math.round(zoom * 100)}%
-        </span>
+        {/* Left: page navigation */}
         <div className="flex items-center gap-1">
+          {hasMultiplePages && (
+            <>
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPageIndex === 0}
+                className="p-2.5 sm:p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous page"
+              >
+                <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+              </button>
+              <span className="font-ui text-xs text-walnut-muted min-w-[60px] text-center">
+                Page {currentPageIndex + 1} of {images.length}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPageIndex >= images.length - 1}
+                className="p-2.5 sm:p-1.5 rounded-md text-walnut-secondary hover:bg-cream-alt disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next page"
+              >
+                <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            </>
+          )}
+          {!hasMultiplePages && (
+            <span className="font-ui text-xs text-walnut-muted">
+              {Math.round(zoom * 100)}%
+            </span>
+          )}
+        </div>
+
+        {/* Right: zoom controls */}
+        <div className="flex items-center gap-1">
+          {hasMultiplePages && (
+            <span className="font-ui text-xs text-walnut-muted mr-1">
+              {Math.round(zoom * 100)}%
+            </span>
+          )}
           <button
             onClick={handleZoomOut}
             disabled={zoom <= MIN_ZOOM}
@@ -138,7 +203,7 @@ export default function PhotoPanel({ imageUrl }) {
         >
           <img
             src={imageUrl}
-            alt="Original scan"
+            alt={hasMultiplePages ? `Scan page ${currentPageIndex + 1}` : 'Original scan'}
             className="max-w-full max-h-full object-contain select-none pointer-events-none"
             draggable={false}
           />

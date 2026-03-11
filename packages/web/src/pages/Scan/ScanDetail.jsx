@@ -49,11 +49,16 @@ export default function ScanDetail() {
   const { getScan, reprocessScan, deleteScan, processing: reprocessing } = useScanStore();
   const {
     originalImage,
+    originalImages,
+    currentPageIndex,
+    pageCount,
     editedData,
     confidence,
     isDirty,
     saving,
     loadScan,
+    setOriginalImages,
+    setCurrentPage,
     updateField,
     save,
   } = useEditorStore();
@@ -85,29 +90,43 @@ export default function ScanDetail() {
         }
         setLoading(false);
 
-        // Fetch original image from R2 via worker
-        api.getBlob(`/scan/${id}/image`)
-          .then((blob) => {
-            const url = URL.createObjectURL(blob);
-            useEditorStore.setState({ originalImage: url });
-          })
-          .catch(() => {
-            // Image not available — PhotoPanel will show fallback
-          });
+        // Fetch all page images from R2 via worker
+        const scanPageCount = scan.pageCount || 1;
+        const imagePromises = [];
+        for (let i = 0; i < scanPageCount; i++) {
+          const url = i === 0 ? `/scan/${id}/image` : `/scan/${id}/image?page=${i}`;
+          imagePromises.push(
+            api.getBlob(url)
+              .then((blob) => URL.createObjectURL(blob))
+              .catch(() => null)
+          );
+        }
+
+        Promise.all(imagePromises).then((urls) => {
+          const validUrls = urls.filter(Boolean);
+          if (validUrls.length > 0) {
+            setOriginalImages(validUrls);
+          }
+        });
       })
       .catch((err) => {
         setLoadError(err.message || 'Failed to load scan');
         setLoading(false);
       });
 
-    // Revoke blob URL on unmount
+    // Revoke blob URLs on unmount
     return () => {
+      const { originalImages } = useEditorStore.getState();
+      originalImages.forEach((url) => {
+        if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+      });
+      // Also check legacy single-image field
       const { originalImage } = useEditorStore.getState();
-      if (originalImage?.startsWith('blob:')) {
+      if (originalImage?.startsWith('blob:') && !originalImages.includes(originalImage)) {
         URL.revokeObjectURL(originalImage);
       }
     };
-  }, [id, getScan, loadScan]);
+  }, [id, getScan, loadScan, setOriginalImages]);
 
   // Auto-save debounce
   useEffect(() => {
@@ -164,13 +183,23 @@ export default function ScanDetail() {
       } else if (result.extractedData?.type) {
         setDocumentType(result.extractedData.type);
       }
-      // Re-fetch image (already in R2, but editorStore.originalImage may have been reset)
-      api.getBlob(`/scan/${id}/image`)
-        .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          useEditorStore.setState({ originalImage: url });
-        })
-        .catch(() => {});
+      // Re-fetch images
+      const scanPageCount = result.pageCount || 1;
+      const imagePromises = [];
+      for (let i = 0; i < scanPageCount; i++) {
+        const url = i === 0 ? `/scan/${id}/image` : `/scan/${id}/image?page=${i}`;
+        imagePromises.push(
+          api.getBlob(url)
+            .then((blob) => URL.createObjectURL(blob))
+            .catch(() => null)
+        );
+      }
+      Promise.all(imagePromises).then((urls) => {
+        const validUrls = urls.filter(Boolean);
+        if (validUrls.length > 0) {
+          setOriginalImages(validUrls);
+        }
+      });
       toast('Reprocessed successfully');
     } catch {
       toast('Reprocessing failed. Please try again.', 'error');
@@ -255,6 +284,11 @@ export default function ScanDetail() {
             <Badge variant={confidenceVariant(confidence)}>
               <span className="hidden sm:inline">{confidenceLabel(confidence)} </span>({Math.round(confidence * 100)}%)
             </Badge>
+            {pageCount > 1 && (
+              <Badge variant="default">
+                {pageCount} pages
+              </Badge>
+            )}
             {isDirty && (
               <span className="font-ui text-xs text-walnut-muted italic hidden sm:inline">
                 Unsaved changes
@@ -318,7 +352,13 @@ export default function ScanDetail() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* LEFT: Photo panel */}
         <div className="lg:w-1/2 h-[40vh] lg:h-auto border-b lg:border-b-0 lg:border-r border-border-light">
-          <PhotoPanel imageUrl={originalImage} />
+          <PhotoPanel
+            imageUrl={originalImage}
+            images={originalImages}
+            currentPageIndex={currentPageIndex}
+            pageCount={pageCount}
+            onPageChange={setCurrentPage}
+          />
         </div>
 
         {/* RIGHT: Text panel */}

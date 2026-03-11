@@ -179,6 +179,7 @@ collections.get('/:id', async (c) => {
         confidence_score,
         extracted_data,
         original_filename,
+        additional_r2_keys,
         r2_key,
         status,
         created_at
@@ -199,25 +200,31 @@ collections.get('/:id', async (c) => {
     coverImageUrl: collection.cover_image_url,
     createdAt: collection.created_at,
     updatedAt: collection.updated_at,
-    items: (items || []).map((item) => ({
-      id: item.id,
-      position: item.sort_order,
-      sectionTitle: item.section_title,
-      addedAt: item.created_at,
-      scan: item.scans
-        ? {
-            id: item.scans.id,
-            title: item.scans.title,
-            documentType: item.scans.document_type,
-            confidence: item.scans.confidence_score,
-            extractedData: item.scans.extracted_data,
-            originalFilename: item.scans.original_filename,
-            r2Key: item.scans.r2_key,
-            status: item.scans.status,
-            createdAt: item.scans.created_at,
-          }
-        : null,
-    })),
+    items: (items || []).map((item) => {
+      const pageCount = item.scans
+        ? 1 + (Array.isArray(item.scans.additional_r2_keys) ? item.scans.additional_r2_keys.length : 0)
+        : 1;
+      return {
+        id: item.id,
+        position: item.sort_order,
+        sectionTitle: item.section_title,
+        addedAt: item.created_at,
+        scan: item.scans
+          ? {
+              id: item.scans.id,
+              title: item.scans.title,
+              documentType: item.scans.document_type,
+              confidence: item.scans.confidence_score,
+              extractedData: item.scans.extracted_data,
+              originalFilename: item.scans.original_filename,
+              r2Key: item.scans.r2_key,
+              status: item.scans.status,
+              pageCount,
+              createdAt: item.scans.created_at,
+            }
+          : null,
+      };
+    }),
   });
 });
 
