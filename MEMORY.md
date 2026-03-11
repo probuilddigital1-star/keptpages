@@ -1,43 +1,60 @@
 # KeptPages — Project Memory
 
-## PDF Character Spacing Bug (Critical — Fixed 4 times)
+## PDF Character Spacing Bug (Critical — DEFINITIVE FIX)
 
 ### Root Cause
-pdf-lib + @pdf-lib/fontkit has a font subsetting bug. When custom fonts (TTF from KV) are embedded with the default `subset: true`, fontkit drops glyphs, producing text like `"Swee t & Sou r Cabb age"`.
+pdf-lib generates **incomplete CIDFontType2 W (width) arrays** when embedding TrueType fonts
+with `{ subset: false }`. Out of 698 glyphs, 74 glyph IDs are missing from the W array.
+Per PDF spec, missing CIDs default to 1000 units width (full em), causing huge character
+spacing — e.g., "Un titled Book" or "Swee t & Sou r Cabb age".
 
-### Fix Requirements (ALL must be true)
+This is a **deterministic pdf-lib bug**, NOT a race condition. Sequential vs parallel font
+loading does not fix it. The W array gaps are identical regardless of loading order.
+
+### Fix: fixCIDFontWidths() — DO NOT REMOVE THIS FUNCTION
+The fix is `fixCIDFontWidths()` in `packages/worker/src/services/fonts.js`. It:
+1. Saves the PDF via `pdfDoc.save()`
+2. Reloads with `PDFDocument.load(bytes)`
+3. Finds all CIDFontType2 font dictionaries
+4. Decompresses embedded TTF from FontFile2 (FlateDecode → `DecompressionStream` Web API)
+5. Parses with fontkit to compute ALL glyph widths
+6. Rebuilds W array as `[0 [w0 w1 w2 ... wN]]` (complete, no gaps)
+7. Sets /DW=0 as safety fallback
+8. Re-saves the fixed PDF
+
+### All Requirements (ALL must be true)
 1. **`{ subset: false }`** on every `pdfDoc.embedFont()` call for custom fonts
-   - File: `packages/worker/src/services/fonts.js:72`
-2. **Sequential font embedding** — NEVER use `Promise.all` for concurrent `embedFont` calls
-   - fontkit shares internal state on the pdfDoc instance
-   - Concurrent embedding causes race conditions that corrupt glyph tables
-   - File: `packages/worker/src/services/fonts.js` — both `loadFonts()` and `loadAllFonts()` must be sequential
-3. **`env` parameter** must be passed to all PDF generation functions so they can load custom fonts from KV
-   - `packages/worker/src/routes/books.js:483` — `loadAllFonts(pdfDoc, [...fontFamilies], env)`
-   - `packages/worker/src/routes/books.js:525` — `generateBookPdf(bookMeta, documents, templateToUse, env)`
-   - `packages/worker/src/routes/collections.js:657` — `c.env` passed to `generateBookPdf`
-4. **FONTS KV binding** must exist in `wrangler.toml` and have font data uploaded
-   - Binding: `FONTS` with id `3084fcd1b8d947b48aada1a8780c8eb4`
+2. **`fixCIDFontWidths(pdfDoc)`** must be called INSTEAD of `pdfDoc.save()` at all 3 save points:
+   - `packages/worker/src/services/pdf.js` ~line 758: `generateBookPdf()` interior
+   - `packages/worker/src/services/pdf.js` ~line 965: `generateCoverPdf()` cover
+   - `packages/worker/src/routes/books.js` ~line 514: blueprint path interior
+3. **Static (non-variable) font files** in FONTS KV — variable fonts cause fontkit issues
+4. **FONTS KV binding** in `wrangler.toml` with id `3084fcd1b8d947b48aada1a8780c8eb4`
+5. **`env` parameter** passed to PDF generation functions for KV font loading
+6. **Test mock** in `books.test.js` must include `fixCIDFontWidths: vi.fn((pdfDoc) => pdfDoc.save())`
+
+### Technical Details
+- Embedded fonts in saved PDFs are FlateDecode compressed (zlib, `78 9c` header)
+- `PDFRawStream.getContents()` returns COMPRESSED bytes, NOT decompressed TTF
+- Must use `DecompressionStream('deflate')` Web API (works in CF Workers, no nodejs_compat needed)
+- `fontkit.create()` accepts `Uint8Array` directly (no `Buffer` needed)
 
 ### Fix History
 | Date | Commit | What happened |
 |------|--------|---------------|
 | 2026-03-08 | `ea309c3` | Initial fix: added `{ subset: false }` |
 | 2026-03-09 | `06d8e8e` | Regression: dirty working tree reverted to `subset: true`, re-fixed |
-| 2026-03-10 | `4f46dd1` | Extended: `generateBookPdf` now accepts `env` param for custom font loading |
-| 2026-03-11 | (current) | Root cause: concurrent `embedFont` calls via `Promise.all` cause fontkit race condition. Changed to sequential loading in both `loadFonts()` and `loadAllFonts()` |
+| 2026-03-10 | `4f46dd1` | Extended: `generateBookPdf` now accepts `env` param |
+| 2026-03-10 | (local) | Implemented `fixCIDFontWidths()` with DecompressionStream — the real fix |
+| 2026-03-11 | `c2c59a6` | REGRESSION: remote session removed fixCIDFontWidths, tried sequential loading (wrong fix) |
+| 2026-03-11 | (current) | Restored fixCIDFontWidths, merged with sequential loading changes |
 
 ### Key Files
-- `packages/worker/src/services/fonts.js` — Font loading with `{ subset: false }` + sequential embedding
-- `packages/worker/src/services/pdf.js` — `generateBookPdf()`, `generateCoverPdf()`, `renderBlueprintBook()`
-- `packages/worker/src/routes/books.js` — Book Designer PDF generation route (blueprint path)
-- `packages/worker/src/routes/collections.js` — Collection export PDF route
-- `packages/worker/wrangler.toml` — FONTS KV binding (line 21-23)
-
-### How to Verify
-- Generate a Book Designer PDF with text containing mixed characters (spaces, punctuation, accented chars)
-- Check that characters are NOT split with extra spaces
-- Run: `pnpm --filter @keptpages/worker test` (627 tests should pass)
+- `packages/worker/src/services/fonts.js` — `loadFonts()`, `loadAllFonts()`, `fixCIDFontWidths()`
+- `packages/worker/src/services/pdf.js` — `generateBookPdf()`, `generateCoverPdf()`
+- `packages/worker/src/routes/books.js` — Blueprint PDF generation
+- `packages/worker/src/routes/collections.js` — Collection export PDF
+- `packages/worker/wrangler.toml` — FONTS KV binding
 
 ---
 

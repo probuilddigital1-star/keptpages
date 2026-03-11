@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 
 export default function Nav({ onCtaClick, onLoginClick }) {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const isArticlesPage = location.pathname.startsWith('/between-the-pages');
 
   useEffect(() => {
     function handleScroll() {
@@ -22,10 +25,34 @@ export default function Nav({ onCtaClick, onLoginClick }) {
       )}
     >
       <div className="mx-auto max-w-container-sm md:max-w-container-md lg:max-w-container-lg px-4 sm:px-6 flex items-center justify-between">
-        <div className="font-display font-[800] text-[19px] sm:text-[22px] text-walnut tracking-[-0.5px]">
-          Kept<span className="text-terracotta">Pages</span>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Link to="/" className="font-display font-[800] text-[19px] sm:text-[22px] text-walnut tracking-[-0.5px] no-underline">
+            Kept<span className="text-terracotta">Pages</span>
+          </Link>
+          <Link
+            to="/between-the-pages"
+            className={clsx(
+              'hidden sm:inline font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
+              isArticlesPage
+                ? 'text-terracotta'
+                : 'text-walnut-secondary hover:text-walnut'
+            )}
+          >
+            Between the Pages
+          </Link>
         </div>
         <div className="flex items-center gap-2.5 sm:gap-4">
+          <Link
+            to="/between-the-pages"
+            className={clsx(
+              'sm:hidden font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
+              isArticlesPage
+                ? 'text-terracotta'
+                : 'text-walnut-secondary hover:text-walnut'
+            )}
+          >
+            Guides
+          </Link>
           <button
             onClick={onLoginClick}
             className="font-ui text-[13px] font-medium text-walnut-secondary tracking-[0.3px] bg-transparent border-none cursor-pointer transition-colors duration-200 hover:text-walnut py-1.5"

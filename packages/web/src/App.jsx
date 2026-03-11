@@ -26,6 +26,8 @@ const CheckoutSuccess = lazy(() => import('@/pages/CheckoutSuccess'));
 const CheckoutCancel = lazy(() => import('@/pages/CheckoutCancel'));
 const AdminOrders = lazy(() => import('@/pages/Admin/Orders'));
 const AuthCallback = lazy(() => import('@/pages/Auth/Callback'));
+const ArticleListing = lazy(() => import('@/pages/Articles'));
+const ArticleDetail = lazy(() => import('@/pages/Articles/ArticleDetail'));
 
 function PageLoader() {
   return (
@@ -65,6 +67,8 @@ export default function App() {
           {/* Marketing pages */}
           <Route element={<MarketingLayout />}>
             <Route path="/" element={<Landing />} />
+            <Route path="/between-the-pages" element={<ArticleListing />} />
+            <Route path="/between-the-pages/:slug" element={<ArticleDetail />} />
           </Route>
 
           {/* Auth pages (guest only) */}

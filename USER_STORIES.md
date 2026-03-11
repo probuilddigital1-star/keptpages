@@ -20,19 +20,19 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-INFRA-7 | GitHub Actions secrets | DONE | 6 secrets set: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD |
 | US-INFRA-8 | Local dev environment | DONE | Worker + frontend both start clean, wrangler v4 upgraded |
 | US-INFRA-9 | Supabase storage buckets | SKIP | Using R2 for all file storage instead of Supabase Storage |
-| US-BLOG-1 | Blog DB schema | TODO | |
-| US-BLOG-2 | Blog migration | TODO | |
-| US-BLOG-3 | Blog public API | TODO | |
-| US-BLOG-4 | Blog admin API | TODO | |
-| US-BLOG-5 | Blog listing page | TODO | |
-| US-BLOG-6 | Blog navigation | TODO | |
-| US-BLOG-7 | Blog post detail | TODO | |
-| US-BLOG-8 | Blog SEO | TODO | |
-| US-BLOG-9 | Blog CTA components | TODO | |
-| US-BLOG-10 | Blog content strategy | TODO | |
-| US-BLOG-11 | Blog routes | TODO | |
-| US-BLOG-12 | Blog RSS feed | TODO | |
-| US-BLOG-13 | Blog admin UI | TODO | |
+| US-BLOG-1 | "Between the Pages" DB schema | DONE | `articles` table, `article_status` enum, indexes, category constraint |
+| US-BLOG-2 | Articles migration | DONE | Migration 014: articles table + migration 015: 10 seed articles |
+| US-BLOG-3 | Articles public API | DONE | `GET /api/articles`, `GET /api/articles/:slug` with pagination, category/tag filters |
+| US-BLOG-4 | Articles admin API | DONE | `POST/PUT/DELETE /api/articles/admin`, publish endpoint, auth+admin middleware |
+| US-BLOG-5 | "Between the Pages" listing page | DONE | `/between-the-pages`, category tabs, article cards, skeleton loading, pagination |
+| US-BLOG-6 | Navigation integration | DONE | Nav + Footer links, active state on article pages, mobile "Guides" shorthand |
+| US-BLOG-7 | Article detail page | DONE | `/between-the-pages/:slug`, Markdown rendering, cover image, back link, 404 state |
+| US-BLOG-8 | SEO meta tags & structured data | DONE | Helmet for title/meta/OG/Twitter/JSON-LD, canonical URLs, RSS alternate link |
+| US-BLOG-9 | Signup CTA components | DONE | Inline + end-of-article CTAs, "Get Started Free" → `/signup` |
+| US-BLOG-10 | Evergreen content (10 articles) | DONE | 10 articles (5 preservation, 2 family-stories, 3 product-guides), seeded as draft |
+| US-BLOG-11 | Routes in React Router | DONE | `/between-the-pages` + `/between-the-pages/:slug`, lazy-loaded |
+| US-BLOG-12 | RSS feed | DONE | `GET /api/articles/rss`, RSS 2.0 XML, "Between the Pages" channel |
+| US-BLOG-13 | Blog admin UI | SKIP | Using Supabase Dashboard instead |
 | US-PAY-1 | Stripe account | DONE | Stripe account created + API keys configured in env |
 | US-PAY-2 | Stripe products/prices | DONE | Products/prices created in Stripe Dashboard |
 | US-PAY-3 | Stripe public key | DONE | `@stripe/stripe-js` installed, `getStripe()` singleton, `config.stripePublicKey` wired |
@@ -116,14 +116,19 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-UX-18 | Signup password strength indicator | DONE | 8-char minimum, 3-bar visual strength indicator (weak/fair/strong), advisory only |
 | US-UX-19 | Avatar upload progress indicator | DONE | Spinner overlay on avatar during upload with uploadingAvatar state |
 | US-UX-20 | Upgrade link deep-linking | DONE | Navigates to /app/settings#subscription, auto-scrolls to card |
+| US-SCAN-1 | Database & API foundation for multi-page scans | DONE | Migration 013: `additional_r2_keys` JSONB column, `POST /scan/:id/add-page`, `GET /scan/:id/image?page=N`, pageCount in responses |
+| US-SCAN-2 | Multi-image AI processing | DONE | Refactored `sendToGemini` and `sendToClaude` to accept `[{buffer, mimeType}]` arrays, multi-page prompt augmentation, 8192 max tokens |
+| US-SCAN-3 | Multi-page scan flow UI | DONE | STEP_PAGES flow step, staged pages with thumbnails, "Add Another Page" button, scanStore staging actions |
+| US-SCAN-4 | Multi-page image viewer in ScanDetail | DONE | editorStore `originalImages[]` + page navigation, PhotoPanel prev/next arrows + "Page X of Y" indicator |
+| US-SCAN-5 | Multi-page cleanup & collection integration | DONE | DELETE cleans up additional R2 keys, account deletion iterates `additional_r2_keys`, pageCount in collection responses |
 
-**Completed: 87/105** | **Remaining: 18**
+**Completed: 104/110** | **Remaining: 6**
 
-### Prioritized Roadmap (as of 2026-03-07)
+### Prioritized Roadmap (as of 2026-03-11)
 
-**DONE — Phases 1–3, 5.5, 6:** Export, QA, Book Designer, Print Options, Order Tracking & Admin
-**Phase 3.5 — UX Polish (NEW):** US-UX-1→20 (mobile/desktop friction fixes)
-**Phase 4 — Content & Growth:** US-BLOG-1→13 (blog infrastructure + content)
+**DONE — Phases 1–3, 3.5, 5.5, 6:** Export, QA, Book Designer, Print Options, Order Tracking & Admin, UX Polish
+**DONE — Phase 3.7 — Multi-Page Scanning:** US-SCAN-1→5 (multi-page scan capture, AI processing, viewer)
+**Phase 4 — Content & Growth:** US-BLOG-1→12 ("Between the Pages" — articles, SEO, evergreen content; US-BLOG-13 skipped)
 **Phase 5 — Launch Readiness:** US-QA-10→12 (pre-launch)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
 
@@ -153,14 +158,15 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | Epic | Stories | Completed | Remaining |
 |------|---------|-----------|-----------|
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
-| **BLOG** — Blog Feature | 13 | 0 | 13 |
+| **BLOG** — "Between the Pages" Content | 13 | 12 | 0 (+1 skipped) |
 | **PAY** — Payments & Subscriptions | 16 | 16 | 0 |
 | **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
 | **QA** — Testing & Launch Readiness | 12 | 9 | 3 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
 | **UX** — Mobile & Desktop Friction Fixes | 20 | 20 | 0 |
-| **Total** | **105** | **87** | **18** |
+| **SCAN** — Multi-Page Scanning | 5 | 5 | 0 |
+| **Total** | **110** | **104** | **6** |
 
 ---
 
@@ -342,35 +348,39 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-## Epic 2: Blog Feature (BLOG)
+## Epic 2: "Between the Pages" — Content & Guides (BLOG)
 
-### US-BLOG-1: Blog database schema design
+> Renamed from "Blog" to "Between the Pages" — a branded content hub with guides, stories, and
+> inspiration for preserving family documents. CTAs drive signup (not waitlist). Admin managed
+> via Supabase Dashboard (US-BLOG-13 skipped).
+
+### US-BLOG-1: Articles database schema design
 **As a** backend developer
-**I want to** define a `blog_posts` table with all necessary columns for content, metadata, and SEO
-**So that** blog content can be stored, queried, and rendered with full SEO support
+**I want to** define an `articles` table with all necessary columns for content, metadata, and SEO
+**So that** article content can be stored, queried, and rendered with full SEO support
 
 **Acceptance Criteria:**
-- [ ] Table `blog_posts` exists with columns: `id` (UUID PK), `title` (TEXT NOT NULL), `slug` (TEXT UNIQUE NOT NULL), `content` (TEXT NOT NULL — Markdown), `excerpt` (TEXT), `cover_image_url` (TEXT), `author` (TEXT DEFAULT 'KeptPages Team'), `tags` (TEXT[]), `category` (TEXT DEFAULT 'preservation-tips'), `status` (blog_post_status ENUM: draft/published/archived), `published_at` (TIMESTAMPTZ), `seo_title` (TEXT), `seo_description` (TEXT), `og_image_url` (TEXT), `created_at`, `updated_at`
-- [ ] A `blog_post_status` ENUM type is created
+- [ ] Table `articles` exists with columns: `id` (UUID PK), `title` (TEXT NOT NULL), `slug` (TEXT UNIQUE NOT NULL), `content` (TEXT NOT NULL — Markdown), `excerpt` (TEXT), `cover_image_url` (TEXT), `author` (TEXT DEFAULT 'KeptPages Team'), `tags` (TEXT[]), `category` (TEXT DEFAULT 'preservation'), `status` (article_status ENUM: draft/published/archived), `published_at` (TIMESTAMPTZ), `seo_title` (TEXT), `seo_description` (TEXT), `og_image_url` (TEXT), `created_at`, `updated_at`
+- [ ] An `article_status` ENUM type is created
 - [ ] `updated_at` trigger uses the existing `update_updated_at()` function
 - [ ] Indexes: UNIQUE on `slug`, GIN on `tags`, composite on `(status, published_at DESC)`, full-text search on `title` + `content`
-- [ ] Blog posts are public read, service-role write (no RLS needed)
+- [ ] Articles are public read, service-role write (no RLS needed)
 
 **Dependencies:** None
 **Estimate:** S
 
 ---
 
-### US-BLOG-2: Supabase migration for blog tables
+### US-BLOG-2: Supabase migration for articles table
 **As a** backend developer
-**I want to** create a numbered migration file that provisions the blog schema
-**So that** the blog tables deploy consistently via `supabase db push`
+**I want to** create a numbered migration file that provisions the articles schema
+**So that** the articles table deploys consistently via `supabase db push`
 
 **Acceptance Criteria:**
-- [ ] Migration file at `supabase/migrations/003_blog_schema.sql` (after waitlist fix migration)
-- [ ] Creates `blog_post_status` ENUM, `blog_posts` table, `updated_at` trigger, all indexes
+- [ ] Migration file at `supabase/migrations/014_articles_schema.sql`
+- [ ] Creates `article_status` ENUM, `articles` table, `updated_at` trigger, all indexes
 - [ ] Migration is idempotent
-- [ ] Includes category check constraint: `preservation-tips`, `family-stories`, `product-updates`
+- [ ] Includes category check constraint: `preservation`, `family-stories`, `product-guides`
 - [ ] Header comments match the style of `001_initial_schema.sql`
 
 **Dependencies:** US-BLOG-1
@@ -378,17 +388,17 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-BLOG-3: Worker API routes for blog (public)
+### US-BLOG-3: Worker API routes for articles (public)
 **As a** frontend developer
-**I want to** consume RESTful API endpoints for listing and reading blog posts
-**So that** the blog pages can fetch and display content
+**I want to** consume RESTful API endpoints for listing and reading articles
+**So that** the "Between the Pages" pages can fetch and display content
 
 **Acceptance Criteria:**
-- [ ] Route module at `packages/worker/src/routes/blog.js`
-- [ ] `GET /api/blog` returns paginated published posts (status = 'published', ordered by `published_at DESC`) with `page`, `limit`, `category`, `tag` query params
+- [ ] Route module at `packages/worker/src/routes/articles.js`
+- [ ] `GET /api/articles` returns paginated published articles (status = 'published', ordered by `published_at DESC`) with `page`, `limit`, `category`, `tag` query params
 - [ ] Response includes pagination metadata: `total`, `page`, `limit`, `totalPages`
-- [ ] `GET /api/blog/:slug` returns a single published post with all fields including full `content`
-- [ ] Returns 404 if slug does not exist or post is not published
+- [ ] `GET /api/articles/:slug` returns a single published article with all fields including full `content`
+- [ ] Returns 404 if slug does not exist or article is not published
 - [ ] Mounted as public in `index.js` alongside waitlist
 - [ ] Error responses follow existing format: `{ error: 'message' }`
 
@@ -397,39 +407,41 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-BLOG-4: Blog admin API routes
+### US-BLOG-4: Articles admin API routes
 **As a** site administrator
-**I want to** create, update, and publish blog posts through authenticated API endpoints
-**So that** blog content can be managed programmatically
+**I want to** create, update, and publish articles through authenticated API endpoints
+**So that** article content can be managed programmatically (and for seed script use)
 
 **Acceptance Criteria:**
-- [ ] `POST /api/blog/admin` creates a new draft post
-- [ ] `PUT /api/blog/admin/:id` updates post fields
-- [ ] `DELETE /api/blog/admin/:id` soft-deletes by setting status to 'archived'
-- [ ] `PUT /api/blog/admin/:id/publish` sets status to 'published' and `published_at` to now()
-- [ ] Admin routes protected by `X-Admin-Key` header validation against `env.ADMIN_API_KEY`
+- [ ] `POST /api/admin/articles` creates a new draft article
+- [ ] `PUT /api/admin/articles/:id` updates article fields
+- [ ] `DELETE /api/admin/articles/:id` soft-deletes by setting status to 'archived'
+- [ ] `PUT /api/admin/articles/:id/publish` sets status to 'published' and `published_at` to now()
+- [ ] Admin routes protected by existing admin middleware (ADMIN_EMAILS)
 - [ ] Slug auto-generated from title if not provided
 - [ ] Validation: required fields on create, reject duplicate slugs (409)
+- [ ] Note: Primary content management via Supabase Dashboard; API for programmatic use
 
 **Dependencies:** US-BLOG-3
 **Estimate:** M
 
 ---
 
-### US-BLOG-5: Blog listing page
+### US-BLOG-5: "Between the Pages" listing page
 **As a** website visitor
-**I want to** browse a list of blog posts on a dedicated page
-**So that** I can discover preservation tips, family stories, and product updates
+**I want to** browse articles on a dedicated page
+**So that** I can discover preservation guides, family stories, and product guides
 
 **Acceptance Criteria:**
-- [ ] Blog listing renders at `/blog` matching the KeptPages design system (warm cream bg, Fraunces headings, Newsreader body, Outfit labels)
-- [ ] Includes shared Nav (with Blog link active) and Footer
+- [ ] Listing renders at `/between-the-pages` matching KeptPages design system (warm cream bg, Fraunces headings, Newsreader body, Outfit labels)
+- [ ] Page heading: "Between the Pages" with subline "Guides, stories, and inspiration for preserving what matters most"
+- [ ] Includes shared Nav (with "Between the Pages" link active) and Footer
 - [ ] Section header uses Outfit 11px uppercase terracotta label with Fraunces heading
-- [ ] Post cards show: cover image, category label, title, excerpt, author, date, tag pills
+- [ ] Article cards show: cover image, category label, title, excerpt, author, date, tag pills
 - [ ] Cards follow design system: `bg-surface`, `border-light`, `radius-md`, `shadow-sm`, hover lift
-- [ ] Category filter tabs: All, Preservation Tips, Family Stories, Product Updates
-- [ ] Loading skeleton during fetch, pagination when > 10 posts
-- [ ] Empty state with friendly message when no posts exist
+- [ ] Category filter tabs: All, Preservation, Family Stories, Product Guides
+- [ ] Loading skeleton during fetch, pagination when > 10 articles
+- [ ] Empty state with friendly message when no articles exist
 - [ ] Scroll reveal animations matching landing page pattern
 - [ ] Page is lazy-loaded in the router
 
@@ -438,39 +450,39 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-BLOG-6: Blog navigation integration
+### US-BLOG-6: Navigation integration
 **As a** website visitor
-**I want to** see a "Blog" link in the navigation and footer
-**So that** I can easily discover and navigate to the blog
+**I want to** see a "Between the Pages" link in the navigation and footer
+**So that** I can easily discover and navigate to the content hub
 
 **Acceptance Criteria:**
-- [ ] Nav component includes a "Blog" link navigating to `/blog`
-- [ ] Blog link positioned between logo and "Join Waitlist" CTA
+- [ ] Nav component includes a "Between the Pages" link navigating to `/between-the-pages`
+- [ ] Link positioned between logo and primary CTA
 - [ ] Link uses Outfit 13px weight 500, `text-walnut`, hover `text-terracotta`
-- [ ] Active state on blog pages (terracotta color or underline)
-- [ ] Footer includes "Blog" link alongside Privacy, Terms, Contact
-- [ ] On blog pages, Nav CTA links to `/#signup` instead of `scrollToSignup`
+- [ ] Active state on article pages (terracotta color or underline)
+- [ ] Footer includes "Between the Pages" link alongside Privacy, Terms, Contact
+- [ ] On article pages, Nav CTA links to `/signup`
 
 **Dependencies:** None
 **Estimate:** S
 
 ---
 
-### US-BLOG-7: Blog post detail page
+### US-BLOG-7: Article detail page
 **As a** website visitor
-**I want to** read a full blog post with rich content rendering
-**So that** I can consume articles in a beautifully typeset layout
+**I want to** read a full article with rich content rendering
+**So that** I can consume guides and stories in a beautifully typeset layout
 
 **Acceptance Criteria:**
-- [ ] Renders at `/blog/:slug`, fetches from `GET /api/blog/:slug`
+- [ ] Renders at `/between-the-pages/:slug`, fetches from `GET /api/articles/:slug`
 - [ ] Uses MarketingLayout with Nav and Footer
 - [ ] Heading: Fraunces 34px mobile / 42px desktop, weight 600, `text-walnut`
 - [ ] Body: Newsreader 17px, line-height 1.65
 - [ ] Cover image full-width with `radius-md`
 - [ ] Category label above title (Outfit 11px uppercase, terracotta)
 - [ ] Author + date below title in Outfit, `text-secondary`
-- [ ] Markdown renders with styled headings, blockquotes (gold-light bg, gold left border), lists, code, images, links (terracotta)
-- [ ] "Back to Blog" link above article
+- [ ] Markdown renders with styled headings, blockquotes (gold-light bg, gold left border), lists, images, links (terracotta)
+- [ ] "Back to Between the Pages" link above article
 - [ ] Loading skeleton and 404 state for invalid slugs
 - [ ] Content container: `max-w-[680px]` for readability
 - [ ] Lazy-loaded in router
@@ -480,73 +492,85 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-BLOG-8: Blog SEO meta tags and structured data
+### US-BLOG-8: SEO meta tags and structured data
 **As a** marketing manager
-**I want to** blog posts to have proper meta tags, Open Graph, and JSON-LD
-**So that** posts rank well in search and show rich previews on social media
+**I want** articles to have proper meta tags, Open Graph, and JSON-LD
+**So that** articles rank well in search and show rich previews on social media
 
 **Acceptance Criteria:**
-- [ ] Listing page: `<title>Blog | KeptPages</title>`, appropriate `<meta description>`
-- [ ] Post page: `<title>` from `seo_title` (fallback `title`), `<meta description>` from `seo_description` (fallback `excerpt`)
+- [ ] Listing page: `<title>Between the Pages | KeptPages</title>`, appropriate `<meta description>`
+- [ ] Article page: `<title>` from `seo_title` (fallback `title`), `<meta description>` from `seo_description` (fallback `excerpt`)
 - [ ] Open Graph tags: `og:title`, `og:description`, `og:image`, `og:type=article`, `og:url`
 - [ ] Twitter Card tags: `twitter:card=summary_large_image`, title, description, image
-- [ ] JSON-LD `BlogPosting` structured data: headline, description, image, author, dates, publisher
-- [ ] `<link rel="canonical">` set to `https://keptpages.com/blog/{slug}`
+- [ ] JSON-LD `Article` structured data: headline, description, image, author, dates, publisher
+- [ ] `<link rel="canonical">` set to `https://keptpages.com/between-the-pages/{slug}`
 - [ ] Meta tags managed via `react-helmet-async` or custom `useHead` hook
-- [ ] Listing page includes JSON-LD `@type: Blog`
 
 **Dependencies:** US-BLOG-5, US-BLOG-7
 **Estimate:** M
 
 ---
 
-### US-BLOG-9: Blog CTA components for waitlist conversion
+### US-BLOG-9: Signup CTA components
 **As a** marketing manager
-**I want to** email capture CTAs within and after blog posts
-**So that** blog readers convert into waitlist subscribers
+**I want** signup CTAs within and after articles
+**So that** readers convert into users
 
 **Acceptance Criteria:**
-- [ ] Inline CTA renders within post content at a configurable point (e.g., after 3rd paragraph or `<!-- cta -->` marker)
-- [ ] End-of-post CTA renders below every post's content, above footer
-- [ ] Both include: Fraunces heading, Newsreader subheading, email input, terracotta "Join Waitlist" button
+- [ ] Inline CTA renders within article content at `<!-- cta -->` marker (if present)
+- [ ] End-of-article CTA renders below every article's content, above footer
+- [ ] Both include: Fraunces heading ("Start preserving your family's story"), Newsreader subheading, terracotta "Get Started Free" button linking to `/signup`
 - [ ] `bg-surface-warm` with `border-light` and `radius-lg`
-- [ ] Submits to `POST /api/waitlist` with `source: 'blog'` for tracking
-- [ ] Success state with sage green checkmark, error state with inline validation
-- [ ] `source` prop defaults to `'blog-inline'` or `'blog-end'`
+- [ ] No email input — direct link to signup page
+- [ ] Variant prop: `inline` (compact) vs `end` (full-width with more breathing room)
 
 **Dependencies:** US-BLOG-7
-**Estimate:** M
-
----
-
-### US-BLOG-10: Blog content strategy scaffolding
-**As a** content manager
-**I want to** an initial category structure and seed posts defined
-**So that** the blog launches with clear taxonomy and sample content
-
-**Acceptance Criteria:**
-- [ ] Three categories enforced: `preservation-tips`, `family-stories`, `product-updates`
-- [ ] Seed SQL inserts at least one sample draft post per category (3 posts total)
-- [ ] Seed posts include realistic titles, excerpts, and placeholder content (3+ paragraphs each)
-- [ ] Seed posts have `status = 'draft'` (not publicly visible until published)
-- [ ] Constants file at `packages/web/src/config/blogCategories.js` with display names and slugs
-- [ ] Category display names: "Preservation Tips", "Family Stories", "Product Updates"
-
-**Dependencies:** US-BLOG-2
 **Estimate:** S
 
 ---
 
-### US-BLOG-11: Blog routes in React Router
-**As a** frontend developer
-**I want to** blog pages registered in React Router
-**So that** `/blog` and `/blog/:slug` resolve to the correct components
+### US-BLOG-10: Evergreen content — 10 articles
+**As a** content manager
+**I want** 10 real, publishable evergreen articles seeded into the database
+**So that** "Between the Pages" launches with valuable search-intent content
+
+**Content plan (10 articles):**
+1. "How to Digitize Old Family Recipe Cards" (preservation)
+2. "How to Transcribe Old Cursive Handwriting" (preservation)
+3. "What to Do with Old Letters You Can't Throw Away" (preservation)
+4. "How to Preserve Faded Ink on Old Paper" (preservation)
+5. "How to Turn a Family Cookbook into a Real Book" (preservation + product)
+6. "Why Every Family Recipe Tells a Story Worth Keeping" (family-stories)
+7. "The Art of Passing Down Handwritten Recipes" (family-stories)
+8. "How KeptPages Reads Your Grandma's Hardest Handwriting" (product-guides)
+9. "From Phone Photo to Hardcover Book: How It Works" (product-guides)
+10. "Hardcover vs. Coil-Bound: Which Format for Your Family Cookbook?" (product-guides)
 
 **Acceptance Criteria:**
-- [ ] `ROUTES` config includes `BLOG: '/blog'` and `BLOG_POST: '/blog/:slug'`
+- [ ] Three categories: `preservation`, `family-stories`, `product-guides`
+- [ ] Constants file at `packages/web/src/config/articleCategories.js` with display names and slugs
+- [ ] Category display names: "Preservation", "Family Stories", "Product Guides"
+- [ ] 10 articles seeded via migration with real, publishable Markdown content (600-1000 words each)
+- [ ] Each article has title, slug, excerpt, tags, category, seo_title, seo_description
+- [ ] Articles seeded as `status = 'draft'` (publish manually after review)
+- [ ] Content is empathetic, targets the 60-year-old finding their mother's recipes — not tech jargon
+- [ ] Articles 1-5 target specific Google search queries
+
+**Dependencies:** US-BLOG-2
+**Estimate:** XL
+
+---
+
+### US-BLOG-11: Routes in React Router
+**As a** frontend developer
+**I want** article pages registered in React Router
+**So that** `/between-the-pages` and `/between-the-pages/:slug` resolve to the correct components
+
+**Acceptance Criteria:**
+- [ ] `ROUTES` config includes `ARTICLES: '/between-the-pages'` and `ARTICLE: '/between-the-pages/:slug'`
 - [ ] Routes added to `App.jsx` inside `<MarketingLayout />` group
-- [ ] Blog pages lazy-loaded: `const BlogListing = lazy(() => import('@/pages/Blog'))`
-- [ ] Navigating to `/blog` renders listing, `/blog/some-slug` renders detail
+- [ ] Pages lazy-loaded: `const ArticleListing = lazy(() => import('@/pages/Articles'))`
+- [ ] Navigating to `/between-the-pages` renders listing, `/between-the-pages/some-slug` renders detail
 - [ ] Unknown slugs display a 404 state
 - [ ] Browser back/forward navigation works correctly
 
@@ -555,39 +579,28 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-BLOG-12: Blog RSS feed endpoint
-**As a** blog reader
+### US-BLOG-12: RSS feed endpoint
+**As a** reader
 **I want to** subscribe via RSS
-**So that** I receive new posts automatically in my feed reader
+**So that** I receive new articles automatically in my feed reader
 
 **Acceptance Criteria:**
-- [ ] `GET /api/blog/rss` returns valid RSS 2.0 XML with `Content-Type: application/rss+xml`
-- [ ] Channel includes title, link, description, language, lastBuildDate
-- [ ] Each published post as `<item>` with title, link, description, pubDate, guid, categories
-- [ ] Returns 20 most recent published posts
-- [ ] Valid per RSS validator
-- [ ] Blog listing page includes `<link rel="alternate" type="application/rss+xml">` tag
-- [ ] Small RSS icon link on blog listing page
+- [ ] `GET /api/articles/rss` returns valid RSS 2.0 XML with `Content-Type: application/rss+xml`
+- [ ] Channel title: "Between the Pages — KeptPages"
+- [ ] Channel includes link, description, language, lastBuildDate
+- [ ] Each published article as `<item>` with title, link, description, pubDate, guid, categories
+- [ ] Returns 20 most recent published articles
+- [ ] Listing page includes `<link rel="alternate" type="application/rss+xml">` tag
+- [ ] Small RSS icon link on listing page
 
 **Dependencies:** US-BLOG-3
 **Estimate:** S
 
 ---
 
-### US-BLOG-13: Blog admin management interface
-**As a** site administrator
-**I want to** create, edit, and publish blog posts through a basic admin UI
-**So that** non-technical team members can manage content without SQL
-
-**Acceptance Criteria:**
-- [ ] Admin page at `/admin/blog` (protected route, admin-only access)
-- [ ] Lists all posts (including drafts) with: title, status pill, category, date, action buttons
-- [ ] "New Post" button opens form: title, slug (auto-generated), content textarea, excerpt, category dropdown, tags, cover image URL, SEO fields
-- [ ] "Save Draft" and "Publish" buttons
-- [ ] Edit mode pre-populates all fields
-- [ ] Validates title and content not empty
-- [ ] Uses KeptPages design system
-- [ ] Alternatively: clear docs for managing posts via Supabase Dashboard
+### US-BLOG-13: Admin management interface ✅ SKIP
+**Status:** Skipped — using Supabase Dashboard for article management at launch.
+**Revisit:** Post-launch if content volume warrants a dedicated UI.
 
 **Dependencies:** US-BLOG-4
 **Estimate:** XL
@@ -1859,4 +1872,95 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 **File:** `packages/web/src/components/layout/AppLayout.jsx:213`, `packages/web/src/pages/Settings/index.jsx`
 **Fix:** Add `id="subscription"` to subscription section, update link to `/app/settings#subscription`, add `useEffect` scroll-to-hash
 **Dependencies:** None
+**Estimate:** S
+
+---
+
+## Epic 9: Multi-Page Scanning (SCAN)
+
+> Implemented 2026-03-11. Allows users to scan multi-page documents (e.g., 2-page recipe, front/back of a letter) as multiple images that get combined into ONE document by the AI.
+
+---
+
+### US-SCAN-1: Database & API foundation for multi-page scans ✅ DONE
+**As a** developer
+**I want to** store additional page images and serve them via API
+**So that** multi-page scans have proper data persistence and retrieval
+
+**Implementation:**
+- Migration 013: `additional_r2_keys JSONB DEFAULT NULL` column on scans table
+- Format: `[{ "r2Key": "...", "mimeType": "image/jpeg", "originalFilename": "page2.jpg", "fileSize": 12345 }]`
+- `POST /scan/:id/add-page`: validates ownership, status=uploaded, max 10 pages, uploads to R2, appends to JSONB array
+- `GET /scan/:id/image?page=N`: 0=primary (r2_key), 1+=additional. Default returns primary.
+- `GET /scan/:id` returns `pageCount`; scan list also includes `pageCount`
+- Backward compatible — existing scans have NULL (single-page)
+
+**Files:** `supabase/migrations/013_multi_page_scans.sql`, `packages/worker/src/routes/scan.js`
+**Estimate:** L
+
+---
+
+### US-SCAN-2: Multi-image AI processing ✅ DONE
+**As a** user scanning a multi-page document
+**I want** the AI to see all pages together
+**So that** it produces one unified extraction (combined ingredients, continuous text, etc.)
+
+**Implementation:**
+- Refactored `sendToGemini(imageBuffer, mimeType, env)` → `sendToGemini(images, env)` where images = `[{ buffer, mimeType }]`
+- Same refactor for `sendToClaude(imageBuffer, mimeType, previousResult, env)` → `sendToClaude(images, previousResult, env)`
+- Extracted shared `arrayBufferToBase64()` helper in gemini.js (imported by claude.js)
+- Multi-page prompt prefix: "You are analyzing multiple pages/images of the SAME document..."
+- `maxOutputTokens` increased to 8192 for multi-page (4096 for single)
+- `POST /scan/:id/process` and `/reprocess` fetch all page images via `fetchAllPageImages()` helper
+
+**Files:** `packages/worker/src/services/gemini.js`, `packages/worker/src/services/claude.js`, `packages/worker/src/routes/scan.js`
+**Estimate:** L
+
+---
+
+### US-SCAN-3: Multi-page scan flow UI ✅ DONE
+**As a** user scanning a multi-page document
+**I want to** stage multiple page images before processing
+**So that** I can capture all pages and process them together
+
+**Implementation:**
+- New `STEP_PAGES` flow step: CHOOSE → CAMERA/UPLOAD → PREVIEW → PAGES → UPLOADING → navigate
+- scanStore additions: `pages[]` state, `addStagedPage(blob)`, `removeStagedPage(index)`, `clearStagedPages()`
+- STEP_PAGES UI: numbered thumbnail grid, remove buttons, "Add Page" placeholder card, "Process N Pages" button
+- Upload flow: page 1 via `uploadScan`, pages 2..N via `addPage(scanId, file)`, then `processScan`
+- Single-page still works: user can process immediately from STEP_PAGES with just 1 page
+
+**Files:** `packages/web/src/pages/Scan/index.jsx`, `packages/web/src/stores/scanStore.js`
+**Estimate:** L
+
+---
+
+### US-SCAN-4: Multi-page image viewer in ScanDetail ✅ DONE
+**As a** user reviewing a multi-page scan
+**I want to** navigate between page images
+**So that** I can see all original scanned pages
+
+**Implementation:**
+- editorStore: `originalImages[]`, `currentPageIndex`, `pageCount`, `setOriginalImages()`, `setCurrentPage()`
+- ScanDetail fetches all page images via `Promise.all` on `GET /scan/:id/image?page=0` through `?page=N-1`
+- PhotoPanel: prev/next arrow buttons, "Page X of Y" indicator, zoom/pan resets on page change
+- Page count badge shown when `pageCount > 1`
+- Backward compatible: `originalImage` kept as alias for `originalImages[currentPageIndex]`
+
+**Files:** `packages/web/src/stores/editorStore.js`, `packages/web/src/pages/Scan/ScanDetail.jsx`, `packages/web/src/components/editor/PhotoPanel.jsx`
+**Estimate:** M
+
+---
+
+### US-SCAN-5: Multi-page cleanup & collection integration ✅ DONE
+**As a** developer
+**I want** multi-page R2 objects cleaned up properly
+**So that** storage is managed correctly on deletion
+
+**Implementation:**
+- `DELETE /scan/:id` selects `additional_r2_keys` for R2 cleanup tracking
+- Account deletion (`DELETE /user`) iterates `additional_r2_keys` array to delete all page R2 objects
+- Collection view includes `pageCount` in response items (computed from `additional_r2_keys` length)
+
+**Files:** `packages/worker/src/routes/scan.js`, `packages/worker/src/routes/user.js`, `packages/worker/src/routes/collections.js`
 **Estimate:** S

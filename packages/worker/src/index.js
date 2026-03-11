@@ -23,6 +23,7 @@ import shareRoutes from './routes/share.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import waitlistRoutes from './routes/waitlist.js';
+import articlesRoutes from './routes/articles.js';
 
 // Stripe webhook service
 import { handleWebhookEvent } from './services/stripe.js';
@@ -78,6 +79,9 @@ app.get('/api/health', (c) => {
 
 // Waitlist - public, no auth
 app.route('/api/waitlist', waitlistRoutes);
+
+// Articles ("Between the Pages") - public listing + detail, admin sub-routes require auth
+app.route('/api/articles', articlesRoutes);
 
 // Shared collection viewer - public, no auth
 // The share routes module defines GET /shared/:token which we mount here

@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithRouter } from '@/test/helpers';
 import Nav from './Nav';
 
 describe('Nav', () => {
@@ -8,19 +9,19 @@ describe('Nav', () => {
   });
 
   it('renders KeptPages logo', () => {
-    render(<Nav onCtaClick={vi.fn()} />);
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
     expect(screen.getByText(/Kept/)).toBeInTheDocument();
     expect(screen.getByText('Pages')).toBeInTheDocument();
   });
 
   it('renders "Get Started" button', () => {
-    render(<Nav onCtaClick={vi.fn()} />);
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
     expect(screen.getByRole('button', { name: /get started/i })).toBeInTheDocument();
   });
 
   it('calls onCtaClick when button is clicked', async () => {
     const handleClick = vi.fn();
-    render(<Nav onCtaClick={handleClick} />);
+    renderWithRouter(<Nav onCtaClick={handleClick} />);
     const user = userEvent.setup();
 
     await user.click(screen.getByRole('button', { name: /get started/i }));
@@ -29,13 +30,13 @@ describe('Nav', () => {
   });
 
   it('starts transparent (no solid background)', () => {
-    render(<Nav onCtaClick={vi.fn()} />);
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
     const nav = screen.getByRole('navigation');
     expect(nav).toHaveClass('bg-transparent');
   });
 
   it('adds solid background after scroll past 40px', () => {
-    render(<Nav onCtaClick={vi.fn()} />);
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
     const nav = screen.getByRole('navigation');
 
     // Simulate scroll past 40px
@@ -47,7 +48,7 @@ describe('Nav', () => {
   });
 
   it('removes solid background when scrolled back to top', () => {
-    render(<Nav onCtaClick={vi.fn()} />);
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
     const nav = screen.getByRole('navigation');
 
     // Scroll down
@@ -60,5 +61,11 @@ describe('Nav', () => {
     fireEvent.scroll(window);
     expect(nav).toHaveClass('bg-transparent');
     expect(nav).not.toHaveClass('bg-cream/95');
+  });
+
+  it('renders "Between the Pages" link on desktop', () => {
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />);
+    const links = screen.getAllByText(/between the pages/i);
+    expect(links.length).toBeGreaterThanOrEqual(1);
   });
 });

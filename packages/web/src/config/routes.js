@@ -1,5 +1,7 @@
 export const ROUTES = {
   HOME: '/',
+  ARTICLES: '/between-the-pages',
+  ARTICLE: '/between-the-pages/:slug',
   LOGIN: '/login',
   SIGNUP: '/signup',
   FORGOT_PASSWORD: '/forgot-password',

@@ -3,9 +3,9 @@
 ## Tech Stack
 - **Frontend:** React 18 + Vite, Tailwind CSS, Zustand stores, React Router v6
 - **Backend:** Cloudflare Worker (Hono), Supabase (Postgres + Auth), R2 storage, KV rate limiting
-- **Testing:** Vitest (frontend + worker), Playwright (E2E), 789+ tests across 70 files
+- **Testing:** Vitest (frontend + worker), Playwright (E2E), 1,452+ tests across 89 files
 - **Payments:** Stripe (checkout, portal, webhooks), Lulu Print API for book orders
-- **AI:** Gemini 2.5 Flash for scan processing
+- **AI:** Gemini 2.5 Flash for scan processing, Claude Sonnet fallback
 
 ## Key Directories
 - `packages/web/` — React frontend (Vite)
@@ -17,7 +17,7 @@
 - `pnpm test:e2e` — Playwright E2E tests
 
 ## Architecture Notes
-- Zustand stores: `authStore`, `scanStore`, `collectionsStore`, `documentsStore`, `subscriptionStore`, `uiStore`
+- Zustand stores: `authStore`, `scanStore`, `editorStore`, `collectionsStore`, `documentsStore`, `subscriptionStore`, `uiStore`
 - API service at `packages/web/src/services/api.js`
 - PDF generation: `packages/worker/src/services/pdf.js` (pdf-lib)
 - Blueprint book rendering: `packages/worker/src/services/blueprint-pdf.js`
@@ -30,7 +30,8 @@
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
 ## Current Status (2026-03-11)
-- **87/105 user stories complete**
-- Phase 3.5 UX Polish: **20/20 COMPLETE**
-- All tests passing (1,416 tests: 789 frontend + 627 worker, 88 files)
-- Remaining work: Blog (13 stories), Launch readiness (2), Claude API fallback (1 parked)
+- **104/110 user stories complete**
+- "Between the Pages" content hub (BLOG): **12/12 COMPLETE** (US-BLOG-13 skipped)
+- Multi-Page Scanning (SCAN): **5/5 COMPLETE**
+- All tests passing (1,452 tests: 790 frontend + 662 worker, 89 files)
+- Remaining work: Launch readiness (2 stories: US-QA-10, US-QA-12), Claude API fallback (1 parked)
