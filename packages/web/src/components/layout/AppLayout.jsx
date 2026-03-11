@@ -210,7 +210,7 @@ function TopBar() {
         <div className="flex items-center gap-2">
           {tier === 'free' && (
             <NavLink
-              to="/app/settings"
+              to="/app/settings#subscription"
               className="font-ui text-[10px] font-semibold uppercase tracking-wider text-terracotta bg-terracotta-light px-2 py-1 rounded-pill"
             >
               Upgrade
@@ -224,7 +224,7 @@ function TopBar() {
               {user?.user_metadata?.name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
             </button>
             {menuOpen && (
-              <div className="absolute right-0 mt-1 w-44 bg-white rounded-md shadow-lg border border-border-light py-1 z-50">
+              <div className="absolute right-0 mt-1 w-44 max-w-[calc(100vw-2rem)] bg-white rounded-md shadow-lg border border-border-light py-1 z-50">
                 <p className="px-3 py-1.5 font-ui text-xs text-walnut-muted truncate border-b border-border-light">
                   {user?.email}
                 </p>

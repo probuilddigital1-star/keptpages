@@ -104,7 +104,7 @@ export default function DocumentCard({
 
       {/* Action buttons */}
       {!readOnly && (onMoveUp || onMoveDown || onRemove) && (
-        <div className="flex flex-col items-center gap-1 shrink-0">
+        <div data-testid="action-buttons" className="flex flex-row md:flex-col items-center gap-1 shrink-0">
           {onMoveUp && (
             <button
               type="button"

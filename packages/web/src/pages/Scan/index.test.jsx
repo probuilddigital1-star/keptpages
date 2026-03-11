@@ -101,6 +101,15 @@ describe('ScanPage', () => {
     expect(screen.getByText('New Scan')).toBeInTheDocument();
   });
 
+  it('header stacks vertically on mobile and horizontally on sm+', () => {
+    renderScan();
+    const header = screen.getByTestId('scan-header');
+    expect(header.className).toContain('flex-col');
+    expect(header.className).toContain('items-start');
+    expect(header.className).toContain('sm:flex-row');
+    expect(header.className).toContain('sm:items-center');
+  });
+
   it('shows scan counter for free tier', () => {
     renderScan();
     expect(screen.getByText('5 of 25 scans used')).toBeInTheDocument();

@@ -180,4 +180,17 @@ describe('DropZone', () => {
 
     expect(onFile).not.toHaveBeenCalled();
   });
+
+  it('has responsive padding classes (p-6 on mobile, sm:p-10 on desktop)', () => {
+    render(<DropZone onFile={vi.fn()} />);
+    const dropZone = screen.getByRole('button');
+    expect(dropZone.className).toMatch(/p-6/);
+    expect(dropZone.className).toMatch(/sm:p-10/);
+  });
+
+  it('renders both mobile and desktop text variants in the DOM', () => {
+    render(<DropZone onFile={vi.fn()} />);
+    expect(screen.getByText(/drop your photo here/i)).toBeInTheDocument();
+    expect(screen.getByText(/tap to choose a photo/i)).toBeInTheDocument();
+  });
 });
