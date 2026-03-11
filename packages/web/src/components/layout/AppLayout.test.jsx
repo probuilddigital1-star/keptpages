@@ -182,4 +182,11 @@ describe('AppLayout', () => {
     expect(dropdown).toHaveClass('max-w-[calc(100vw-2rem)]');
     expect(dropdown).toHaveClass('right-0');
   });
+
+  it('upgrade link href includes #subscription', () => {
+    setupMocks({ tier: 'free' });
+    renderLayout();
+    const upgradeLink = screen.getByText('Upgrade');
+    expect(upgradeLink.closest('a')).toHaveAttribute('href', '/app/settings#subscription');
+  });
 });
