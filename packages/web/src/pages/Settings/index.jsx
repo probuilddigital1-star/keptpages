@@ -49,6 +49,16 @@ export default function Settings() {
     fetchSubscription().catch(() => {});
   }, [fetchSubscription]);
 
+  // Scroll to subscription card when navigated with #subscription hash
+  useEffect(() => {
+    if (window.location.hash === '#subscription') {
+      const el = document.getElementById('subscription');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       setDisplayName(user.user_metadata?.name || '');
@@ -250,7 +260,7 @@ export default function Settings() {
       {/* ================================================================= */}
       <section className="mb-10">
         <h2 className="section-label mb-4">Subscription</h2>
-        <Card className="p-6">
+        <Card id="subscription" className="p-6">
           <div className="flex items-center gap-3 mb-6">
             <span className="font-ui text-sm font-medium text-walnut">
               Current Plan:
