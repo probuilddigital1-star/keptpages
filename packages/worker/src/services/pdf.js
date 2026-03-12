@@ -872,36 +872,56 @@ export async function generateCoverPdf(coverData, pageCount, env) {
   const authorSize = 16;
   const dividerWidth = layout === 'left-aligned' ? 48 : 64;
 
+  // Compute total content block height so we can vertically center it
+  // Each element contributes: its own height + gap below it
+  const GAP_PHOTO_TITLE = 30;
+  const GAP_TITLE_SUB = 16;
+  const GAP_SUB_DIVIDER = 28;
+  const GAP_DIVIDER_AUTHOR = 36; // large gap so divider line never overlaps author ascenders
+
   if (layout === 'left-aligned') {
     const leftPad = frontCoverX + 50;
-    let cursorY = coverHeight * 0.65;
+
+    // Calculate total block height for vertical centering
+    let blockH = titleSize; // title
+    if (coverData.subtitle) blockH += GAP_TITLE_SUB + subtitleSize;
+    blockH += GAP_SUB_DIVIDER + 1; // divider line
+    if (coverData.author) blockH += GAP_DIVIDER_AUTHOR + authorSize;
+
+    // Center the block on the front cover (safe area)
+    const safeTop = coverHeight - coverBleed - 50;
+    const safeBottom = coverBleed + 50;
+    const centerY = (safeTop + safeBottom) / 2;
+    let cursorY = centerY + blockH / 2;
 
     // Title
     coverPage.drawText(titleText, {
       x: leftPad, y: cursorY,
       size: titleSize, font: fontBold, color: frontTextColor,
     });
-    cursorY -= titleSize + 14;
+    cursorY -= titleSize;
 
     // Subtitle
     if (coverData.subtitle) {
+      cursorY -= GAP_TITLE_SUB;
       coverPage.drawText(coverData.subtitle, {
         x: leftPad, y: cursorY,
         size: subtitleSize, font: fontItalic, color: frontAccentColor,
       });
-      cursorY -= subtitleSize + 14;
+      cursorY -= subtitleSize;
     }
 
     // Divider line
+    cursorY -= GAP_SUB_DIVIDER;
     coverPage.drawLine({
       start: { x: leftPad, y: cursorY },
       end: { x: leftPad + dividerWidth, y: cursorY },
       thickness: 1, color: frontAccentColor,
     });
-    cursorY -= 20;
 
     // Author
     if (coverData.author) {
+      cursorY -= GAP_DIVIDER_AUTHOR;
       coverPage.drawText(coverData.author, {
         x: leftPad, y: cursorY,
         size: authorSize, font: fontRegular, color: frontSubColor,
@@ -909,30 +929,45 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     }
   } else {
     // centered (and photo-background) layout
-    let cursorY;
 
-    // Cover photo above title for centered layout
+    // Embed photo first (we need its dimensions for layout calculation)
+    let photo = null;
+    let photoDims = null;
     if (coverData.photoBytes && !isPhotoBg) {
       try {
         const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
-        const photo = await pdfDoc[embedFn](coverData.photoBytes);
-        const maxW = TRIM_WIDTH * 0.35;
-        const maxH = coverHeight * 0.2;
-        const photoDims = photo.scaleToFit(maxW, maxH);
-        const photoY = coverHeight * 0.68;
-        coverPage.drawImage(photo, {
-          x: frontCenterX - photoDims.width / 2,
-          y: photoY,
-          width: photoDims.width,
-          height: photoDims.height,
-        });
-        cursorY = photoY - 24;
+        photo = await pdfDoc[embedFn](coverData.photoBytes);
+        const maxW = TRIM_WIDTH * 0.45;
+        const maxH = coverHeight * 0.22;
+        photoDims = photo.scaleToFit(maxW, maxH);
       } catch (err) {
         console.error('Cover photo embed failed (centered):', err?.message || err);
-        cursorY = coverHeight * 0.6;
       }
-    } else {
-      cursorY = coverHeight * 0.6;
+    }
+
+    // Calculate total block height for vertical centering
+    let blockH = 0;
+    if (photo && photoDims) blockH += photoDims.height + GAP_PHOTO_TITLE;
+    blockH += titleSize; // title
+    if (coverData.subtitle) blockH += GAP_TITLE_SUB + subtitleSize;
+    blockH += GAP_SUB_DIVIDER + 1; // divider line
+    if (coverData.author) blockH += GAP_DIVIDER_AUTHOR + authorSize;
+
+    // Center on front cover safe area
+    const safeTop = coverHeight - coverBleed - 50;
+    const safeBottom = coverBleed + 50;
+    const centerY = (safeTop + safeBottom) / 2;
+    let cursorY = centerY + blockH / 2;
+
+    // Photo (above title)
+    if (photo && photoDims) {
+      coverPage.drawImage(photo, {
+        x: frontCenterX - photoDims.width / 2,
+        y: cursorY - photoDims.height,
+        width: photoDims.width,
+        height: photoDims.height,
+      });
+      cursorY -= photoDims.height + GAP_PHOTO_TITLE;
     }
 
     // Title
@@ -941,30 +976,30 @@ export async function generateCoverPdf(coverData, pageCount, env) {
       x: frontCenterX - titleWidth / 2, y: cursorY,
       size: titleSize, font: fontBold, color: frontTextColor,
     });
-    cursorY -= titleSize + 14;
+    cursorY -= titleSize;
 
     // Subtitle
     if (coverData.subtitle) {
+      cursorY -= GAP_TITLE_SUB;
       const subtitleWidth = fontItalic.widthOfTextAtSize(coverData.subtitle, subtitleSize);
       coverPage.drawText(coverData.subtitle, {
         x: frontCenterX - subtitleWidth / 2, y: cursorY,
         size: subtitleSize, font: fontItalic, color: frontAccentColor,
       });
-      cursorY -= subtitleSize + 20;
-    } else {
-      cursorY -= 20;
+      cursorY -= subtitleSize;
     }
 
     // Divider line
+    cursorY -= GAP_SUB_DIVIDER;
     coverPage.drawLine({
       start: { x: frontCenterX - dividerWidth / 2, y: cursorY },
       end: { x: frontCenterX + dividerWidth / 2, y: cursorY },
       thickness: 1, color: frontAccentColor,
     });
-    cursorY -= 20;
 
     // Author
     if (coverData.author) {
+      cursorY -= GAP_DIVIDER_AUTHOR;
       const authorWidth = fontRegular.widthOfTextAtSize(coverData.author, authorSize);
       coverPage.drawText(coverData.author, {
         x: frontCenterX - authorWidth / 2, y: cursorY,
