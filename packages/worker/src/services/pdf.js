@@ -11,7 +11,7 @@
  * - Spine width: depends on page count (approx 0.0025" per page for B&W)
  */
 
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, pushGraphicsState, popGraphicsState, moveTo, appendBezierCurve, clip, endPath } from 'pdf-lib';
 import { loadAllFonts, fixCIDFontWidths } from './fonts.js';
 
 // Dimensions in points (1 inch = 72 points)
@@ -1444,6 +1444,9 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
   const globalFont = globalSettings?.fontFamily || 'fraunces';
   let totalPages = 0;
 
+  console.log(`[blueprint-pdf] Rendering ${pages?.length || 0} pages, font=${globalFont}, coverDesign keys=${Object.keys(blueprint.coverDesign || {}).join(',')}`);
+
+
   // Front matter — title page uses cover color scheme (not template styles)
   if (globalSettings?.includeTitlePage) {
     const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
@@ -1477,14 +1480,12 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
 
     // Embed photo if available (for layout calculation)
     let photo = null;
-    let photoDims = null;
+    const PHOTO_RADIUS = 72; // circular photo radius in points (~1 inch)
+    const PHOTO_BORDER = 3;  // accent border width
     if (coverPhotoData?.bytes && blueprint.coverDesign?.layout !== 'photo-background') {
       try {
         const embedFn = coverPhotoData.mimeType === 'image/png' ? 'embedPng' : 'embedJpg';
         photo = await pdfDoc[embedFn](coverPhotoData.bytes);
-        const maxW = TRIM_WIDTH * 0.45;
-        const maxH = PAGE_HEIGHT * 0.25;
-        photoDims = photo.scaleToFit(maxW, maxH);
       } catch (err) {
         console.error('Title page photo embed failed:', err?.message || err);
       }
@@ -1497,8 +1498,9 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
     const GAP_DIV_AUTHOR = 32;
     const DIVIDER_W = 64;
 
+    const photoBlockH = photo ? (PHOTO_RADIUS * 2 + PHOTO_BORDER * 2) : 0;
     let blockH = 0;
-    if (photo && photoDims) blockH += photoDims.height + GAP_PHOTO;
+    if (photo) blockH += photoBlockH + GAP_PHOTO;
     if (titleText && titleFont) blockH += titleSize;
     if (subtitleText && subFont) blockH += GAP_TITLE_SUB + subSize;
     blockH += GAP_SUB_DIV + 1; // divider
@@ -1509,15 +1511,44 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
     const safeBottom = BLEED + 50;
     let cursorY = (safeTop + safeBottom) / 2 + blockH / 2;
 
-    // Photo above title
-    if (photo && photoDims) {
-      page.drawImage(photo, {
-        x: CENTER_X - photoDims.width / 2,
-        y: cursorY - photoDims.height,
-        width: photoDims.width,
-        height: photoDims.height,
+    // Circular photo above title (matches CoverPreview rounded-full style)
+    if (photo) {
+      const photoCY = cursorY - PHOTO_RADIUS - PHOTO_BORDER; // center Y of circle
+      const photoCX = CENTER_X;
+      const r = PHOTO_RADIUS;
+      const k = 0.5522847498; // bezier constant for circular arcs
+
+      // Draw accent-color border circle
+      page.drawCircle({
+        x: photoCX, y: photoCY,
+        size: r + PHOTO_BORDER,
+        color: tpAccent,
       });
-      cursorY -= photoDims.height + GAP_PHOTO;
+
+      // Clip to inner circle and draw the photo
+      page.pushOperators(
+        pushGraphicsState(),
+        moveTo(photoCX + r, photoCY),
+        appendBezierCurve(photoCX + r, photoCY + r * k, photoCX + r * k, photoCY + r, photoCX, photoCY + r),
+        appendBezierCurve(photoCX - r * k, photoCY + r, photoCX - r, photoCY + r * k, photoCX - r, photoCY),
+        appendBezierCurve(photoCX - r, photoCY - r * k, photoCX - r * k, photoCY - r, photoCX, photoCY - r),
+        appendBezierCurve(photoCX + r * k, photoCY - r, photoCX + r, photoCY - r * k, photoCX + r, photoCY),
+        clip(),
+        endPath(),
+      );
+
+      // Draw image scaled to fill the circle (square crop)
+      const dim = r * 2;
+      page.drawImage(photo, {
+        x: photoCX - r,
+        y: photoCY - r,
+        width: dim,
+        height: dim,
+      });
+
+      page.pushOperators(popGraphicsState());
+
+      cursorY -= photoBlockH + GAP_PHOTO;
     }
 
     // Title
@@ -1630,21 +1661,25 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
     drawPageBorder(page, styles);
     drawCornerOrnaments(page, styles);
 
-    // Render each element
+    // Render each element (try-catch per element to prevent one failure from breaking the page)
     for (const element of blueprintPage.elements || []) {
-      switch (element.type) {
-        case 'text':
-          drawBlueprintText(page, element, fontMap, globalFont);
-          break;
-        case 'image':
-          await drawBlueprintImage(page, element, imageMap, pdfDoc);
-          break;
-        case 'shape':
-          drawBlueprintShape(page, element);
-          break;
-        case 'decorative':
-          drawBlueprintDecorative(page, element);
-          break;
+      try {
+        switch (element.type) {
+          case 'text':
+            drawBlueprintText(page, element, fontMap, globalFont);
+            break;
+          case 'image':
+            await drawBlueprintImage(page, element, imageMap, pdfDoc);
+            break;
+          case 'shape':
+            drawBlueprintShape(page, element);
+            break;
+          case 'decorative':
+            drawBlueprintDecorative(page, element);
+            break;
+        }
+      } catch (elErr) {
+        console.error(`Element render failed (type=${element.type}, id=${element.id}):`, elErr?.message || elErr);
       }
     }
 
