@@ -725,7 +725,7 @@ books.post(
 
 /**
  * GET /books/:id/preview
- * Download the generated interior PDF for preview.
+ * Download the generated PDF for preview (cover + interior merged).
  */
 books.get('/:id/preview', async (c) => {
   const user = c.get('user');
@@ -735,7 +735,7 @@ books.get('/:id/preview', async (c) => {
 
   const { data: book, error } = await supabase
     .from('books')
-    .select('id, user_id, interior_pdf_key, title, status')
+    .select('id, user_id, interior_pdf_key, cover_pdf_key, title, status')
     .eq('id', bookId)
     .eq('user_id', user.id)
     .single();
@@ -748,14 +748,50 @@ books.get('/:id/preview', async (c) => {
     return c.json({ error: 'PDF has not been generated yet' }, 400);
   }
 
-  const obj = await env.PROCESSED.get(book.interior_pdf_key);
-  if (!obj) {
+  const interiorObj = await env.PROCESSED.get(book.interior_pdf_key);
+  if (!interiorObj) {
     return c.json({ error: 'PDF file not found in storage' }, 404);
   }
 
   const filename = `${(book.title || 'book').replace(/[^a-zA-Z0-9_-]/g, '_')}_preview.pdf`;
 
-  return new Response(obj.body, {
+  // If cover PDF exists, merge it as the first page(s) of the preview
+  if (book.cover_pdf_key) {
+    try {
+      const coverObj = await env.PROCESSED.get(book.cover_pdf_key);
+      if (coverObj) {
+        const { PDFDocument } = await import('pdf-lib');
+        const mergedPdf = await PDFDocument.create();
+
+        const coverBytes = new Uint8Array(await coverObj.arrayBuffer());
+        const interiorBytes = new Uint8Array(await interiorObj.arrayBuffer());
+
+        const coverDoc = await PDFDocument.load(coverBytes);
+        const interiorDoc = await PDFDocument.load(interiorBytes);
+
+        const coverPages = await mergedPdf.copyPages(coverDoc, coverDoc.getPageIndices());
+        for (const p of coverPages) mergedPdf.addPage(p);
+
+        const interiorPages = await mergedPdf.copyPages(interiorDoc, interiorDoc.getPageIndices());
+        for (const p of interiorPages) mergedPdf.addPage(p);
+
+        const mergedBytes = await mergedPdf.save();
+
+        return new Response(mergedBytes, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="${filename}"`,
+            'Cache-Control': 'private, max-age=300',
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Cover merge failed, returning interior only:', err?.message || err);
+    }
+  }
+
+  // Fallback: return interior PDF only
+  return new Response(interiorObj.body, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${filename}"`,

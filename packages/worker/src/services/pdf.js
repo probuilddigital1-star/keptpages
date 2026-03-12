@@ -1444,75 +1444,119 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
   const globalFont = globalSettings?.fontFamily || 'fraunces';
   let totalPages = 0;
 
-  // Front matter
+  // Front matter — title page uses cover color scheme (not template styles)
   if (globalSettings?.includeTitlePage) {
     const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    drawPageBackground(page, styles);
+
+    // Use cover color scheme for title page background and text
+    const coverScheme = getCoverColorScheme(blueprint.coverDesign?.colorScheme);
+    const tpBg = rgb(...coverScheme.bg);
+    const tpText = rgb(...coverScheme.text);
+    const tpAccent = rgb(...coverScheme.accent);
+    const tpSub = rgb(...coverScheme.textSub);
+
+    // Background from cover scheme
+    page.drawRectangle({
+      x: BLEED, y: BLEED,
+      width: TRIM_WIDTH, height: TRIM_HEIGHT,
+      color: tpBg,
+    });
     drawPageBorder(page, styles);
-    drawTitlePageDecoration(page, styles);
 
+    // Gather fonts
     const titleFont = fontMap[globalFont]?.bold || fontMap[globalFont]?.regular;
-    if (titleFont && blueprint.coverDesign?.title) {
-      const titleText = blueprint.coverDesign.title;
-      const titleSize = styles.titleFontSize;
-      const titleWidth = titleFont.widthOfTextAtSize(titleText, titleSize);
-      page.drawText(titleText, {
-        x: CENTER_X - titleWidth / 2,
-        y: PAGE_HEIGHT * 0.6,
-        size: titleSize,
-        font: titleFont,
-        color: styles.titleColor,
-      });
-    }
+    const subFont = fontMap[globalFont]?.italic || fontMap[globalFont]?.regular;
+    const authorFont = fontMap[globalFont]?.regular;
 
-    if (fontMap[globalFont]?.italic && blueprint.coverDesign?.subtitle) {
-      const subFont = fontMap[globalFont].italic;
-      const subText = blueprint.coverDesign.subtitle;
-      const subSize = styles.subtitleFontSize;
-      const subWidth = subFont.widthOfTextAtSize(subText, subSize);
-      page.drawText(subText, {
-        x: CENTER_X - subWidth / 2,
-        y: PAGE_HEIGHT * 0.55,
-        size: subSize,
-        font: subFont,
-        color: styles.subtitleColor,
-      });
-    }
+    const titleText = blueprint.coverDesign?.title || '';
+    const subtitleText = blueprint.coverDesign?.subtitle || '';
+    const authorText = blueprint.coverDesign?.author || '';
+    const titleSize = styles.titleFontSize || 32;
+    const subSize = styles.subtitleFontSize || 16;
+    const authorSize = styles.authorFontSize || 14;
 
-    // Author on title page
-    if (blueprint.coverDesign?.author) {
-      const authorFont = fontMap[globalFont]?.regular;
-      if (authorFont) {
-        const authorText = blueprint.coverDesign.author;
-        const authorSize = styles.authorFontSize || 14;
-        const authorWidth = authorFont.widthOfTextAtSize(authorText, authorSize);
-        page.drawText(authorText, {
-          x: CENTER_X - authorWidth / 2,
-          y: PAGE_HEIGHT * 0.48,
-          size: authorSize,
-          font: authorFont,
-          color: styles.subtitleColor,
-        });
-      }
-    }
-
-    // Cover photo on title page (if not using photo-background layout on cover)
+    // Embed photo if available (for layout calculation)
+    let photo = null;
+    let photoDims = null;
     if (coverPhotoData?.bytes && blueprint.coverDesign?.layout !== 'photo-background') {
       try {
         const embedFn = coverPhotoData.mimeType === 'image/png' ? 'embedPng' : 'embedJpg';
-        const photo = await pdfDoc[embedFn](coverPhotoData.bytes);
-        const maxPhotoWidth = TRIM_WIDTH * 0.5;
-        const maxPhotoHeight = PAGE_HEIGHT * 0.3;
-        const photoDims = photo.scaleToFit(maxPhotoWidth, maxPhotoHeight);
-        page.drawImage(photo, {
-          x: CENTER_X - photoDims.width / 2,
-          y: PAGE_HEIGHT * 0.15,
-          width: photoDims.width,
-          height: photoDims.height,
-        });
+        photo = await pdfDoc[embedFn](coverPhotoData.bytes);
+        const maxW = TRIM_WIDTH * 0.45;
+        const maxH = PAGE_HEIGHT * 0.25;
+        photoDims = photo.scaleToFit(maxW, maxH);
       } catch (err) {
         console.error('Title page photo embed failed:', err?.message || err);
       }
+    }
+
+    // Calculate content block height for vertical centering
+    const GAP_PHOTO = 24;
+    const GAP_TITLE_SUB = 14;
+    const GAP_SUB_DIV = 24;
+    const GAP_DIV_AUTHOR = 32;
+    const DIVIDER_W = 64;
+
+    let blockH = 0;
+    if (photo && photoDims) blockH += photoDims.height + GAP_PHOTO;
+    if (titleText && titleFont) blockH += titleSize;
+    if (subtitleText && subFont) blockH += GAP_TITLE_SUB + subSize;
+    blockH += GAP_SUB_DIV + 1; // divider
+    if (authorText && authorFont) blockH += GAP_DIV_AUTHOR + authorSize;
+
+    // Center on safe area
+    const safeTop = PAGE_HEIGHT - BLEED - 50;
+    const safeBottom = BLEED + 50;
+    let cursorY = (safeTop + safeBottom) / 2 + blockH / 2;
+
+    // Photo above title
+    if (photo && photoDims) {
+      page.drawImage(photo, {
+        x: CENTER_X - photoDims.width / 2,
+        y: cursorY - photoDims.height,
+        width: photoDims.width,
+        height: photoDims.height,
+      });
+      cursorY -= photoDims.height + GAP_PHOTO;
+    }
+
+    // Title
+    if (titleText && titleFont) {
+      const tw = titleFont.widthOfTextAtSize(titleText, titleSize);
+      page.drawText(titleText, {
+        x: CENTER_X - tw / 2, y: cursorY,
+        size: titleSize, font: titleFont, color: tpText,
+      });
+      cursorY -= titleSize;
+    }
+
+    // Subtitle
+    if (subtitleText && subFont) {
+      cursorY -= GAP_TITLE_SUB;
+      const sw = subFont.widthOfTextAtSize(subtitleText, subSize);
+      page.drawText(subtitleText, {
+        x: CENTER_X - sw / 2, y: cursorY,
+        size: subSize, font: subFont, color: tpAccent,
+      });
+      cursorY -= subSize;
+    }
+
+    // Divider line
+    cursorY -= GAP_SUB_DIV;
+    page.drawLine({
+      start: { x: CENTER_X - DIVIDER_W / 2, y: cursorY },
+      end: { x: CENTER_X + DIVIDER_W / 2, y: cursorY },
+      thickness: 1, color: tpAccent,
+    });
+
+    // Author
+    if (authorText && authorFont) {
+      cursorY -= GAP_DIV_AUTHOR;
+      const aw = authorFont.widthOfTextAtSize(authorText, authorSize);
+      page.drawText(authorText, {
+        x: CENTER_X - aw / 2, y: cursorY,
+        size: authorSize, font: authorFont, color: tpSub,
+      });
     }
 
     totalPages++;
