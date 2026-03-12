@@ -30,7 +30,9 @@
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
 ## Current Status (2026-03-12)
-- **105/110 user stories complete**
+- **111/116 user stories complete**
+- PDF Cover Fidelity (COVER): **1/1 COMPLETE** — divider line, photo position, color match
+- Book Designer Mobile UX (MOBILE): **5/5 COMPLETE** — toolbar, page nav, action bar, drawer, touch canvas
 - "Between the Pages" content hub (BLOG): **12/12 COMPLETE** (US-BLOG-13 skipped)
 - Multi-Page Scanning (SCAN): **5/5 COMPLETE**
 - Pre-launch checklist (US-QA-10): **COMPLETE**

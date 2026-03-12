@@ -7,12 +7,17 @@ import PageBackground from './canvas/PageBackground';
 import TextEditOverlay from './canvas/TextEditOverlay';
 import { toast } from '@/components/ui/Toast';
 
+// Detect coarse pointer (touch device) for larger touch targets
+const isTouchDevice = () =>
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
 export default function PageCanvas({ page, pageIndex, globalSettings }) {
   const stageRef = useRef(null);
   const transformerRef = useRef(null);
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
   const [editingText, setEditingText] = useState(null);
+  const [isTouch] = useState(isTouchDevice);
 
   const selectedElementId = useBookStore((s) => s.selectedElementId);
   const setSelectedElement = useBookStore((s) => s.setSelectedElement);
@@ -273,7 +278,15 @@ export default function PageCanvas({ page, pageIndex, globalSettings }) {
                 return newBox;
               }}
               rotateEnabled={true}
-              enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']}
+              enabledAnchors={isTouch
+                ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+                : ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']
+              }
+              anchorSize={isTouch ? 16 : 8}
+              anchorStroke="#C65D3E"
+              anchorFill="#FAF4E8"
+              anchorStrokeWidth={isTouch ? 2 : 1}
+              anchorCornerRadius={isTouch ? 3 : 0}
             />
           </Layer>
         </Stage>

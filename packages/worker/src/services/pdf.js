@@ -762,12 +762,14 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
 /**
  * Cover color scheme definitions matching the frontend designer.
  */
+// RGB values derived from exact hex-to-[0,1] conversion of frontend COLOR_SCHEMES
+// bg/accent match frontend; text matches cover preview title color; textSub matches author color
 const COVER_SCHEMES = {
-  default:  { bg: [0.98, 0.96, 0.91], accent: [0.78, 0.36, 0.24], text: [0.25, 0.17, 0.10], textSub: [0.50, 0.40, 0.35] },
-  midnight: { bg: [0.10, 0.10, 0.18], accent: [0.89, 0.69, 0.29], text: [1, 1, 1],          textSub: [0.85, 0.85, 0.90] },
-  forest:   { bg: [0.94, 0.96, 0.94], accent: [0.18, 0.35, 0.24], text: [0.15, 0.25, 0.15], textSub: [0.30, 0.45, 0.30] },
-  plum:     { bg: [0.97, 0.94, 0.96], accent: [0.48, 0.25, 0.43], text: [0.30, 0.15, 0.27], textSub: [0.50, 0.35, 0.47] },
-  ocean:    { bg: [0.93, 0.96, 0.97], accent: [0.16, 0.39, 0.59], text: [0.12, 0.22, 0.35], textSub: [0.30, 0.42, 0.55] },
+  default:  { bg: [250/255, 244/255, 232/255], accent: [198/255, 93/255, 62/255],   text: [44/255, 24/255, 16/255], textSub: [0.4, 0.4, 0.4] },
+  midnight: { bg: [26/255, 26/255, 46/255],    accent: [226/255, 176/255, 74/255],  text: [1, 1, 1],                textSub: [0.8, 0.8, 0.8] },
+  forest:   { bg: [240/255, 244/255, 240/255], accent: [45/255, 90/255, 61/255],    text: [44/255, 24/255, 16/255], textSub: [0.4, 0.4, 0.4] },
+  plum:     { bg: [248/255, 240/255, 246/255], accent: [123/255, 63/255, 110/255],  text: [44/255, 24/255, 16/255], textSub: [0.4, 0.4, 0.4] },
+  ocean:    { bg: [238/255, 244/255, 248/255], accent: [42/255, 100/255, 150/255],  text: [44/255, 24/255, 16/255], textSub: [0.4, 0.4, 0.4] },
 };
 
 function getCoverColorScheme(schemeId) {
@@ -821,6 +823,7 @@ export async function generateCoverPdf(coverData, pageCount, env) {
   const bgColor = rgb(...scheme.bg);
   const textColor = rgb(...scheme.text);
   const textSubColor = rgb(...scheme.textSub);
+  const accentColor = rgb(...scheme.accent);
 
   const layout = coverData.layout || 'centered';
   const titleText = coverData.title || 'Untitled';
@@ -858,87 +861,115 @@ export async function generateCoverPdf(coverData, pageCount, env) {
   }
 
   // Text colors for photo-background are always white for readability
-  const frontTextColor = layout === 'photo-background' && coverData.photoBytes ? rgb(1, 1, 1) : textColor;
-  const frontSubColor = layout === 'photo-background' && coverData.photoBytes ? rgb(0.9, 0.9, 0.95) : textSubColor;
+  const isPhotoBg = layout === 'photo-background' && coverData.photoBytes;
+  const frontTextColor = isPhotoBg ? rgb(1, 1, 1) : textColor;
+  const frontAccentColor = isPhotoBg ? rgb(0.9, 0.9, 0.95) : accentColor;
+  const frontSubColor = isPhotoBg ? rgb(0.9, 0.9, 0.95) : textSubColor;
 
-  // Title
+  // Title + subtitle + divider + author layout (matches frontend CoverPreview)
   const titleSize = 36;
+  const subtitleSize = 18;
+  const authorSize = 16;
+  const dividerWidth = layout === 'left-aligned' ? 48 : 64;
+
   if (layout === 'left-aligned') {
     const leftPad = frontCoverX + 50;
+    let cursorY = coverHeight * 0.65;
+
+    // Title
     coverPage.drawText(titleText, {
-      x: leftPad, y: coverHeight * 0.6,
+      x: leftPad, y: cursorY,
       size: titleSize, font: fontBold, color: frontTextColor,
     });
+    cursorY -= titleSize + 14;
+
+    // Subtitle
     if (coverData.subtitle) {
       coverPage.drawText(coverData.subtitle, {
-        x: leftPad, y: coverHeight * 0.6 - titleSize - 20,
-        size: 18, font: fontItalic, color: frontSubColor,
+        x: leftPad, y: cursorY,
+        size: subtitleSize, font: fontItalic, color: frontAccentColor,
       });
+      cursorY -= subtitleSize + 14;
     }
-    if (coverData.author) {
-      coverPage.drawText(coverData.author, {
-        x: leftPad, y: coverBleed + 60,
-        size: 16, font: fontRegular, color: frontSubColor,
-      });
-    }
-    // Cover photo for left-aligned layout (below author)
-    if (coverData.photoBytes && layout !== 'photo-background') {
-      try {
-        const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
-        const photo = await pdfDoc[embedFn](coverData.photoBytes);
-        const maxW = TRIM_WIDTH * 0.6;
-        const maxH = coverHeight * 0.25;
-        const photoDims = photo.scaleToFit(maxW, maxH);
-        coverPage.drawImage(photo, {
-          x: leftPad,
-          y: coverBleed + 90,
-          width: photoDims.width,
-          height: photoDims.height,
-        });
-      } catch (err) {
-        console.error('Cover photo embed failed (left-aligned):', err?.message || err);
-      }
-    }
-  } else {
-    // centered (and photo-background) layout
-    const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
-    coverPage.drawText(titleText, {
-      x: frontCenterX - titleWidth / 2, y: coverHeight * 0.6,
-      size: titleSize, font: fontBold, color: frontTextColor,
+
+    // Divider line
+    coverPage.drawLine({
+      start: { x: leftPad, y: cursorY },
+      end: { x: leftPad + dividerWidth, y: cursorY },
+      thickness: 1, color: frontAccentColor,
     });
-    if (coverData.subtitle) {
-      const subtitleSize = 18;
-      const subtitleWidth = fontItalic.widthOfTextAtSize(coverData.subtitle, subtitleSize);
-      coverPage.drawText(coverData.subtitle, {
-        x: frontCenterX - subtitleWidth / 2, y: coverHeight * 0.6 - titleSize - 20,
-        size: subtitleSize, font: fontItalic, color: frontSubColor,
-      });
-    }
+    cursorY -= 20;
+
+    // Author
     if (coverData.author) {
-      const authorSize = 16;
-      const authorWidth = fontRegular.widthOfTextAtSize(coverData.author, authorSize);
       coverPage.drawText(coverData.author, {
-        x: frontCenterX - authorWidth / 2, y: coverHeight * 0.3,
+        x: leftPad, y: cursorY,
         size: authorSize, font: fontRegular, color: frontSubColor,
       });
     }
-    // Cover photo for centered layout (between author and bottom)
-    if (coverData.photoBytes && layout !== 'photo-background') {
+  } else {
+    // centered (and photo-background) layout
+    let cursorY;
+
+    // Cover photo above title for centered layout
+    if (coverData.photoBytes && !isPhotoBg) {
       try {
         const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
         const photo = await pdfDoc[embedFn](coverData.photoBytes);
-        const maxW = TRIM_WIDTH * 0.5;
+        const maxW = TRIM_WIDTH * 0.35;
         const maxH = coverHeight * 0.2;
         const photoDims = photo.scaleToFit(maxW, maxH);
+        const photoY = coverHeight * 0.68;
         coverPage.drawImage(photo, {
           x: frontCenterX - photoDims.width / 2,
-          y: coverBleed + 60,
+          y: photoY,
           width: photoDims.width,
           height: photoDims.height,
         });
+        cursorY = photoY - 24;
       } catch (err) {
         console.error('Cover photo embed failed (centered):', err?.message || err);
+        cursorY = coverHeight * 0.6;
       }
+    } else {
+      cursorY = coverHeight * 0.6;
+    }
+
+    // Title
+    const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
+    coverPage.drawText(titleText, {
+      x: frontCenterX - titleWidth / 2, y: cursorY,
+      size: titleSize, font: fontBold, color: frontTextColor,
+    });
+    cursorY -= titleSize + 14;
+
+    // Subtitle
+    if (coverData.subtitle) {
+      const subtitleWidth = fontItalic.widthOfTextAtSize(coverData.subtitle, subtitleSize);
+      coverPage.drawText(coverData.subtitle, {
+        x: frontCenterX - subtitleWidth / 2, y: cursorY,
+        size: subtitleSize, font: fontItalic, color: frontAccentColor,
+      });
+      cursorY -= subtitleSize + 20;
+    } else {
+      cursorY -= 20;
+    }
+
+    // Divider line
+    coverPage.drawLine({
+      start: { x: frontCenterX - dividerWidth / 2, y: cursorY },
+      end: { x: frontCenterX + dividerWidth / 2, y: cursorY },
+      thickness: 1, color: frontAccentColor,
+    });
+    cursorY -= 20;
+
+    // Author
+    if (coverData.author) {
+      const authorWidth = fontRegular.widthOfTextAtSize(coverData.author, authorSize);
+      coverPage.drawText(coverData.author, {
+        x: frontCenterX - authorWidth / 2, y: cursorY,
+        size: authorSize, font: fontRegular, color: frontSubColor,
+      });
     }
   }
 

@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-11
+Last Updated: 2026-03-12
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -121,8 +121,14 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-SCAN-3 | Multi-page scan flow UI | DONE | STEP_PAGES flow step, staged pages with thumbnails, "Add Another Page" button, scanStore staging actions |
 | US-SCAN-4 | Multi-page image viewer in ScanDetail | DONE | editorStore `originalImages[]` + page navigation, PhotoPanel prev/next arrows + "Page X of Y" indicator |
 | US-SCAN-5 | Multi-page cleanup & collection integration | DONE | DELETE cleans up additional R2 keys, account deletion iterates `additional_r2_keys`, pageCount in collection responses |
+| US-COVER-1 | PDF cover layout fidelity | DONE | Cover photo, divider line, author position, color scheme alignment |
+| US-MOBILE-1 | Book designer toolbar mobile usability | DONE | Undo/redo visible, save status dot, icon-only mode tabs |
+| US-MOBILE-2 | Mobile page navigation strip | DONE | Prev/next arrows + "Page X of Y" above canvas |
+| US-MOBILE-3 | Mobile element action bar | DONE | Delete, edit text buttons when element selected on mobile |
+| US-MOBILE-4 | Mobile drawer improvements | DONE | Contextual label, drag handle, image delete visibility |
+| US-MOBILE-5 | Touch-friendly canvas interactions | DONE | Larger transformer anchors on touch devices |
 
-**Completed: 105/110** | **Remaining: 5**
+**Completed: 111/116** | **Remaining: 5**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -130,6 +136,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 **DONE — Phase 3.7 — Multi-Page Scanning:** US-SCAN-1→5 (multi-page scan capture, AI processing, viewer)
 **Phase 4 — Content & Growth:** US-BLOG-1→12 ("Between the Pages" — articles, SEO, evergreen content; US-BLOG-13 skipped)
 **Phase 5 — Launch Readiness:** US-QA-10→12 (pre-launch)
+**DONE — Phase 7 — Book Creation Polish:** US-COVER-1 (PDF cover fidelity), US-MOBILE-1→5 (book designer mobile UX)
 **Parked:** US-CORE-6 (Claude API fallback — optional)
 
 ### Key Credentials & Resources (do not commit)
@@ -166,7 +173,9 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
 | **UX** — Mobile & Desktop Friction Fixes | 20 | 20 | 0 |
 | **SCAN** — Multi-Page Scanning | 5 | 5 | 0 |
-| **Total** | **110** | **104** | **6** |
+| **COVER** — PDF Cover Fidelity | 1 | 1 | 0 |
+| **MOBILE** — Book Designer Mobile UX | 5 | 5 | 0 |
+| **Total** | **116** | **111** | **5** |
 
 ---
 
@@ -1963,4 +1972,106 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 - Collection view includes `pageCount` in response items (computed from `additional_r2_keys` length)
 
 **Files:** `packages/worker/src/routes/scan.js`, `packages/worker/src/routes/user.js`, `packages/worker/src/routes/collections.js`
+**Estimate:** S
+
+---
+
+## Epic: PDF Cover Fidelity (COVER)
+
+### US-COVER-1: PDF cover layout fidelity ✅ DONE
+**As a** user generating a book PDF
+**I want** the cover to match the designer preview
+**So that** the printed book looks like what I designed
+
+**Implementation:**
+- COVER_SCHEMES RGB values now use exact hex-to-[0,1] conversions from frontend COLOR_SCHEMES
+- Divider line renders between subtitle and author in both centered and left-aligned layouts
+- Cover photo renders above the title in centered layout (matching CoverPreview)
+- Author renders below divider line at consistent relative position
+- Subtitle uses accent color (matching frontend preview)
+- Layout positions computed with flowing cursor (title → subtitle → divider → author)
+
+**Files:** `packages/worker/src/services/pdf.js`
+**Estimate:** M
+
+---
+
+## Epic: Book Designer Mobile UX (MOBILE)
+
+### US-MOBILE-1: Book designer toolbar mobile usability ✅ DONE
+**As a** mobile user in the book designer
+**I want** to see undo/redo, save status, and mode tabs without toolbar wrapping
+**So that** I can access all essential controls on a small screen
+
+**Implementation:**
+- Undo/redo buttons always visible (removed `hidden sm:flex`)
+- Save status shown as colored dot on mobile (green=saved, amber pulse=saving, red=unsaved)
+- Mode tabs render as icon-only below `sm:` breakpoint with SVG icon paths
+- `aria-label` on all icon-only tabs and buttons for accessibility
+- Toolbar uses `flex` without `flex-wrap` to prevent wrapping at 320px
+
+**Files:** `packages/web/src/components/book/DesignerToolbar.jsx`, `packages/web/src/components/book/DesignerToolbar.test.jsx`
+**Estimate:** S
+
+---
+
+### US-MOBILE-2: Mobile page navigation strip ✅ DONE
+**As a** mobile user editing book pages
+**I want** prev/next arrows and a page indicator above the canvas
+**So that** I can switch pages without opening the drawer
+
+**Implementation:**
+- Horizontal strip visible only on mobile (`md:hidden`) between toolbar and canvas
+- Shows prev/next arrow buttons and "Page X of Y" text with tabular-nums
+- Prev disabled on first page, next disabled on last page
+- Uses `setSelectedPage` from bookStore
+
+**Files:** `packages/web/src/components/book/BookDesigner.jsx`
+**Estimate:** S
+
+---
+
+### US-MOBILE-3: Mobile element action bar ✅ DONE
+**As a** mobile user who selected an element on the canvas
+**I want** quick-access delete and edit buttons
+**So that** I can perform common actions without opening the drawer
+
+**Implementation:**
+- Compact action bar appears on mobile (`md:hidden`) when `selectedElementId` is set
+- Delete button (trash icon) using `deleteElement` from bookStore
+- Edit Text button (pencil icon) for text elements
+- Deselect button (X icon) to clear selection
+
+**Files:** `packages/web/src/components/book/BookDesigner.jsx`
+**Estimate:** S
+
+---
+
+### US-MOBILE-4: Mobile drawer improvements ✅ DONE
+**As a** mobile user in pages mode
+**I want** the drawer toggle to be obvious and image management to work on touch
+**So that** I can discover and use the panel controls
+
+**Implementation:**
+- Drawer toggle label changes contextually: "Pages & Elements" (default), "Element Settings" (when element selected)
+- Drag-handle pill indicator above toggle button (standard bottom-sheet affordance)
+- Image delete buttons in ImageLibraryPanel always visible on mobile (`opacity-100 md:opacity-0`), larger touch target (`w-5 h-5 md:w-4 md:h-4`)
+
+**Files:** `packages/web/src/components/book/BookDesigner.jsx`, `packages/web/src/components/book/panels/ImageLibraryPanel.jsx`
+**Estimate:** S
+
+---
+
+### US-MOBILE-5: Touch-friendly canvas interactions ✅ DONE
+**As a** mobile user manipulating elements on the canvas
+**I want** larger touch targets for resize handles
+**So that** I can resize and rotate elements with my fingers
+
+**Implementation:**
+- On touch devices (`pointer: coarse` media query), transformer anchor size increases to 16px (from 8px)
+- Only 4 corner anchors shown on touch (removes middle handles that are easy to accidentally grab)
+- Anchors styled with terracotta stroke (`#C65D3E`) and cream fill (`#FAF4E8`) for visibility
+- Corner radius and stroke width increased on touch for better affordance
+
+**Files:** `packages/web/src/components/book/PageCanvas.jsx`
 **Estimate:** S

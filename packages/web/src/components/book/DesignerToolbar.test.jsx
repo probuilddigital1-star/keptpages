@@ -52,7 +52,7 @@ describe('DesignerToolbar', () => {
         bookId="book-1"
       />
     );
-    const pagesTab = screen.getByText('Pages');
+    const pagesTab = screen.getByText('Pages').closest('button');
     expect(pagesTab.className).toContain('bg-terracotta');
   });
 

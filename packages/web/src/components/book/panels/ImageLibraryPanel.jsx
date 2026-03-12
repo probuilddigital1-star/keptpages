@@ -147,7 +147,7 @@ export default function ImageLibraryPanel() {
                 </button>
                 <button
                   onClick={() => book?.id && deleteBookImage(book.id, img.key)}
-                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1 -right-1 w-5 h-5 md:w-4 md:h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-2.5 h-2.5">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
