@@ -80,7 +80,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-QA-7 | Accessibility audit | DONE | Modal focus trap, Input aria-describedby + aria-invalid, skip-to-content link, main landmark ID. |
 | US-QA-8 | Mobile QA | DONE | Fixed: Modal scroll overflow, touch targets (44px min), CollectionCard hover-only delete, delete button visibility |
 | US-QA-9 | Security review | DONE | Fixed: path traversal in R2 downloads, JWKS stale-fallback, avatar_url validation. Noted: shares RLS policy, waitlist rate limit, MIME sniffing |
-| US-QA-10 | Pre-launch checklist | TODO | |
+| US-QA-10 | Pre-launch checklist | DONE | favicon.svg + PNG fallbacks (32/192/512), apple-touch-icon (180px), OG + Twitter meta tags in index.html + Landing Helmet, NotFound 404 page with catch-all route, robots.txt + sitemap.xml (14 URLs), canonical URLs on landing + articles. Loading skeletons & empty states already existed. Console clean. |
 | US-QA-11 | Clean up artifacts | DONE | Moved static HTML landing pages + duplicate design system to docs/archive/ |
 | US-QA-12 | Production validation | TODO | |
 | US-BOOK-1 | Book designer shell & page navigation | DONE | BookDesigner replaces 4-step wizard, 2-column layout, sortable page list, GlobalSettingsPanel, migration 011 |
@@ -122,7 +122,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-SCAN-4 | Multi-page image viewer in ScanDetail | DONE | editorStore `originalImages[]` + page navigation, PhotoPanel prev/next arrows + "Page X of Y" indicator |
 | US-SCAN-5 | Multi-page cleanup & collection integration | DONE | DELETE cleans up additional R2 keys, account deletion iterates `additional_r2_keys`, pageCount in collection responses |
 
-**Completed: 104/110** | **Remaining: 6**
+**Completed: 105/110** | **Remaining: 5**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 

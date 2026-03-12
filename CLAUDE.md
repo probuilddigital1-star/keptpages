@@ -29,9 +29,10 @@
 - `md:` (768px) — small desktop
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
-## Current Status (2026-03-11)
-- **104/110 user stories complete**
+## Current Status (2026-03-12)
+- **105/110 user stories complete**
 - "Between the Pages" content hub (BLOG): **12/12 COMPLETE** (US-BLOG-13 skipped)
 - Multi-Page Scanning (SCAN): **5/5 COMPLETE**
-- All tests passing (1,452 tests: 790 frontend + 662 worker, 89 files)
-- Remaining work: Launch readiness (2 stories: US-QA-10, US-QA-12), Claude API fallback (1 parked)
+- Pre-launch checklist (US-QA-10): **COMPLETE**
+- All tests passing (1,458 tests: 796 frontend + 662 worker, 90 files)
+- Remaining work: Production validation (US-QA-12), Claude API fallback (1 parked)

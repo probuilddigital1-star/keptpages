@@ -28,6 +28,7 @@ const AdminOrders = lazy(() => import('@/pages/Admin/Orders'));
 const AuthCallback = lazy(() => import('@/pages/Auth/Callback'));
 const ArticleListing = lazy(() => import('@/pages/Articles'));
 const ArticleDetail = lazy(() => import('@/pages/Articles/ArticleDetail'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function PageLoader() {
   return (
@@ -108,6 +109,9 @@ export default function App() {
           <Route element={<PublicLayout />}>
             <Route path="/shared/:token" element={<SharedCollection />} />
           </Route>
+
+          {/* 404 catch-all */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
       </ErrorBoundary>
