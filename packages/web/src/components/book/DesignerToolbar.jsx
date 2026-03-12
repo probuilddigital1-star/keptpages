@@ -29,8 +29,9 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
     try {
       await generatePdf(bookId);
       toast('PDF generated successfully!');
-    } catch {
-      toast('Failed to generate PDF.', 'error');
+    } catch (err) {
+      const msg = err?.message || 'Unknown error';
+      toast(`Failed to generate PDF: ${msg}`, 'error');
     }
   }, [bookId, generatePdf]);
 

@@ -18,7 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useBookStore } from '@/stores/bookStore';
 import { PAGE_KINDS, CANVAS_WIDTH, CANVAS_HEIGHT } from '../constants';
 
-function SortablePageItem({ page, index, isSelected, onClick, thumbnailUrl }) {
+function SortablePageItem({ page, index, isSelected, onClick, thumbnailUrl, onMoveUp, onMoveDown, isFirst, isLast }) {
   const {
     attributes,
     listeners,
@@ -39,9 +39,6 @@ function SortablePageItem({ page, index, isSelected, onClick, thumbnailUrl }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onClick(index)}
       className={clsx(
         'flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors group',
         isDragging && 'opacity-50',
@@ -50,8 +47,48 @@ function SortablePageItem({ page, index, isSelected, onClick, thumbnailUrl }) {
           : 'hover:bg-cream-alt border border-transparent'
       )}
     >
+      {/* Drag handle (desktop) */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="hidden md:flex items-center shrink-0 cursor-grab active:cursor-grabbing text-walnut-muted/40 hover:text-walnut-muted"
+        title="Drag to reorder"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-4">
+          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+        </svg>
+      </div>
+
+      {/* Move up/down buttons (mobile) */}
+      <div className="flex flex-col md:hidden shrink-0">
+        <button
+          onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+          disabled={isFirst}
+          className="p-0.5 text-walnut-muted hover:text-walnut disabled:opacity-20 disabled:cursor-not-allowed"
+          aria-label="Move page up"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+          disabled={isLast}
+          className="p-0.5 text-walnut-muted hover:text-walnut disabled:opacity-20 disabled:cursor-not-allowed"
+          aria-label="Move page down"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      </div>
+
       {/* Thumbnail */}
-      <div className="w-10 h-13 bg-white border border-border-light rounded-sm overflow-hidden shrink-0 flex items-center justify-center"
+      <div
+        onClick={() => onClick(index)}
+        className="w-10 h-13 bg-white border border-border-light rounded-sm overflow-hidden shrink-0 flex items-center justify-center"
         style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
       >
         {thumbnailUrl ? (
@@ -62,7 +99,7 @@ function SortablePageItem({ page, index, isSelected, onClick, thumbnailUrl }) {
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" onClick={() => onClick(index)}>
         <div className="font-ui text-xs font-medium text-walnut truncate">
           Page {index + 1}
         </div>
@@ -145,6 +182,10 @@ export default function PageListPanel() {
                 isSelected={index === selectedPageIndex}
                 onClick={setSelectedPage}
                 thumbnailUrl={thumbnails[page.id]}
+                onMoveUp={() => index > 0 && reorderPages(index, index - 1)}
+                onMoveDown={() => index < pages.length - 1 && reorderPages(index, index + 1)}
+                isFirst={index === 0}
+                isLast={index === pages.length - 1}
               />
             ))}
           </div>
