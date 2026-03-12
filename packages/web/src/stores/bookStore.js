@@ -366,7 +366,10 @@ export const useBookStore = create(
         if (!blueprint || !bookId) return;
         set({ saveStatus: 'saving' });
         try {
-          await api.put(`/books/${bookId}`, { customization: blueprint });
+          // Strip coverDesign.photo (data URL) before saving — server only needs photoKey
+          const { photo, ...coverDesignClean } = blueprint.coverDesign || {};
+          const cleanBlueprint = { ...blueprint, coverDesign: coverDesignClean };
+          await api.put(`/books/${bookId}`, { customization: cleanBlueprint });
           set({ saveStatus: 'saved', dirty: false });
         } catch (error) {
           set({ saveStatus: 'unsaved' });
@@ -415,10 +418,12 @@ export const useBookStore = create(
             }
           }
 
-          // Save blueprint before generating
+          // Save blueprint before generating (strip photo data URL to avoid huge request)
           const currentBlueprint = get().blueprint;
           if (currentBlueprint?.pages?.length) {
-            await api.put(`/books/${bookId}`, { customization: currentBlueprint });
+            const { photo, ...coverClean } = currentBlueprint.coverDesign || {};
+            const cleanBp = { ...currentBlueprint, coverDesign: coverClean };
+            await api.put(`/books/${bookId}`, { customization: cleanBp });
           }
           const result = await api.post(`/books/${bookId}/generate`);
           set((state) => ({
