@@ -1,8 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { DocumentPickerModal } from './DocumentPickerModal';
 import { useScanStore } from '@/stores/scanStore';
 import { useDocumentsStore } from '@/stores/documentsStore';
+
+function renderModal(props) {
+  return render(
+    <MemoryRouter>
+      <DocumentPickerModal {...props} />
+    </MemoryRouter>
+  );
+}
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -57,35 +66,17 @@ describe('DocumentPickerModal', () => {
   });
 
   it('does not render when open is false', () => {
-    render(
-      <DocumentPickerModal
-        open={false}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: false, onClose: vi.fn(), collectionId: 'col-1' });
     expect(screen.queryByText('Add Documents')).not.toBeInTheDocument();
   });
 
   it('renders when open is true', () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     expect(screen.getByText('Add Documents')).toBeInTheDocument();
   });
 
   it('only shows completed scans', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     // Wait for async fetchScans to complete and loading state to clear
     await waitFor(() => {
       expect(screen.getByText('Apple Pie Recipe')).toBeInTheDocument();
@@ -96,14 +87,12 @@ describe('DocumentPickerModal', () => {
   });
 
   it('filters out scans already in the collection', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-        existingItems={[{ id: 'scan-1' }]}
-      />
-    );
+    renderModal({
+      open: true,
+      onClose: vi.fn(),
+      collectionId: 'col-1',
+      existingItems: [{ id: 'scan-1' }],
+    });
     // Wait for loading to finish
     await waitFor(() => {
       expect(screen.getByText('Grandma Letter')).toBeInTheDocument();
@@ -113,14 +102,12 @@ describe('DocumentPickerModal', () => {
   });
 
   it('shows empty message when all scans are already in collection', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-        existingItems={[{ id: 'scan-1' }, { id: 'scan-2' }]}
-      />
-    );
+    renderModal({
+      open: true,
+      onClose: vi.fn(),
+      collectionId: 'col-1',
+      existingItems: [{ id: 'scan-1' }, { id: 'scan-2' }],
+    });
     await waitFor(() => {
       expect(screen.getByText(/all your scans are already/i)).toBeInTheDocument();
     });
@@ -132,26 +119,14 @@ describe('DocumentPickerModal', () => {
       fetchScans: vi.fn().mockResolvedValue(undefined),
     });
 
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     await waitFor(() => {
       expect(screen.getByText(/no scans yet/i)).toBeInTheDocument();
     });
   });
 
   it('shows selected count', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     await waitFor(() => {
       expect(screen.getByText(/0 selected/i)).toBeInTheDocument();
     });
@@ -159,13 +134,7 @@ describe('DocumentPickerModal', () => {
 
   it('toggles selection when a scan is clicked', async () => {
     const user = userEvent.setup();
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
 
     await waitFor(() => {
       expect(screen.getByText('Apple Pie Recipe')).toBeInTheDocument();
@@ -176,13 +145,7 @@ describe('DocumentPickerModal', () => {
   });
 
   it('disables Add button when no scans are selected', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     await waitFor(() => {
       expect(screen.getByText(/0 selected/i)).toBeInTheDocument();
     });
@@ -192,13 +155,7 @@ describe('DocumentPickerModal', () => {
 
   it('enables Add button when scans are selected', async () => {
     const user = userEvent.setup();
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
 
     await waitFor(() => {
       expect(screen.getByText('Apple Pie Recipe')).toBeInTheDocument();
@@ -210,13 +167,7 @@ describe('DocumentPickerModal', () => {
   });
 
   it('renders document type badges', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose: vi.fn(), collectionId: 'col-1' });
     await waitFor(() => {
       expect(screen.getByText('Recipe')).toBeInTheDocument();
     });
@@ -229,13 +180,7 @@ describe('DocumentPickerModal', () => {
     useDocumentsStore.setState({ addToCollection });
 
     const user = userEvent.setup();
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={onClose}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose, collectionId: 'col-1' });
 
     await waitFor(() => {
       expect(screen.getByText('Apple Pie Recipe')).toBeInTheDocument();
@@ -256,13 +201,7 @@ describe('DocumentPickerModal', () => {
   it('calls onClose when Cancel is clicked', async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={onClose}
-        collectionId="col-1"
-      />
-    );
+    renderModal({ open: true, onClose, collectionId: 'col-1' });
 
     await waitFor(() => {
       expect(screen.getByText(/0 selected/i)).toBeInTheDocument();
@@ -273,14 +212,12 @@ describe('DocumentPickerModal', () => {
   });
 
   it('filters existing items with nested scan objects', async () => {
-    render(
-      <DocumentPickerModal
-        open={true}
-        onClose={vi.fn()}
-        collectionId="col-1"
-        existingItems={[{ scan: { id: 'scan-1' } }]}
-      />
-    );
+    renderModal({
+      open: true,
+      onClose: vi.fn(),
+      collectionId: 'col-1',
+      existingItems: [{ scan: { id: 'scan-1' } }],
+    });
     await waitFor(() => {
       expect(screen.getByText('Grandma Letter')).toBeInTheDocument();
     });

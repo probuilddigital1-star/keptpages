@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -19,7 +20,8 @@ const DOC_TYPE_LABELS = {
  * Modal that shows the user's scans and lets them pick which ones
  * to add to a collection. Supports multi-select.
  */
-export function DocumentPickerModal({ open, onClose, collectionId, existingItems = [] }) {
+export function DocumentPickerModal({ open, onClose, collectionId, collectionName, existingItems = [] }) {
+  const navigate = useNavigate();
   const { scans, fetchScans } = useScanStore();
   const { addToCollection } = useDocumentsStore();
 
@@ -88,12 +90,22 @@ export function DocumentPickerModal({ open, onClose, collectionId, existingItems
         <div className="text-center py-8">
           <p className="font-body text-sm text-walnut-secondary mb-4">
             {scans.length === 0
-              ? 'No scans yet. Scan a document first.'
+              ? 'No scans yet. Scan a document to get started.'
               : 'All your scans are already in this collection.'}
           </p>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
+          <div className="flex gap-3 justify-center">
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                onClose();
+                navigate('/app/scan', { state: { collectionId, collectionName } });
+              }}
+            >
+              Scan New Document
+            </Button>
+          </div>
         </div>
       ) : (
         <>

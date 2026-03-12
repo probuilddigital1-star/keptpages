@@ -572,6 +572,7 @@ export default function CollectionPage() {
           fetchDocuments(id).catch(() => {});
         }}
         collectionId={id}
+        collectionName={collection?.name}
         existingItems={documents}
       />
 

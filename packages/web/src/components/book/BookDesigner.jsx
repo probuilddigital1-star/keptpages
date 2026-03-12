@@ -154,9 +154,15 @@ export default function BookDesigner({ collectionId, bookId }) {
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (
-            <div className="flex items-start justify-center min-h-full">
-              <CoverPreview coverDesign={blueprint?.coverDesign} />
-            </div>
+            <>
+              {/* Mobile: show cover editor inline since sidebar is hidden */}
+              <div className="md:hidden bg-cream-surface rounded-lg border border-border-light mb-4">
+                <DesignerSidebar mode="cover" />
+              </div>
+              <div className="flex items-start justify-center min-h-full">
+                <CoverPreview coverDesign={blueprint?.coverDesign} />
+              </div>
+            </>
           ) : mode === 'settings' ? (
             <>
               {/* Mobile: show settings inline since sidebar is hidden */}

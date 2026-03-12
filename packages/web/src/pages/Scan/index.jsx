@@ -163,13 +163,20 @@ export default function ScanPage() {
       if (collectionId) {
         try {
           await addToCollection(collectionId, result.id);
+          toast('Scan saved and added to collection!');
         } catch {
           toast('Scan saved but could not add to collection automatically', 'error');
         }
+      } else {
+        toast('Scan saved successfully!');
       }
 
       navigate(`/app/scan/${result.id}`, {
-        state: collectionId ? { fromCollection: collectionId, fromCollectionName: collectionName } : undefined,
+        state: {
+          fromCollection: collectionId || undefined,
+          fromCollectionName: collectionName || undefined,
+          justScanned: true,
+        },
       });
     } catch (err) {
       setUploadError(err.message || 'Upload failed. Please try again.');

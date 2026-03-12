@@ -493,7 +493,11 @@ books.post('/:id/generate', async (c) => {
       const imageMap = {};
       const imagePromises = [...imageKeys].map(async (key) => {
         try {
-          const obj = await env.PROCESSED.get(key);
+          let obj = await env.PROCESSED.get(key);
+          // Fallback to UPLOADS bucket (scan original images are stored there)
+          if (!obj) {
+            obj = await env.UPLOADS.get(key);
+          }
           if (obj) {
             const bytes = new Uint8Array(await obj.arrayBuffer());
             const mimeType = obj.httpMetadata?.contentType || 'image/jpeg';
