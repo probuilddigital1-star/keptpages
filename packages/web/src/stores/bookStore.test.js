@@ -204,13 +204,36 @@ describe('bookStore', () => {
   });
 
   describe('generatePdf', () => {
-    it('calls api.post then polls status until ready', async () => {
+    it('returns immediately when POST returns ready', async () => {
+      api.post.mockResolvedValue({ status: 'ready', pageCount: 12 });
+
+      const result = await useBookStore.getState().generatePdf('book-1');
+
+      expect(api.post).toHaveBeenCalledWith('/books/book-1/generate');
+      expect(api.get).not.toHaveBeenCalled();
+      expect(result.status).toBe('ready');
+      expect(result.pageCount).toBe(12);
+      expect(useBookStore.getState().generatingPdf).toBe(false);
+    });
+
+    it('polls status when POST returns generating', async () => {
       api.post.mockResolvedValue({ status: 'generating' });
       api.get.mockResolvedValue({ status: 'ready', pageCount: 12 });
 
       const result = await useBookStore.getState().generatePdf('book-1');
 
       expect(api.post).toHaveBeenCalledWith('/books/book-1/generate');
+      expect(api.get).toHaveBeenCalledWith('/books/book-1/status');
+      expect(result.status).toBe('ready');
+      expect(useBookStore.getState().generatingPdf).toBe(false);
+    });
+
+    it('falls back to polling on network error', async () => {
+      api.post.mockRejectedValue(new TypeError('Failed to fetch'));
+      api.get.mockResolvedValue({ status: 'ready', pageCount: 8 });
+
+      const result = await useBookStore.getState().generatePdf('book-1');
+
       expect(api.get).toHaveBeenCalledWith('/books/book-1/status');
       expect(result.status).toBe('ready');
       expect(useBookStore.getState().generatingPdf).toBe(false);

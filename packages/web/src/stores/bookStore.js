@@ -426,31 +426,59 @@ export const useBookStore = create(
             await api.put(`/books/${bookId}`, { customization: cleanBp });
           }
 
-          // Kick off generation (returns immediately — work happens in background)
-          await api.post(`/books/${bookId}/generate`);
-
-          // Poll for completion
-          const maxAttempts = 60; // 2 minutes max
-          for (let i = 0; i < maxAttempts; i++) {
-            await new Promise((r) => setTimeout(r, 2000));
-            const status = await api.get(`/books/${bookId}/status`);
-            if (status.status === 'ready') {
-              set((state) => ({
-                generatingPdf: false,
-                book: state.book?.id === bookId
-                  ? { ...state.book, pageCount: status.pageCount, status: 'ready' }
-                  : state.book,
-              }));
-              return status;
-            }
-            if (status.status === 'error') {
-              set({ generatingPdf: false });
-              throw new Error(status.errorMessage || 'PDF generation failed');
+          // Try synchronous generation first
+          let result;
+          let needsPoll = false;
+          try {
+            result = await api.post(`/books/${bookId}/generate`);
+          } catch (postError) {
+            // If the request failed due to network/timeout (Worker killed mid-response),
+            // the generation may still have completed — fall back to polling
+            if (postError.message?.includes('Failed to fetch') || postError.message?.includes('network') || postError.name === 'TypeError') {
+              needsPoll = true;
+            } else {
+              throw postError;
             }
           }
 
+          // If the POST succeeded with status 'ready', we're done
+          if (result?.status === 'ready') {
+            set((state) => ({
+              generatingPdf: false,
+              book: state.book?.id === bookId
+                ? { ...state.book, pageCount: result.pageCount, status: 'ready' }
+                : state.book,
+            }));
+            return result;
+          }
+
+          // If the POST returned 'generating' or we need to poll due to timeout
+          if (result?.status === 'generating' || needsPoll) {
+            const maxAttempts = 60;
+            for (let i = 0; i < maxAttempts; i++) {
+              await new Promise((r) => setTimeout(r, 2000));
+              const status = await api.get(`/books/${bookId}/status`);
+              if (status.status === 'ready') {
+                set((state) => ({
+                  generatingPdf: false,
+                  book: state.book?.id === bookId
+                    ? { ...state.book, pageCount: status.pageCount, status: 'ready' }
+                    : state.book,
+                }));
+                return status;
+              }
+              if (status.status === 'error') {
+                set({ generatingPdf: false });
+                throw new Error(status.errorMessage || 'PDF generation failed');
+              }
+            }
+            set({ generatingPdf: false });
+            throw new Error('PDF generation timed out');
+          }
+
+          // Any other response — treat as complete
           set({ generatingPdf: false });
-          throw new Error('PDF generation timed out');
+          return result;
         } catch (error) {
           set({ generatingPdf: false });
           throw error;
