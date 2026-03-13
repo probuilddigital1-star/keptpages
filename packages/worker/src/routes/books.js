@@ -384,15 +384,22 @@ books.post('/:id/generate', async (c) => {
     return c.json({ error: 'Book not found' }, 404);
   }
 
-  // Don't start if already generating
-  if (book.status === 'generating') {
-    return c.json({ status: 'generating', message: 'PDF generation already in progress' });
+  // Always allow regeneration — a stuck 'generating' from a crashed Worker
+  // should not block the user from trying again.
+
+  // Mark as generating
+  const { error: updateErr } = await supabase
+    .from('books')
+    .update({ status: 'generating', error_message: null, updated_at: new Date().toISOString() })
+    .eq('id', bookId);
+
+  if (updateErr) {
+    console.error('[generate] Failed to set generating status:', updateErr);
   }
 
-  // Update status to generating
-  await supabase.from('books').update({ status: 'generating', error_message: null }).eq('id', bookId);
-
-  try {
+  // Define the generation work as a promise so we can both await it
+  // AND register it with waitUntil as a safety net.
+  const generateWork = async () => {
     // Fetch collection items for this book's collection
     const { data: items, error: itemsError } = await supabase
       .from('collection_items')
@@ -444,7 +451,7 @@ books.post('/:id/generate', async (c) => {
 
     if (documents.length === 0) {
       await supabase.from('books').update({ status: 'draft' }).eq('id', bookId);
-      return c.json({ error: 'No documents found in the collection to generate a book' }, 400);
+      return { empty: true };
     }
 
     const blueprint = book.customization;
@@ -551,7 +558,7 @@ books.post('/:id/generate', async (c) => {
     });
 
     // Update book record — generation complete
-    await supabase
+    const { error: finalUpdateErr } = await supabase
       .from('books')
       .update({
         status: 'ready',
@@ -563,22 +570,57 @@ books.post('/:id/generate', async (c) => {
       })
       .eq('id', bookId);
 
+    if (finalUpdateErr) {
+      console.error('[generate] Failed to update book to ready:', finalUpdateErr);
+      // PDFs are in R2 but DB didn't update — throw so the catch sets error status
+      throw new Error('PDF generated but failed to update book status');
+    }
+
     console.log(`[generate] Book ${bookId} PDF generation complete: ${pageCount} pages`);
+    return { status: 'ready', pageCount };
+  };
+
+  // Run generation with waitUntil as a safety net:
+  // If the Worker gets killed mid-response (Cloudflare timeout), the promise
+  // continues executing via waitUntil for up to 30 additional seconds.
+  // The frontend detects the dropped connection and polls GET /status.
+  const workPromise = generateWork().catch(async (err) => {
+    console.error('[generate] Book generation error:', err);
+    try {
+      await supabase
+        .from('books')
+        .update({ status: 'error', error_message: err.message, updated_at: new Date().toISOString() })
+        .eq('id', bookId);
+    } catch (dbErr) {
+      console.error('[generate] Failed to persist error status:', dbErr);
+    }
+    throw err;
+  });
+
+  // Register with waitUntil so the work continues even if the response is killed.
+  // c.executionCtx throws in test environments (no Worker runtime), so guard with try/catch.
+  try {
+    if (c.executionCtx?.waitUntil) {
+      c.executionCtx.waitUntil(workPromise.catch(() => {}));
+    }
+  } catch {
+    // No ExecutionContext available (test environment) — skip waitUntil
+  }
+
+  try {
+    const result = await workPromise;
+
+    if (result.empty) {
+      return c.json({ error: 'No documents found in the collection to generate a book' }, 400);
+    }
 
     return c.json({
       id: bookId,
       status: 'ready',
-      pageCount,
+      pageCount: result.pageCount,
     });
   } catch (err) {
-    console.error('Book generation error:', err);
-
-    await supabase
-      .from('books')
-      .update({ status: 'error', error_message: err.message })
-      .eq('id', bookId);
-
-    return c.json({ error: 'Failed to generate book PDFs', details: err.message }, 500);
+    return c.json({ error: err.message || 'Failed to generate book PDFs' }, 500);
   }
 });
 

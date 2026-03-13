@@ -709,6 +709,40 @@ describe('Books routes', () => {
       expect(res.status).toBe(404);
     });
 
+    it('regenerates when book status is stuck at generating', async () => {
+      const stuckBook = { ...baseBook, status: 'generating' };
+      // books select (returns stuck book)
+      mockFrom('books', { data: stuckBook, error: null });
+      // collection_items
+      mockFrom('collection_items', { data: collectionItems, error: null });
+      // books update (status: generating — no-op but still called)
+      mockFrom('books', { data: null, error: null });
+      // books update (final: ready)
+      mockFrom('books', { data: null, error: null });
+
+      const res = await app.request('/books/b1/generate', { method: 'POST' }, ENV);
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.status).toBe('ready');
+      expect(json.pageCount).toBe(24);
+      expect(generateBookPdf).toHaveBeenCalled();
+    });
+
+    it('regenerates when book status is error from previous attempt', async () => {
+      const errorBook = { ...baseBook, status: 'error', error_message: 'Previous failure' };
+      mockFrom('books', { data: errorBook, error: null });
+      mockFrom('collection_items', { data: collectionItems, error: null });
+      mockFrom('books', { data: null, error: null });
+      mockFrom('books', { data: null, error: null });
+
+      const res = await app.request('/books/b1/generate', { method: 'POST' }, ENV);
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.status).toBe('ready');
+    });
+
     it('returns 500 and sets error status on generation failure', async () => {
       // books select
       mockFrom('books', { data: { ...baseBook }, error: null });
@@ -731,8 +765,7 @@ describe('Books routes', () => {
 
       expect(res.status).toBe(500);
       const json = await res.json();
-      expect(json.error).toContain('Failed to generate');
-      expect(json.details).toContain('PDF engine crashed');
+      expect(json.error).toContain('PDF engine crashed');
     });
   });
 
