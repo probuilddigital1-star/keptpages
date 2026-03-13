@@ -204,19 +204,15 @@ describe('bookStore', () => {
   });
 
   describe('generatePdf', () => {
-    it('calls api.post and sets generatingPdf during request', async () => {
-      let resolvePost;
-      api.post.mockReturnValue(new Promise((resolve) => { resolvePost = resolve; }));
+    it('calls api.post then polls status until ready', async () => {
+      api.post.mockResolvedValue({ status: 'generating' });
+      api.get.mockResolvedValue({ status: 'ready', pageCount: 12 });
 
-      const promise = useBookStore.getState().generatePdf('book-1');
-      expect(useBookStore.getState().generatingPdf).toBe(true);
-
-      const mockResult = { url: 'https://example.com/book.pdf' };
-      resolvePost(mockResult);
-      const result = await promise;
+      const result = await useBookStore.getState().generatePdf('book-1');
 
       expect(api.post).toHaveBeenCalledWith('/books/book-1/generate');
-      expect(result).toEqual(mockResult);
+      expect(api.get).toHaveBeenCalledWith('/books/book-1/status');
+      expect(result.status).toBe('ready');
       expect(useBookStore.getState().generatingPdf).toBe(false);
     });
 

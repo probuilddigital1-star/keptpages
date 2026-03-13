@@ -425,14 +425,32 @@ export const useBookStore = create(
             const cleanBp = { ...currentBlueprint, coverDesign: coverClean };
             await api.put(`/books/${bookId}`, { customization: cleanBp });
           }
-          const result = await api.post(`/books/${bookId}/generate`);
-          set((state) => ({
-            generatingPdf: false,
-            book: state.book?.id === bookId
-              ? { ...state.book, pageCount: result.pageCount, status: result.status }
-              : state.book,
-          }));
-          return result;
+
+          // Kick off generation (returns immediately — work happens in background)
+          await api.post(`/books/${bookId}/generate`);
+
+          // Poll for completion
+          const maxAttempts = 60; // 2 minutes max
+          for (let i = 0; i < maxAttempts; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            const status = await api.get(`/books/${bookId}/status`);
+            if (status.status === 'ready') {
+              set((state) => ({
+                generatingPdf: false,
+                book: state.book?.id === bookId
+                  ? { ...state.book, pageCount: status.pageCount, status: 'ready' }
+                  : state.book,
+              }));
+              return status;
+            }
+            if (status.status === 'error') {
+              set({ generatingPdf: false });
+              throw new Error(status.errorMessage || 'PDF generation failed');
+            }
+          }
+
+          set({ generatingPdf: false });
+          throw new Error('PDF generation timed out');
         } catch (error) {
           set({ generatingPdf: false });
           throw error;

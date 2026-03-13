@@ -605,15 +605,19 @@ describe('Books routes', () => {
     it('generates PDFs successfully (legacy path)', async () => {
       // books select
       mockFrom('books', { data: { ...baseBook }, error: null });
-      // books update (status: generating)
-      mockFrom('books', { data: null, error: null });
       // collection_items select
       mockFrom('collection_items', { data: collectionItems, error: null });
+      // books update (status: generating)
+      mockFrom('books', { data: null, error: null });
       // books update (final with PDF keys)
+      mockFrom('books', { data: null, error: null });
+      // books select (sync fallback reads final status)
       mockFrom('books', {
         data: {
-          id: 'b1', status: 'ready', interior_pdf_key: 'user-123/books/b1/interior.pdf',
-          cover_pdf_key: 'user-123/books/b1/cover.pdf', page_count: 24,
+          id: 'b1', status: 'ready',
+          interior_pdf_key: 'user-123/books/b1/interior.pdf',
+          cover_pdf_key: 'user-123/books/b1/cover.pdf',
+          page_count: 24,
         },
         error: null,
       });
@@ -624,8 +628,6 @@ describe('Books routes', () => {
       const json = await res.json();
       expect(json.status).toBe('ready');
       expect(json.pageCount).toBe(24);
-      expect(json.interiorPdfKey).toContain('interior.pdf');
-      expect(json.coverPdfKey).toContain('cover.pdf');
       expect(generateBookPdf).toHaveBeenCalled();
       expect(generateCoverPdf).toHaveBeenCalled();
       expect(ENV.PROCESSED.put).toHaveBeenCalledTimes(2);
@@ -650,11 +652,13 @@ describe('Books routes', () => {
 
       // books select
       mockFrom('books', { data: blueprintBook, error: null });
-      // books update (status: generating)
-      mockFrom('books', { data: null, error: null });
       // collection_items
       mockFrom('collection_items', { data: collectionItems, error: null });
+      // books update (status: generating)
+      mockFrom('books', { data: null, error: null });
       // books update (final)
+      mockFrom('books', { data: null, error: null });
+      // books select (sync fallback reads final status)
       mockFrom('books', {
         data: {
           id: 'b1', status: 'ready',
@@ -687,12 +691,8 @@ describe('Books routes', () => {
     it('returns 400 when no documents in collection', async () => {
       // books select
       mockFrom('books', { data: { ...baseBook }, error: null });
-      // books update (generating)
-      mockFrom('books', { data: null, error: null });
-      // empty collection_items
+      // empty collection_items (fetched before going async)
       mockFrom('collection_items', { data: [], error: null });
-      // books update (back to draft)
-      mockFrom('books', { data: null, error: null });
 
       const res = await app.request('/books/b1/generate', { method: 'POST' }, ENV);
 
@@ -710,16 +710,22 @@ describe('Books routes', () => {
     });
 
     it('returns 500 and sets error status on generation failure', async () => {
+      // books select
       mockFrom('books', { data: { ...baseBook }, error: null });
+      // collection_items (fetched before going async)
+      mockFrom('collection_items', { data: collectionItems, error: null });
       // books update (generating)
       mockFrom('books', { data: null, error: null });
-      // collection_items
-      mockFrom('collection_items', { data: collectionItems, error: null });
 
       generateBookPdf.mockRejectedValueOnce(new Error('PDF engine crashed'));
 
-      // books update (error status)
+      // books update (error status set by catch in generateWork)
       mockFrom('books', { data: null, error: null });
+      // books select (sync fallback reads final status)
+      mockFrom('books', {
+        data: { id: 'b1', status: 'error', error_message: 'PDF engine crashed' },
+        error: null,
+      });
 
       const res = await app.request('/books/b1/generate', { method: 'POST' }, ENV);
 

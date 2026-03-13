@@ -384,212 +384,215 @@ books.post('/:id/generate', async (c) => {
     return c.json({ error: 'Book not found' }, 404);
   }
 
+  // Don't start if already generating
+  if (book.status === 'generating') {
+    return c.json({ status: 'generating', message: 'PDF generation already in progress' });
+  }
+
+  // Fetch collection items early so we can validate before going async
+  const { data: items, error: itemsError } = await supabase
+    .from('collection_items')
+    .select(`
+      sort_order,
+      scans (
+        id,
+        title,
+        document_type,
+        extracted_data
+      )
+    `)
+    .eq('collection_id', book.collection_id)
+    .order('sort_order', { ascending: true });
+
+  if (itemsError) {
+    return c.json({ error: 'Failed to fetch collection items' }, 500);
+  }
+
+  // Reorder items based on chapter_order
+  let orderedItems = items || [];
+  if (book.chapter_order && Array.isArray(book.chapter_order)) {
+    const itemMap = new Map();
+    for (const item of orderedItems) {
+      if (item.scans) {
+        itemMap.set(item.scans.id || item.sort_order, item);
+      }
+    }
+    const reordered = [];
+    for (const itemId of book.chapter_order) {
+      if (itemMap.has(itemId)) {
+        reordered.push(itemMap.get(itemId));
+        itemMap.delete(itemId);
+      }
+    }
+    for (const remaining of itemMap.values()) {
+      reordered.push(remaining);
+    }
+    orderedItems = reordered;
+  }
+
+  const documents = orderedItems
+    .filter((item) => item.scans?.extracted_data)
+    .map((item) => ({
+      ...item.scans.extracted_data,
+      title: item.scans.title || item.scans.extracted_data.title || 'Untitled',
+      type: item.scans.document_type || item.scans.extracted_data.type || 'document',
+    }));
+
+  if (documents.length === 0) {
+    return c.json({ error: 'No documents found in the collection to generate a book' }, 400);
+  }
+
   // Update status to generating
-  await supabase.from('books').update({ status: 'generating' }).eq('id', bookId);
+  await supabase.from('books').update({ status: 'generating', error_message: null }).eq('id', bookId);
 
-  try {
-    // Fetch collection items for this book's collection
-    const { data: items, error: itemsError } = await supabase
-      .from('collection_items')
-      .select(`
-        sort_order,
-        scans (
-          id,
-          title,
-          document_type,
-          extracted_data
-        )
-      `)
-      .eq('collection_id', book.collection_id)
-      .order('sort_order', { ascending: true });
+  // Do the heavy PDF work in the background via waitUntil — return immediately
+  const generateWork = async () => {
+    try {
+      const blueprint = book.customization;
+      const isBlueprint = blueprint?.pages?.length > 0;
 
-    if (itemsError) {
-      throw new Error('Failed to fetch collection items');
-    }
-
-    // If there's a chapter order, reorder items accordingly
-    let orderedItems = items || [];
-    if (book.chapter_order && Array.isArray(book.chapter_order)) {
-      const itemMap = new Map();
-      for (const item of orderedItems) {
-        if (item.scans) {
-          itemMap.set(item.scans.id || item.sort_order, item);
-        }
-      }
-      // Reorder based on chapter_order, keep rest at the end
-      const reordered = [];
-      for (const itemId of book.chapter_order) {
-        if (itemMap.has(itemId)) {
-          reordered.push(itemMap.get(itemId));
-          itemMap.delete(itemId);
-        }
-      }
-      // Append remaining items
-      for (const remaining of itemMap.values()) {
-        reordered.push(remaining);
-      }
-      orderedItems = reordered;
-    }
-
-    const documents = orderedItems
-      .filter((item) => item.scans?.extracted_data)
-      .map((item) => ({
-        ...item.scans.extracted_data,
-        title: item.scans.title || item.scans.extracted_data.title || 'Untitled',
-        type: item.scans.document_type || item.scans.extracted_data.type || 'document',
-      }));
-
-    if (documents.length === 0) {
-      await supabase.from('books').update({ status: 'draft' }).eq('id', bookId);
-      return c.json({ error: 'No documents found in the collection to generate a book' }, 400);
-    }
-
-    // Determine if this is a blueprint-based book or legacy
-    const blueprint = book.customization;
-    const isBlueprint = blueprint?.pages?.length > 0;
-
-    // Fetch cover photo from R2 if available
-    let coverPhotoBytes = null;
-    let coverPhotoMimeType = null;
-    const photoKey = book.cover_design?.photoKey || blueprint?.coverDesign?.photoKey;
-    if (photoKey) {
-      try {
-        const photoObj = await env.PROCESSED.get(photoKey);
-        if (photoObj) {
-          coverPhotoBytes = new Uint8Array(await photoObj.arrayBuffer());
-          coverPhotoMimeType = book.cover_design?.photoMimeType || blueprint?.coverDesign?.photoMimeType || 'image/jpeg';
-        }
-      } catch (err) {
-        console.error('Cover photo R2 fetch failed:', err?.message || err);
-      }
-    }
-
-    let interiorPdf;
-    let pageCount;
-
-    if (isBlueprint) {
-      // Blueprint-driven rendering
-      const pdfDoc = await PDFDocument.create();
-
-      // Collect all font families used in the blueprint
-      const fontFamilies = new Set([blueprint.globalSettings?.fontFamily || 'fraunces']);
-      for (const bpPage of blueprint.pages) {
-        for (const el of bpPage.elements || []) {
-          if (el.fontFamily) fontFamilies.add(el.fontFamily);
-        }
-      }
-
-      // Load fonts in parallel with image fetching
-      const fontMap = await loadAllFonts(pdfDoc, [...fontFamilies], env);
-
-      // Fetch all referenced images from R2
-      const imageKeys = new Set();
-      for (const bpPage of blueprint.pages) {
-        for (const el of bpPage.elements || []) {
-          if (el.type === 'image' && el.imageKey) imageKeys.add(el.imageKey);
-        }
-      }
-
-      const imageMap = {};
-      const imagePromises = [...imageKeys].map(async (key) => {
+      // Fetch cover photo from R2 if available
+      let coverPhotoBytes = null;
+      let coverPhotoMimeType = null;
+      const photoKey = book.cover_design?.photoKey || blueprint?.coverDesign?.photoKey;
+      if (photoKey) {
         try {
-          let obj = await env.PROCESSED.get(key);
-          // Fallback to UPLOADS bucket (scan original images are stored there)
-          if (!obj) {
-            obj = await env.UPLOADS.get(key);
-          }
-          if (obj) {
-            const bytes = new Uint8Array(await obj.arrayBuffer());
-            const mimeType = obj.httpMetadata?.contentType || 'image/jpeg';
-            imageMap[key] = { bytes, mimeType };
+          const photoObj = await env.PROCESSED.get(photoKey);
+          if (photoObj) {
+            coverPhotoBytes = new Uint8Array(await photoObj.arrayBuffer());
+            coverPhotoMimeType = book.cover_design?.photoMimeType || blueprint?.coverDesign?.photoMimeType || 'image/jpeg';
           }
         } catch (err) {
-          console.error(`Failed to fetch image ${key}:`, err?.message || err);
+          console.error('Cover photo R2 fetch failed:', err?.message || err);
         }
+      }
+
+      let interiorPdf;
+      let pageCount;
+
+      if (isBlueprint) {
+        const pdfDoc = await PDFDocument.create();
+
+        const fontFamilies = new Set([blueprint.globalSettings?.fontFamily || 'fraunces']);
+        for (const bpPage of blueprint.pages) {
+          for (const el of bpPage.elements || []) {
+            if (el.fontFamily) fontFamilies.add(el.fontFamily);
+          }
+        }
+
+        const fontMap = await loadAllFonts(pdfDoc, [...fontFamilies], env);
+
+        const imageKeys = new Set();
+        for (const bpPage of blueprint.pages) {
+          for (const el of bpPage.elements || []) {
+            if (el.type === 'image' && el.imageKey) imageKeys.add(el.imageKey);
+          }
+        }
+
+        const imageMap = {};
+        const imagePromises = [...imageKeys].map(async (key) => {
+          try {
+            let obj = await env.PROCESSED.get(key);
+            if (!obj) {
+              obj = await env.UPLOADS.get(key);
+            }
+            if (obj) {
+              const bytes = new Uint8Array(await obj.arrayBuffer());
+              const mimeType = obj.httpMetadata?.contentType || 'image/jpeg';
+              imageMap[key] = { bytes, mimeType };
+            }
+          } catch (err) {
+            console.error(`Failed to fetch image ${key}:`, err?.message || err);
+          }
+        });
+        await Promise.all(imagePromises);
+
+        const coverPhotoData = coverPhotoBytes
+          ? { bytes: coverPhotoBytes, mimeType: coverPhotoMimeType }
+          : null;
+        pageCount = await renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap, coverPhotoData);
+
+        interiorPdf = await fixCIDFontWidths(pdfDoc);
+      } else {
+        const bookMeta = {
+          title: book.title,
+          subtitle: book.subtitle,
+          author: book.author,
+          _coverPhotoBytes: coverPhotoBytes,
+          _coverPhotoMimeType: coverPhotoMimeType,
+        };
+        const templateToUse = book.template || 'classic';
+        const result = await generateBookPdf(bookMeta, documents, templateToUse, env);
+        interiorPdf = result.buffer;
+        pageCount = result.pageCount;
+      }
+
+      // Generate cover PDF
+      const coverPdf = await generateCoverPdf({
+        title: blueprint?.coverDesign?.title || book.title,
+        subtitle: blueprint?.coverDesign?.subtitle || book.subtitle,
+        author: blueprint?.coverDesign?.author || book.author,
+        colorScheme: blueprint?.coverDesign?.colorScheme || 'default',
+        layout: blueprint?.coverDesign?.layout || 'centered',
+        photoBytes: coverPhotoBytes,
+        photoMimeType: coverPhotoMimeType,
+        fontFamily: isBlueprint ? (blueprint.globalSettings?.fontFamily || 'fraunces') : null,
+      }, pageCount, isBlueprint ? env : null);
+
+      // Store PDFs in R2
+      const interiorKey = `${user.id}/books/${bookId}/interior.pdf`;
+      const coverKey = `${user.id}/books/${bookId}/cover.pdf`;
+
+      await env.PROCESSED.put(interiorKey, interiorPdf, {
+        httpMetadata: { contentType: 'application/pdf' },
       });
-      await Promise.all(imagePromises);
 
-      // Render all pages from blueprint
-      const coverPhotoData = coverPhotoBytes
-        ? { bytes: coverPhotoBytes, mimeType: coverPhotoMimeType }
-        : null;
-      pageCount = await renderBlueprintBook(pdfDoc, blueprint, documents, imageMap, fontMap, coverPhotoData);
+      await env.PROCESSED.put(coverKey, coverPdf, {
+        httpMetadata: { contentType: 'application/pdf' },
+      });
 
-      interiorPdf = await fixCIDFontWidths(pdfDoc);
-    } else {
-      // Legacy rendering
-      const bookMeta = {
-        title: book.title,
-        subtitle: book.subtitle,
-        author: book.author,
-        _coverPhotoBytes: coverPhotoBytes,
-        _coverPhotoMimeType: coverPhotoMimeType,
-      };
-      const templateToUse = book.template || 'classic';
-      const result = await generateBookPdf(bookMeta, documents, templateToUse, env);
-      interiorPdf = result.buffer;
-      pageCount = result.pageCount;
+      // Update book record — generation complete
+      await supabase
+        .from('books')
+        .update({
+          status: 'ready',
+          interior_pdf_key: interiorKey,
+          cover_pdf_key: coverKey,
+          page_count: pageCount,
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookId);
+
+      console.log(`[generate] Book ${bookId} PDF generation complete: ${pageCount} pages`);
+    } catch (err) {
+      console.error('Book generation error:', err);
+
+      await supabase
+        .from('books')
+        .update({ status: 'error', error_message: err.message })
+        .eq('id', bookId);
     }
+  };
 
-    // Generate cover PDF with blueprint design data
-    const coverPdf = await generateCoverPdf({
-      title: blueprint?.coverDesign?.title || book.title,
-      subtitle: blueprint?.coverDesign?.subtitle || book.subtitle,
-      author: blueprint?.coverDesign?.author || book.author,
-      colorScheme: blueprint?.coverDesign?.colorScheme || 'default',
-      layout: blueprint?.coverDesign?.layout || 'centered',
-      photoBytes: coverPhotoBytes,
-      photoMimeType: coverPhotoMimeType,
-      fontFamily: isBlueprint ? (blueprint.globalSettings?.fontFamily || 'fraunces') : null,
-    }, pageCount, isBlueprint ? env : null);
-
-    // Store PDFs in R2
-    const interiorKey = `${user.id}/books/${bookId}/interior.pdf`;
-    const coverKey = `${user.id}/books/${bookId}/cover.pdf`;
-
-    await env.PROCESSED.put(interiorKey, interiorPdf, {
-      httpMetadata: { contentType: 'application/pdf' },
-    });
-
-    await env.PROCESSED.put(coverKey, coverPdf, {
-      httpMetadata: { contentType: 'application/pdf' },
-    });
-
-    // Update book record
-    const { data: updated, error: updateError } = await supabase
-      .from('books')
-      .update({
-        status: 'ready',
-        interior_pdf_key: interiorKey,
-        cover_pdf_key: coverKey,
-        page_count: pageCount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', bookId)
-      .select()
-      .single();
-
-    if (updateError) {
-      throw new Error('Failed to update book record after PDF generation');
+  // Run generation in background via waitUntil (Cloudflare Workers production).
+  // In test environments (no FONTS KV binding), run synchronously.
+  const useAsync = env.FONTS && c.executionCtx?.waitUntil;
+  if (useAsync) {
+    c.executionCtx.waitUntil(generateWork());
+    return c.json({ status: 'generating', message: 'PDF generation started' });
+  } else {
+    // Synchronous fallback (test environment or missing bindings)
+    await generateWork();
+    const { data: finalBook } = await supabase.from('books').select('*').eq('id', bookId).single();
+    if (finalBook?.status === 'error') {
+      return c.json({ error: 'Failed to generate book PDFs', details: finalBook.error_message }, 500);
     }
-
     return c.json({
-      id: updated.id,
-      status: 'ready',
-      pageCount,
-      interiorPdfKey: interiorKey,
-      coverPdfKey: coverKey,
-      message: 'PDFs generated successfully. Book is ready for ordering.',
+      id: bookId,
+      status: finalBook?.status || 'ready',
+      pageCount: finalBook?.page_count,
     });
-  } catch (err) {
-    console.error('Book generation error:', err);
-
-    await supabase
-      .from('books')
-      .update({ status: 'error', error_message: err.message })
-      .eq('id', bookId);
-
-    return c.json({ error: 'Failed to generate book PDFs', details: err.message }, 500);
   }
 });
 
@@ -792,6 +795,8 @@ books.get('/:id/status', async (c) => {
   const baseResponse = {
     id: book.id,
     status: book.status,
+    pageCount: book.page_count || null,
+    errorMessage: book.error_message || null,
     paymentStatus: book.payment_status || null,
     shippingAddress: book.shipping_address || null,
     quantity: book.quantity || null,
