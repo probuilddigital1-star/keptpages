@@ -51,6 +51,38 @@ describe('generateBookPdf', () => {
     expect(result.pageCount).toBeGreaterThan(0);
   });
 
+  it('handles Unicode characters in text without crashing', async () => {
+    const unicodeDoc = {
+      type: 'recipe',
+      title: 'Grandma\u2019s Pie \u2014 \u2153 cup sugar',
+      ingredients: [
+        '\u2153 cup flour',
+        '\u00BD tsp salt',
+        '\u2154 cup milk',
+        'Temp: 350\u2109',
+      ],
+      instructions: [
+        'Mix \u2026 everything',
+        'Bake at 350\u00B0F for \u00BD hour',
+      ],
+      notes: 'Notes with \u201Csmart quotes\u201D and \u2013 en-dash',
+    };
+    const result = await generateBookPdf(sampleBook, [unicodeDoc]);
+    expect(result.buffer).toBeInstanceOf(ArrayBuffer);
+    expect(result.buffer.byteLength).toBeGreaterThan(0);
+  });
+
+  it('handles non-string content fields gracefully', async () => {
+    const weirdDoc = {
+      type: 'document',
+      title: 'Test',
+      content: ['paragraph one', 'paragraph two'], // array instead of string
+      notes: null,
+    };
+    const result = await generateBookPdf(sampleBook, [weirdDoc]);
+    expect(result.buffer).toBeInstanceOf(ArrayBuffer);
+  });
+
   it('generated PDF can be loaded by pdf-lib', async () => {
     const result = await generateBookPdf(sampleBook, [sampleRecipeDoc]);
     const pdf = await PDFDocument.load(result.buffer);

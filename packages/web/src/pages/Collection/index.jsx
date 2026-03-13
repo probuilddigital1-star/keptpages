@@ -165,8 +165,9 @@ export default function CollectionPage() {
       }
       toast('PDF exported!');
       setShowExportOptions(false);
-    } catch {
-      toast('Failed to export PDF', 'error');
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast(err?.message || 'Failed to export PDF', 'error');
     } finally {
       setExporting(false);
     }

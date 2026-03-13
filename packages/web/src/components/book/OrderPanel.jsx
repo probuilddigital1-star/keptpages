@@ -80,8 +80,9 @@ export default function OrderPanel({ bookId }) {
     try {
       await generatePdf(bookId);
       toast('PDF generated successfully!');
-    } catch {
-      toast('Failed to generate PDF.', 'error');
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      toast(err?.message || 'Failed to generate PDF.', 'error');
     }
   }, [bookId, generatePdf]);
 

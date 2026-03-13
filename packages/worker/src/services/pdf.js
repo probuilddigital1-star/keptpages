@@ -38,11 +38,63 @@ const RIGHT_X = LEFT_X + CONTENT_MAX_WIDTH;
 const BORDER_MARGIN = BLEED + 18;
 
 /**
+ * Sanitize text for PDF rendering.
+ * Replaces Unicode characters that are outside WinAnsiEncoding (used by StandardFonts)
+ * with ASCII equivalents. Custom TTF fonts support more chars, but some exotic Unicode
+ * can still crash pdf-lib's glyph lookup. This ensures safe rendering with any font.
+ */
+function sanitizeText(text) {
+  if (typeof text !== 'string') {
+    if (Array.isArray(text)) return text.join('\n');
+    if (text == null) return '';
+    return String(text);
+  }
+
+  return text
+    // Unicode fraction characters → ASCII
+    .replace(/\u2150/g, '1/7')
+    .replace(/\u2151/g, '1/9')
+    .replace(/\u2152/g, '1/10')
+    .replace(/\u2153/g, '1/3')
+    .replace(/\u2154/g, '2/3')
+    .replace(/\u2155/g, '1/5')
+    .replace(/\u2156/g, '2/5')
+    .replace(/\u2157/g, '3/5')
+    .replace(/\u2158/g, '4/5')
+    .replace(/\u2159/g, '1/6')
+    .replace(/\u215A/g, '5/6')
+    .replace(/\u215B/g, '1/8')
+    .replace(/\u215C/g, '3/8')
+    .replace(/\u215D/g, '5/8')
+    .replace(/\u215E/g, '7/8')
+    // Common Unicode symbols → ASCII equivalents
+    .replace(/\u2018|\u2019|\u201A/g, "'")  // smart single quotes
+    .replace(/\u201C|\u201D|\u201E/g, '"')  // smart double quotes
+    .replace(/\u2013/g, '-')                 // en-dash
+    .replace(/\u2014/g, '--')                // em-dash
+    .replace(/\u2026/g, '...')               // ellipsis
+    .replace(/\u2022/g, '\u2022')            // bullet (keep — in WinAnsi)
+    .replace(/\u00B0/g, '\u00B0')            // degree (keep — in WinAnsi)
+    .replace(/\u2109/g, 'F')                 // ℉
+    .replace(/\u2103/g, 'C')                 // ℃
+    .replace(/\u2190/g, '<-')               // ←
+    .replace(/\u2192/g, '->')               // →
+    .replace(/\u00BC/g, '1/4')             // ¼ (in WinAnsi but safer as ASCII)
+    .replace(/\u00BD/g, '1/2')             // ½
+    .replace(/\u00BE/g, '3/4')             // ¾
+    // Strip any remaining characters outside printable ASCII + WinAnsi extended (0x80-0xFF)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\x80-\xFF]/g, '');
+}
+
+/**
  * Wrap text to fit within a given width, returning an array of lines.
  */
 function wrapText(text, font, fontSize, maxWidth) {
+  // Sanitize input to prevent encoding crashes
+  const safeText = sanitizeText(text);
   // Split on explicit newlines first to preserve paragraph/line breaks
-  const paragraphs = text.split(/\n/);
+  const paragraphs = safeText.split(/\n/);
   const lines = [];
 
   for (const paragraph of paragraphs) {
@@ -290,7 +342,7 @@ function renderDocumentPages(pdfDoc, doc, fonts, styles, isFirstDoc) {
   }
 
   // Document title
-  const docTitleText = doc.title || 'Untitled';
+  const docTitleText = sanitizeText(doc.title || 'Untitled');
   page.drawText(docTitleText, {
     x: LEFT_X,
     y,
@@ -373,7 +425,7 @@ function renderDocumentPages(pdfDoc, doc, fonts, styles, isFirstDoc) {
 
   // Non-recipe: raw content
   if (doc.type !== 'recipe' && doc.content) {
-    const paragraphs = doc.content.split('\n');
+    const paragraphs = sanitizeText(doc.content).split('\n');
     for (const para of paragraphs) {
       if (para.trim() === '') {
         y -= 10;
@@ -593,7 +645,7 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
     }
 
     const titleFontSize = styles.titleFontSize;
-    const titleText = book.title || 'Untitled';
+    const titleText = sanitizeText(book.title || 'Untitled');
     const titleWidth = fontBold.widthOfTextAtSize(titleText, titleFontSize);
     const titleY = book._coverPhotoBytes ? photoBottomY : PAGE_HEIGHT * 0.6;
     titlePage.drawText(titleText, {
@@ -605,9 +657,10 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
     });
 
     if (book.subtitle) {
+      const subtitleText = sanitizeText(book.subtitle);
       const subtitleSize = styles.subtitleFontSize;
-      const subtitleWidth = fontItalic.widthOfTextAtSize(book.subtitle, subtitleSize);
-      titlePage.drawText(book.subtitle, {
+      const subtitleWidth = fontItalic.widthOfTextAtSize(subtitleText, subtitleSize);
+      titlePage.drawText(subtitleText, {
         x: CENTER_X - subtitleWidth / 2,
         y: titleY - titleFontSize - 20,
         size: subtitleSize,
@@ -617,9 +670,10 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
     }
 
     if (book.author) {
+      const authorText = sanitizeText(book.author);
       const authorSize = styles.authorFontSize;
-      const authorWidth = fontRegular.widthOfTextAtSize(book.author, authorSize);
-      titlePage.drawText(book.author, {
+      const authorWidth = fontRegular.widthOfTextAtSize(authorText, authorSize);
+      titlePage.drawText(authorText, {
         x: CENTER_X - authorWidth / 2,
         y: PAGE_HEIGHT * 0.35,
         size: authorSize,
@@ -636,11 +690,11 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
     drawPageBackground(copyrightPage, styles);
 
     const copyrightText = [
-      `${book.title || 'Untitled'}`,
+      sanitizeText(book.title || 'Untitled'),
       '',
-      book.author ? `By ${book.author}` : '',
+      book.author ? `By ${sanitizeText(book.author)}` : '',
       '',
-      `Copyright ${new Date().getFullYear()}${book.author ? ` ${book.author}` : ''}`,
+      `Copyright ${new Date().getFullYear()}${book.author ? ` ${sanitizeText(book.author)}` : ''}`,
       'All rights reserved.',
       '',
       'Created with KeptPages',
@@ -690,7 +744,7 @@ export async function generateBookPdf(book, documents, optionsOrTemplate = {}, e
 
       while (tocEntryIndex < documents.length && tocY >= CONTENT_BOTTOM + 40) {
         const doc = documents[tocEntryIndex];
-        const docTitle = doc.title || `Document ${tocEntryIndex + 1}`;
+        const docTitle = sanitizeText(doc.title || `Document ${tocEntryIndex + 1}`);
         const pageNum = String(docStartPages[tocEntryIndex]);
 
         let displayTitle = docTitle;
@@ -826,7 +880,7 @@ export async function generateCoverPdf(coverData, pageCount, env) {
   const accentColor = rgb(...scheme.accent);
 
   const layout = coverData.layout || 'centered';
-  const titleText = coverData.title || 'Untitled';
+  const titleText = sanitizeText(coverData.title || 'Untitled');
 
   // Front cover area starts after back cover + spine
   const frontCoverX = TRIM_WIDTH + coverBleed + spineWidthPt;
@@ -904,7 +958,7 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     // Subtitle
     if (coverData.subtitle) {
       cursorY -= GAP_TITLE_SUB;
-      coverPage.drawText(coverData.subtitle, {
+      coverPage.drawText(sanitizeText(coverData.subtitle), {
         x: leftPad, y: cursorY,
         size: subtitleSize, font: fontItalic, color: frontAccentColor,
       });
@@ -922,7 +976,7 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     // Author
     if (coverData.author) {
       cursorY -= GAP_DIVIDER_AUTHOR;
-      coverPage.drawText(coverData.author, {
+      coverPage.drawText(sanitizeText(coverData.author), {
         x: leftPad, y: cursorY,
         size: authorSize, font: fontRegular, color: frontSubColor,
       });
@@ -981,8 +1035,9 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     // Subtitle
     if (coverData.subtitle) {
       cursorY -= GAP_TITLE_SUB;
-      const subtitleWidth = fontItalic.widthOfTextAtSize(coverData.subtitle, subtitleSize);
-      coverPage.drawText(coverData.subtitle, {
+      const safeSubtitle = sanitizeText(coverData.subtitle);
+      const subtitleWidth = fontItalic.widthOfTextAtSize(safeSubtitle, subtitleSize);
+      coverPage.drawText(safeSubtitle, {
         x: frontCenterX - subtitleWidth / 2, y: cursorY,
         size: subtitleSize, font: fontItalic, color: frontAccentColor,
       });
@@ -1000,8 +1055,9 @@ export async function generateCoverPdf(coverData, pageCount, env) {
     // Author
     if (coverData.author) {
       cursorY -= GAP_DIVIDER_AUTHOR;
-      const authorWidth = fontRegular.widthOfTextAtSize(coverData.author, authorSize);
-      coverPage.drawText(coverData.author, {
+      const safeAuthor = sanitizeText(coverData.author);
+      const authorWidth = fontRegular.widthOfTextAtSize(safeAuthor, authorSize);
+      coverPage.drawText(safeAuthor, {
         x: frontCenterX - authorWidth / 2, y: cursorY,
         size: authorSize, font: fontRegular, color: frontSubColor,
       });
@@ -1471,9 +1527,9 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
     const subFont = fontMap[globalFont]?.italic || fontMap[globalFont]?.regular;
     const authorFont = fontMap[globalFont]?.regular;
 
-    const titleText = blueprint.coverDesign?.title || '';
-    const subtitleText = blueprint.coverDesign?.subtitle || '';
-    const authorText = blueprint.coverDesign?.author || '';
+    const titleText = sanitizeText(blueprint.coverDesign?.title || '');
+    const subtitleText = sanitizeText(blueprint.coverDesign?.subtitle || '');
+    const authorText = sanitizeText(blueprint.coverDesign?.author || '');
     const titleSize = styles.titleFontSize || 32;
     const subSize = styles.subtitleFontSize || 16;
     const authorSize = styles.authorFontSize || 14;
@@ -1638,7 +1694,7 @@ export async function renderBlueprintBook(pdfDoc, blueprint, documents, imageMap
       const frontMatterCount = (globalSettings.includeTitlePage ? 1 : 0) + (globalSettings.includeCopyright ? 1 : 0) + 1; // +1 for TOC itself
       pages.forEach((bp, i) => {
         if (ly < CONTENT_BOTTOM) return;
-        const title = getPageTitle(bp, documents);
+        const title = sanitizeText(getPageTitle(bp, documents));
         const pageNum = frontMatterCount + i + 1;
         page.drawText(title, { x: LEFT_X, y: ly, size: 11, font: tocBodyFont, color: styles.bodyColor });
         const numStr = `${pageNum}`;
