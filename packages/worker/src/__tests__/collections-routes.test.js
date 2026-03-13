@@ -539,6 +539,9 @@ describe('Collections Routes', () => {
       expect(res._body.message).toBe('PDF export generated successfully');
       expect(res._body.documentCount).toBe(1);
       expect(res._body.exportKey).toContain('user-123/exports/col-1-');
+      // URL must NOT have encoded slashes — download endpoint needs raw path
+      expect(res._body.url).not.toContain('%2F');
+      expect(res._body.url).toContain('/download/user-123/exports/col-1-');
       expect(c.env.PROCESSED.put).toHaveBeenCalled();
     });
 

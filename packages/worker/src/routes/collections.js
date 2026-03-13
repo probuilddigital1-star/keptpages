@@ -677,7 +677,7 @@ collections.post('/:id/export', async (c) => {
 
     return c.json({
       message: 'PDF export generated successfully',
-      url: `/collections/${collectionId}/download/${encodeURIComponent(exportKey)}`,
+      url: `/collections/${collectionId}/download/${exportKey}`,
       exportKey,
       documentCount: documents.length,
     });

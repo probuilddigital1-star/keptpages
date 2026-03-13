@@ -6,6 +6,7 @@ import DesignerToolbar from './DesignerToolbar';
 import DesignerSidebar from './DesignerSidebar';
 import PageCanvas from './PageCanvas';
 import OrderPanel from './OrderPanel';
+import { createPage } from './constants';
 
 const MODES = ['pages', 'settings', 'cover', 'order'];
 
@@ -60,9 +61,27 @@ export default function BookDesigner({ collectionId, bookId }) {
         // Load collection documents
         const docs = await loadDocuments(collectionId);
 
-        // If book has existing blueprint, load it
+        // If book has existing blueprint, load it and reconcile new documents
         if (currentBook?.customization?.pages?.length) {
           loadBlueprint(currentBook.customization);
+
+          // Reconcile: append pages for any new collection items not in the saved blueprint
+          const savedDocIds = new Set(
+            currentBook.customization.pages
+              .filter((p) => p.documentId)
+              .map((p) => p.documentId)
+          );
+          const newDocs = docs.filter((d) => !savedDocIds.has(d.id));
+          if (newDocs.length > 0) {
+            const newPages = newDocs.map((doc) => createPage('document', doc));
+            useBookStore.setState((state) => ({
+              blueprint: {
+                ...state.blueprint,
+                pages: [...state.blueprint.pages, ...newPages],
+              },
+              dirty: true,
+            }));
+          }
         } else if (!blueprint?.pages?.length) {
           // Initialize fresh blueprint from documents
           initBlueprint(docs, {
