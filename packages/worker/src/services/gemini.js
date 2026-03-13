@@ -107,7 +107,7 @@ export async function sendToGemini(images, env) {
       temperature: 0.1,
       maxOutputTokens: isMultiPage ? 8192 : 4096,
       responseMimeType: 'application/json',
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingBudget: 1024 },
     },
   };
 
