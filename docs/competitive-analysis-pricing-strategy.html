@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeptPages — Competitive Analysis & Pricing Strategy</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --walnut: #5C4033;
+    --walnut-light: #7A5C4F;
+    --walnut-dark: #3D2B22;
+    --terracotta: #C75B39;
+    --terracotta-light: #E8845F;
+    --sage: #7A8B6F;
+    --sage-light: #A3B396;
+    --cream: #FAF6F1;
+    --cream-dark: #F0E8DC;
+    --ink: #2C2420;
+    --ink-light: #6B5E57;
+    --white: #FFFFFF;
+    --border: #E5DDD4;
+    --shadow: rgba(92, 64, 51, 0.08);
+    --shadow-lg: rgba(92, 64, 51, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(160deg, var(--walnut-dark) 0%, var(--walnut) 40%, var(--walnut-light) 100%);
+    color: var(--cream);
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 80%;
+    height: 200%;
+    background: radial-gradient(ellipse, rgba(199, 91, 57, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -40%;
+    left: -20%;
+    width: 60%;
+    height: 150%;
+    background: radial-gradient(ellipse, rgba(122, 139, 111, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cover-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--terracotta-light);
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 400;
+    line-height: 1.15;
+    max-width: 700px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover h1 em {
+    font-style: italic;
+    color: var(--terracotta-light);
+  }
+
+  .cover-subtitle {
+    font-size: 1.15rem;
+    font-weight: 300;
+    color: rgba(250, 246, 241, 0.7);
+    max-width: 500px;
+    line-height: 1.7;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-date {
+    position: absolute;
+    bottom: 2.5rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: rgba(250, 246, 241, 0.4);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  .page + .page {
+    border-top: 1px solid var(--border);
+  }
+
+  .page-dark {
+    background: var(--walnut-dark);
+    color: var(--cream);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .page-dark .inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .page-accent {
+    background: var(--cream-dark);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .page-accent .inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .page-sage {
+    background: linear-gradient(135deg, #4a5a40 0%, var(--sage) 100%);
+    color: var(--cream);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .page-sage .inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .page-terracotta {
+    background: linear-gradient(135deg, #a84828 0%, var(--terracotta) 60%, var(--terracotta-light) 100%);
+    color: var(--cream);
+    max-width: 100%;
+    padding: 5rem 2rem;
+  }
+
+  .page-terracotta .inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* ── Typography ── */
+  .section-number {
+    font-family: 'Fraunces', serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--terracotta);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .page-dark .section-number,
+  .page-sage .section-number,
+  .page-terracotta .section-number {
+    color: var(--terracotta-light);
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.25;
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: var(--walnut);
+  }
+
+  .page-dark h3, .page-sage h3, .page-terracotta h3 {
+    color: var(--cream);
+  }
+
+  h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .page-dark h4, .page-sage h4, .page-terracotta h4 {
+    color: rgba(250, 246, 241, 0.6);
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: var(--ink-light);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    line-height: 1.7;
+  }
+
+  .page-dark .subtitle {
+    color: rgba(250, 246, 241, 0.65);
+  }
+
+  p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+  }
+
+  .lead {
+    font-size: 1.05rem;
+    color: var(--ink-light);
+    line-height: 1.8;
+    max-width: 680px;
+  }
+
+  .page-dark .lead {
+    color: rgba(250, 246, 241, 0.75);
+  }
+
+  strong {
+    font-weight: 600;
+    color: var(--walnut);
+  }
+
+  .page-dark strong, .page-sage strong, .page-terracotta strong {
+    color: var(--cream);
+  }
+
+  em.highlight {
+    font-style: normal;
+    color: var(--terracotta);
+    font-weight: 600;
+  }
+
+  .page-dark em.highlight, .page-sage em.highlight {
+    color: var(--terracotta-light);
+  }
+
+  .page-terracotta em.highlight {
+    color: var(--cream);
+    text-decoration: underline;
+    text-decoration-color: rgba(250,246,241,0.4);
+    text-underline-offset: 3px;
+  }
+
+  /* ── Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .page-dark .card {
+    background: rgba(250, 246, 241, 0.06);
+    border-color: rgba(250, 246, 241, 0.1);
+  }
+
+  .page-dark .card:hover {
+    background: rgba(250, 246, 241, 0.09);
+  }
+
+  .card-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 0.5rem;
+  }
+
+  .page-dark .card-label {
+    color: var(--sage-light);
+  }
+
+  .card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card p {
+    font-size: 0.9rem;
+    color: var(--ink-light);
+    margin-bottom: 0;
+    line-height: 1.65;
+  }
+
+  .page-dark .card p {
+    color: rgba(250, 246, 241, 0.6);
+  }
+
+  .card-price {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--terracotta);
+    margin: 0.5rem 0;
+  }
+
+  .page-dark .card-price {
+    color: var(--terracotta-light);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 2rem 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--white);
+  }
+
+  .page-dark .table-wrap {
+    background: rgba(250, 246, 241, 0.04);
+    border-color: rgba(250, 246, 241, 0.08);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead {
+    background: var(--cream-dark);
+  }
+
+  .page-dark thead {
+    background: rgba(250, 246, 241, 0.06);
+  }
+
+  th {
+    font-weight: 600;
+    text-align: left;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .page-dark th {
+    color: rgba(250, 246, 241, 0.5);
+    border-color: rgba(250, 246, 241, 0.08);
+  }
+
+  td {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .page-dark td {
+    border-color: rgba(250, 246, 241, 0.06);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  td.price {
+    font-weight: 600;
+    color: var(--terracotta);
+    white-space: nowrap;
+  }
+
+  .page-dark td.price {
+    color: var(--terracotta-light);
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .badge-yes {
+    background: rgba(122, 139, 111, 0.15);
+    color: var(--sage);
+  }
+
+  .badge-no {
+    background: rgba(107, 94, 87, 0.08);
+    color: var(--ink-light);
+  }
+
+  .badge-partial {
+    background: rgba(199, 91, 57, 0.12);
+    color: var(--terracotta);
+  }
+
+  .page-dark .badge-yes {
+    background: rgba(163, 179, 150, 0.2);
+    color: var(--sage-light);
+  }
+
+  .page-dark .badge-no {
+    background: rgba(250, 246, 241, 0.06);
+    color: rgba(250, 246, 241, 0.4);
+  }
+
+  .page-dark .badge-partial {
+    background: rgba(232, 132, 95, 0.2);
+    color: var(--terracotta-light);
+  }
+
+  /* ── Callout ── */
+  .callout {
+    background: var(--white);
+    border-left: 4px solid var(--terracotta);
+    border-radius: 0 10px 10px 0;
+    padding: 1.5rem 1.75rem;
+    margin: 2rem 0;
+  }
+
+  .page-dark .callout {
+    background: rgba(199, 91, 57, 0.1);
+    border-color: var(--terracotta-light);
+  }
+
+  .page-sage .callout {
+    background: rgba(250, 246, 241, 0.1);
+    border-color: var(--cream);
+  }
+
+  .callout p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .callout-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--terracotta);
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  .page-dark .callout-label, .page-sage .callout-label {
+    color: var(--terracotta-light);
+  }
+
+  /* ── Stat blocks ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin: 2.5rem 0;
+  }
+
+  .stat {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: rgba(250, 246, 241, 0.08);
+    border-radius: 12px;
+    border: 1px solid rgba(250, 246, 241, 0.1);
+  }
+
+  .page-accent .stat, .page .stat {
+    background: var(--white);
+    border: 1px solid var(--border);
+  }
+
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--terracotta-light);
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+  }
+
+  .page-accent .stat-value, .page .stat-value {
+    color: var(--terracotta);
+  }
+
+  .stat-label {
+    font-size: 0.78rem;
+    color: rgba(250, 246, 241, 0.55);
+    line-height: 1.4;
+  }
+
+  .page-accent .stat-label, .page .stat-label {
+    color: var(--ink-light);
+  }
+
+  /* ── Avatar ── */
+  .avatar-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 700px) {
+    .avatar-section { grid-template-columns: 1fr; }
+  }
+
+  .avatar-profile {
+    background: rgba(250, 246, 241, 0.06);
+    border: 1px solid rgba(250, 246, 241, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .avatar-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    margin-bottom: 0.25rem;
+  }
+
+  .avatar-age {
+    font-size: 0.85rem;
+    color: rgba(250, 246, 241, 0.5);
+    margin-bottom: 1.25rem;
+  }
+
+  .avatar-trait {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .avatar-trait-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(199, 91, 57, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    margin-top: 1px;
+  }
+
+  .avatar-trait span {
+    color: rgba(250, 246, 241, 0.75);
+  }
+
+  .journey-list {
+    list-style: none;
+    position: relative;
+    padding-left: 1.5rem;
+  }
+
+  .journey-list::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: rgba(250, 246, 241, 0.12);
+    border-radius: 1px;
+  }
+
+  .journey-list li {
+    position: relative;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: rgba(250, 246, 241, 0.75);
+  }
+
+  .journey-list li::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 7px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--terracotta);
+    border: 2px solid var(--walnut-dark);
+  }
+
+  .journey-list li strong {
+    display: block;
+    color: var(--cream);
+    font-weight: 600;
+    margin-bottom: 0.1rem;
+  }
+
+  /* ── Comparison visual ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2.5rem 0;
+  }
+
+  @media (max-width: 700px) {
+    .compare-grid { grid-template-columns: 1fr; }
+  }
+
+  .compare-block {
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .compare-old {
+    background: rgba(250, 246, 241, 0.04);
+    border: 1px solid rgba(250, 246, 241, 0.08);
+  }
+
+  .compare-new {
+    background: rgba(199, 91, 57, 0.1);
+    border: 1px solid rgba(199, 91, 57, 0.2);
+  }
+
+  .compare-block h4 {
+    margin-bottom: 1rem;
+  }
+
+  .compare-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(250, 246, 241, 0.06);
+    font-size: 0.88rem;
+  }
+
+  .compare-new .compare-line {
+    border-color: rgba(199, 91, 57, 0.1);
+  }
+
+  .compare-line:last-child { border-bottom: none; }
+
+  .compare-line .label {
+    color: rgba(250, 246, 241, 0.6);
+  }
+
+  .compare-line .value {
+    font-weight: 600;
+    color: var(--cream);
+  }
+
+  .compare-total {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 2px solid rgba(250, 246, 241, 0.15);
+    display: flex;
+    justify-content: space-between;
+    font-size: 1rem;
+  }
+
+  .compare-new .compare-total {
+    border-color: rgba(199, 91, 57, 0.3);
+  }
+
+  .compare-total .value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--terracotta-light);
+  }
+
+  /* ── Pricing cards ── */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 2.5rem 0;
+  }
+
+  @media (max-width: 700px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+  }
+
+  .pricing-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem 1.75rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .pricing-card.featured {
+    border-color: var(--terracotta);
+    box-shadow: 0 8px 32px rgba(199, 91, 57, 0.12);
+    transform: scale(1.03);
+  }
+
+  .pricing-card.featured::before {
+    content: 'Most Popular';
+    position: absolute;
+    top: -0.7rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--terracotta);
+    color: var(--white);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+  }
+
+  .pricing-card h3 {
+    color: var(--walnut);
+    margin-bottom: 0.25rem;
+  }
+
+  .pricing-card .pricing-desc {
+    font-size: 0.82rem;
+    color: var(--ink-light);
+    margin-bottom: 1.25rem;
+  }
+
+  .pricing-card .pricing-amount {
+    font-family: 'Fraunces', serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--walnut);
+    margin-bottom: 0.15rem;
+  }
+
+  .pricing-card.featured .pricing-amount {
+    color: var(--terracotta);
+  }
+
+  .pricing-card .pricing-unit {
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    margin-bottom: 1.5rem;
+  }
+
+  .pricing-features {
+    list-style: none;
+    text-align: left;
+    font-size: 0.85rem;
+  }
+
+  .pricing-features li {
+    padding: 0.4rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+    color: var(--ink-light);
+  }
+
+  .pricing-features li::before {
+    content: '\2713';
+    position: absolute;
+    left: 0;
+    color: var(--sage);
+    font-weight: 700;
+  }
+
+  /* ── Revenue comparison ── */
+  .revenue-bar-group {
+    margin: 2.5rem 0;
+  }
+
+  .revenue-bar-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+
+  .revenue-bar-label h4 {
+    margin: 0;
+    font-size: 0.8rem;
+  }
+
+  .revenue-bar-label .revenue-amount {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+
+  .revenue-bar {
+    height: 40px;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .revenue-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding-left: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--white);
+    transition: width 0.8s ease;
+  }
+
+  /* ── Seasonal ── */
+  .season-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  @media (max-width: 700px) {
+    .season-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .season-card {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    border-radius: 10px;
+    background: var(--white);
+    border: 1px solid var(--border);
+  }
+
+  .season-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .season-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--walnut);
+    margin-bottom: 0.25rem;
+  }
+
+  .season-months {
+    font-size: 0.75rem;
+    color: var(--ink-light);
+  }
+
+  .season-pct {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--terracotta);
+    margin-top: 0.35rem;
+  }
+
+  /* ── Friction list ── */
+  .friction-list {
+    list-style: none;
+    margin: 2rem 0;
+    counter-reset: friction;
+  }
+
+  .friction-list li {
+    counter-increment: friction;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+
+  .friction-list li::before {
+    content: counter(friction);
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--terracotta);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--ink-light);
+    font-size: 1.2rem;
+    letter-spacing: 0.3em;
+  }
+
+  /* ── Blockquote ── */
+  blockquote {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.6;
+    color: var(--cream);
+    text-align: center;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  blockquote cite {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+    font-size: 0.8rem;
+    color: rgba(250, 246, 241, 0.45);
+    margin-top: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Print styles ── */
+  @media print {
+    .cover { min-height: auto; padding: 3rem 2rem; page-break-after: always; }
+    .page, .page-dark, .page-accent, .page-sage, .page-terracotta { page-break-inside: avoid; padding: 2rem; }
+    .pricing-card.featured { transform: none; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════ COVER ════════════════════════════════════════ -->
+<section class="cover">
+  <div class="cover-badge">Strategic Analysis</div>
+  <h1>Competitive Analysis &<br><em>Pricing Strategy</em></h1>
+  <p class="cover-subtitle">Market positioning, consumer behavior, and a revenue model built for the way people actually buy.</p>
+  <div class="cover-date">KeptPages &mdash; March 2026 &mdash; Confidential</div>
+</section>
+
+<!-- ════════════════════════════════════════ EXEC SUMMARY ════════════════════════════════════════ -->
+<section class="page-dark">
+  <div class="inner">
+    <span class="section-number">01 &mdash; Executive Summary</span>
+    <h2>The Opportunity</h2>
+    <p class="subtitle">KeptPages sits at a unique intersection that no single competitor fully covers.</p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-value">$0.008</div>
+        <div class="stat-label">Current per-scan cost<br>(thinking tokens enabled)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">$0.0002</div>
+        <div class="stat-label">Optimized per-scan cost<br>(after thinkingBudget fix)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">~70%</div>
+        <div class="stat-label">Gross margin<br>on printed books</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Competitors with AI OCR<br>+ book designer + print</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="callout-label">Key Insight</span>
+      <p>Our target customer is a Baby Boomer or Gen X person preserving family recipes, letters, or artwork. This is a <strong>one-time emotional project</strong>, not an ongoing need. <em class="highlight">Subscription pricing creates friction at the exact moment we should be removing it.</em></p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ CUSTOMER AVATAR ════════════════════════════════════════ -->
+<section class="page-dark" style="padding-top: 2rem;">
+  <div class="inner">
+    <span class="section-number">02 &mdash; Customer Avatar</span>
+    <h2>Meet Karen</h2>
+    <p class="subtitle">The archetypal KeptPages customer isn't a power user. She's a person with a box of memories and a deadline.</p>
+
+    <div class="avatar-section">
+      <div class="avatar-profile">
+        <div class="avatar-name">Karen M.</div>
+        <div class="avatar-age">Age 58 &middot; Gen X &middot; Suburban Midwest</div>
+
+        <div class="avatar-trait">
+          <div class="avatar-trait-icon">&#x1f4f1;</div>
+          <span><strong>Tech comfort:</strong> iPhone daily, shops Amazon, uses Facebook. Not a power user. Dislikes "another app subscription."</span>
+        </div>
+        <div class="avatar-trait">
+          <div class="avatar-trait-icon">&#x1f3e0;</div>
+          <span><strong>Trigger:</strong> Mom moved to assisted living. Karen found the recipe box &mdash; index cards in Mom's handwriting, some from Grandma. Flour stains. Faded ink.</span>
+        </div>
+        <div class="avatar-trait">
+          <div class="avatar-trait-icon">&#x2764;</div>
+          <span><strong>Emotional state:</strong> Grief mixed with urgency. "These could get lost." Love: "My kids should have these."</span>
+        </div>
+        <div class="avatar-trait">
+          <div class="avatar-trait-icon">&#x1f381;</div>
+          <span><strong>Goal:</strong> Scan the box, make a beautiful book, order 4 copies (one per sibling), be done by Christmas.</span>
+        </div>
+        <div class="avatar-trait">
+          <div class="avatar-trait-icon">&#x1f4b3;</div>
+          <span><strong>Spending:</strong> Will pay a premium for something emotionally meaningful. Will NOT pay $40/year for something she uses for 3 weeks.</span>
+        </div>
+      </div>
+
+      <div>
+        <h4>Karen's Journey</h4>
+        <ol class="journey-list">
+          <li>
+            <strong>Trigger Event</strong>
+            Parent passes or downsizes. Karen finds the recipe box, letters, artwork.
+          </li>
+          <li>
+            <strong>Discovery</strong>
+            Googles "digitize handwritten recipes" or "make cookbook from grandma's recipes."
+          </li>
+          <li>
+            <strong>First Scan (The Magic Moment)</strong>
+            Takes a photo of a faded index card. AI extracts every word. She tears up.
+          </li>
+          <li>
+            <strong>The Project</strong>
+            Spends 2&ndash;3 weekends scanning recipes, organizing into chapters, designing the book.
+          </li>
+          <li>
+            <strong>The Purchase</strong>
+            Orders 4 hardcover copies. Total: ~$250.
+          </li>
+          <li>
+            <strong>The Multiplier</strong>
+            Sister sees the book, wants to make one from Dad's side. Three friends at book club ask "How did you do this?"
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ COMPETITIVE LANDSCAPE ════════════════════════════════════════ -->
+<section class="page">
+  <span class="section-number">03 &mdash; Competitive Landscape</span>
+  <h2>Direct Competitors</h2>
+  <p class="subtitle">Recipe digitization and cookbook creation. KeptPages' AI + design + print pipeline is unmatched.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Competitor</th>
+          <th>AI Scanning</th>
+          <th>Book Designer</th>
+          <th>Printing</th>
+          <th>Pricing</th>
+          <th>Key Gap</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ReciScan</strong></td>
+          <td><span class="badge badge-partial">Basic</span></td>
+          <td><span class="badge badge-partial">Basic</span></td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td class="price">$4.99/mo + $18/book</td>
+          <td>Less sophisticated AI, simpler design tools</td>
+        </tr>
+        <tr>
+          <td><strong>Family Cookbook Project</strong></td>
+          <td><span class="badge badge-partial">Basic AI</span></td>
+          <td><span class="badge badge-partial">Basic</span></td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td class="price">$29.95/yr</td>
+          <td>Weaker design experience</td>
+        </tr>
+        <tr>
+          <td><strong>Heritage Cookbook</strong></td>
+          <td><span class="badge badge-no">Photo only</span></td>
+          <td><span class="badge badge-yes">Templates</span></td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td class="price">$29.95/yr</td>
+          <td>No AI digitization at all</td>
+        </tr>
+        <tr>
+          <td><strong>CreateMyCookbook</strong></td>
+          <td><span class="badge badge-no">None</span></td>
+          <td><span class="badge badge-yes">Templates</span></td>
+          <td><span class="badge badge-yes">Yes</span></td>
+          <td class="price">$39.95/book HC</td>
+          <td>Manual entry only, no scanning</td>
+        </tr>
+        <tr>
+          <td><strong>OrganizEat</strong></td>
+          <td><span class="badge badge-yes">AI OCR</span></td>
+          <td><span class="badge badge-no">None</span></td>
+          <td><span class="badge badge-no">None</span></td>
+          <td class="price">$39.99/yr</td>
+          <td>No book creation or printing</td>
+        </tr>
+        <tr>
+          <td><strong>Mr. Cook</strong></td>
+          <td><span class="badge badge-yes">AI OCR</span></td>
+          <td><span class="badge badge-no">None</span></td>
+          <td><span class="badge badge-no">None</span></td>
+          <td class="price">$59.99/yr</td>
+          <td>Digitization only</td>
+        </tr>
+        <tr style="background: rgba(199, 91, 57, 0.05);">
+          <td><strong>KeptPages</strong></td>
+          <td><span class="badge badge-yes">Gemini + Claude</span></td>
+          <td><span class="badge badge-yes">Rich WYSIWYG</span></td>
+          <td><span class="badge badge-yes">Lulu POD</span></td>
+          <td class="price">See proposal</td>
+          <td>&mdash;</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 3rem;">Adjacent Competitors</h3>
+  <p class="lead">Photo book makers compete on price and brand, not intelligence. Recipe apps compete on digital features, not physical output.</p>
+
+  <div class="card-grid" style="margin-top: 1.5rem;">
+    <div class="card">
+      <div class="card-label">Photo Books</div>
+      <h3>Shutterfly / Mixbook / Blurb</h3>
+      <p>Rich design tools, massive template libraries, aggressive promotions (50-70% off). But zero recipe awareness &mdash; no scanning, no AI. Users must type everything manually.</p>
+      <div class="card-price">$8 &ndash; $86/book</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Premium Keepsake</div>
+      <h3>Artifact Uprising</h3>
+      <p>Ultra-premium positioning with fabric covers, hand-embossed titles. Proves there's a market for high-quality keepsake books at $60-100+. No recipe functionality.</p>
+      <div class="card-price">$59+/book</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recipe Apps</div>
+      <h3>Paprika / Samsung Food / Honeydew</h3>
+      <p>Strong at web recipe clipping and meal planning ($0&ndash;$7/mo). Some have AI import from social media. None create physical books. Different primary use case.</p>
+      <div class="card-price">$0 &ndash; $60/yr</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Generic OCR</div>
+      <h3>Google Lens / Adobe Scan</h3>
+      <p>Free or low-cost generic OCR. Not recipe-specific &mdash; no structured extraction of ingredients, instructions, or categories. Output is raw text, not a designed book.</p>
+      <div class="card-price">Free &ndash; $13/mo</div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ THE PROBLEM WITH SUBSCRIPTION ════════════════════════════════════════ -->
+<section class="page-sage">
+  <div class="inner">
+    <span class="section-number">04 &mdash; Consumer Behavior</span>
+    <h2>Why Subscription Pricing Fails This Customer</h2>
+    <p class="subtitle" style="color: rgba(250,246,241,0.65);">Karen's project takes 3 weeks. A subscription asks her to pay for 52.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3 style="color: var(--cream);">No Ongoing Need</h3>
+        <p style="color: rgba(250,246,241,0.65);">Karen scans Grandma's recipes in November, orders the book for Christmas, and never opens the app again. The $40 renewal email next November feels like a ripoff.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--cream);">Commitment Anxiety</h3>
+        <p style="color: rgba(250,246,241,0.65);">For a 58-year-old burned by forgotten subscriptions, "free trial &rarr; auto-renew" triggers instant skepticism. She'll Google "KeptPages cancel" before signing up.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--cream);">One-Time Psychology</h3>
+        <p style="color: rgba(250,246,241,0.65);">When cleaning out Mom's house, Karen thinks "how much does this cost" &mdash; not "how much per month." The mental model is purchasing, not subscribing.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--cream);">Structural 100% Churn</h3>
+        <p style="color: rgba(250,246,241,0.65);">If the average customer completes their project in 2&ndash;4 weeks, monthly churn approaches 100%. Annual renewal approaches 0%. Acquisition cost is wasted on customers who will never renew.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--cream);">Wrong Comparison Set</h3>
+        <p style="color: rgba(250,246,241,0.65);">Karen compares you to "I could just take photos and make a Shutterfly book for $30." The subscription makes you look more expensive, not less.</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--cream);">Book = Marketing</h3>
+        <p style="color: rgba(250,246,241,0.65);">Every printed book sitting on a kitchen counter is an ad. A subscription wall before the book purchase reduces books in the world &mdash; which reduces your word-of-mouth engine.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top: 2.5rem;">
+      <span class="callout-label">The Core Tension</span>
+      <p style="color: rgba(250,246,241,0.8);">The subscription model optimizes for recurring revenue from power users. But KeptPages' best customers are <em class="highlight">one-time buyers with high order values and powerful referral potential</em>. The pricing model should match the customer, not the other way around.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ UNIT ECONOMICS ════════════════════════════════════════ -->
+<section class="page-accent">
+  <div class="inner">
+    <span class="section-number">05 &mdash; Unit Economics</span>
+    <h2>The Thinking Token Problem</h2>
+    <p class="subtitle">Gemini 2.5 Flash is a "thinking" model. With thinking enabled (current), scans cost 40x more than they should.</p>
+
+    <div class="callout" style="border-left-color: #c53030; margin-bottom: 2rem;">
+      <span class="callout-label" style="color: #c53030;">Critical Cost Finding</span>
+      <p>Our Gemini integration currently has <strong>no <code>thinkingConfig</code></strong> set. Gemini 2.5 Flash defaults to thinking mode, generating 1,000&ndash;4,000 hidden "thinking" tokens per scan at <em class="highlight">$3.50/1M tokens</em> &mdash; nearly 6x the non-thinking output rate of $0.60/1M. This is why actual bills are higher than estimated.</p>
+    </div>
+
+    <h3>Per-Scan Cost Breakdown</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Token Type</th>
+            <th>Rate (per 1M tokens)</th>
+            <th>Tokens/Scan</th>
+            <th>Current (Thinking ON)</th>
+            <th>Optimized (Thinking OFF)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Input (prompt + image)</td>
+            <td class="price">$0.15</td>
+            <td>~2,500</td>
+            <td>$0.000375</td>
+            <td>$0.000375</td>
+          </tr>
+          <tr>
+            <td>Output &mdash; thinking</td>
+            <td class="price">$3.50</td>
+            <td>~2,000</td>
+            <td style="color: #c53030; font-weight: 600;">$0.007</td>
+            <td style="color: var(--sage); font-weight: 600;">$0 (disabled)</td>
+          </tr>
+          <tr>
+            <td>Output &mdash; non-thinking (JSON)</td>
+            <td class="price">$0.60</td>
+            <td>~500</td>
+            <td>$0.0003</td>
+            <td>$0.0003</td>
+          </tr>
+          <tr style="background: var(--cream-dark); font-weight: 600;">
+            <td><strong>Total per scan</strong></td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td class="price" style="color: #c53030;">~$0.008</td>
+            <td class="price" style="color: var(--sage);">~$0.0007</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top: 2rem;">The Fix: One Line of Code</h3>
+    <p class="lead">Add <code>thinkingConfig: { thinkingBudget: 0 }</code> to the Gemini <code>generationConfig</code>. Structured JSON extraction doesn't need chain-of-thought reasoning. <strong>Estimated 97% cost reduction per scan with no quality loss.</strong></p>
+
+    <h3 style="margin-top: 2.5rem;">Freeloader Risk Analysis</h3>
+    <p class="lead" style="margin-bottom: 1.5rem;">What does it cost to serve users who scan but never buy a book?</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Scans</th>
+            <th style="color: #c53030;">Current Cost</th>
+            <th style="color: var(--sage);">Optimized Cost</th>
+            <th>R2 Storage/mo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>100 users &times; 100 scans</td>
+            <td>10,000</td>
+            <td class="price" style="color: #c53030;">$80</td>
+            <td class="price" style="color: var(--sage);">$7</td>
+            <td>3 GB &mdash; $0.05</td>
+          </tr>
+          <tr>
+            <td>1,000 users &times; 100 scans</td>
+            <td>100,000</td>
+            <td class="price" style="color: #c53030;">$800</td>
+            <td class="price" style="color: var(--sage);">$70</td>
+            <td>30 GB &mdash; $0.45</td>
+          </tr>
+          <tr>
+            <td>10,000 users &times; 100 scans</td>
+            <td>1,000,000</td>
+            <td class="price" style="color: #c53030;">$8,000</td>
+            <td class="price" style="color: var(--sage);">$700</td>
+            <td>300 GB &mdash; $4.50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top: 2rem;">
+      <span class="callout-label">Implication</span>
+      <p><strong>Before the fix:</strong> 1,000 non-paying users cost $800/month in API alone &mdash; a real concern.<br>
+      <strong>After the fix:</strong> The same 1,000 users cost $70 total &mdash; easily absorbed if even 10% convert to book purchases (12 books &times; $69 = $828 revenue).<br><br>
+      The thinking token fix must ship before any pricing model change. It's the difference between "free scanning is unsustainable" and "free scanning is a rounding error."</p>
+    </div>
+
+    <h3 style="margin-top: 2.5rem;">Full Cost Per Customer Journey (Optimized)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cost Component</th>
+            <th>Per Scan</th>
+            <th>Per 100 Scans</th>
+            <th>Per Book Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Gemini 2.5 Flash (thinking OFF)</td>
+            <td class="price">$0.0007</td>
+            <td class="price">$0.07</td>
+            <td>&mdash;</td>
+          </tr>
+          <tr>
+            <td>Claude Sonnet reprocessing (10% of scans)</td>
+            <td class="price">$0.002</td>
+            <td class="price">$0.20</td>
+            <td>&mdash;</td>
+          </tr>
+          <tr>
+            <td>R2 storage + operations</td>
+            <td class="price">&lt;$0.001</td>
+            <td class="price">$0.001</td>
+            <td>&mdash;</td>
+          </tr>
+          <tr>
+            <td>PDF generation (pdf-lib)</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td class="price">$0 (local)</td>
+          </tr>
+          <tr>
+            <td>Lulu manufacturing (hardcover color)</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td class="price">$18 &ndash; $25</td>
+          </tr>
+          <tr>
+            <td>Stripe processing (2.9% + $0.30)</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td class="price">$2 &ndash; $5</td>
+          </tr>
+          <tr style="background: var(--cream-dark); font-weight: 600;">
+            <td><strong>Total marginal cost</strong></td>
+            <td class="price">$0.0007</td>
+            <td class="price">~$0.27</td>
+            <td class="price">$20 &ndash; $30</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ PRICING STRATEGY ════════════════════════════════════════ -->
+<section class="page-terracotta">
+  <div class="inner">
+    <span class="section-number">06 &mdash; Recommended Pricing</span>
+    <h2>Project Pricing</h2>
+    <p class="subtitle" style="color: rgba(250,246,241,0.7);">Make scanning free. Make designing free. Charge for the output.</p>
+
+    <blockquote>
+      "Don't put a toll booth on the emotional journey.<br>Put the cash register at the destination."
+    </blockquote>
+  </div>
+</section>
+
+<section class="page">
+  <span class="section-number">06a &mdash; Free Tier</span>
+  <h2>Generous But Bounded Free Tier</h2>
+  <p class="subtitle">Let the magic happen before asking for anything. Gate volume, not the aha moment.</p>
+
+  <div class="table-wrap" style="margin-bottom: 2rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>No Account</th>
+          <th>Free Account</th>
+          <th>Book Purchaser</th>
+          <th>Keeper Pass ($59)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Scans</strong></td>
+          <td class="price">5 (the hook)</td>
+          <td class="price">25/month</td>
+          <td class="price" style="color: var(--sage);">Unlimited</td>
+          <td class="price" style="color: var(--sage);">Unlimited</td>
+        </tr>
+        <tr>
+          <td><strong>Collections</strong></td>
+          <td>1</td>
+          <td>2</td>
+          <td>3</td>
+          <td class="price" style="color: var(--sage);">Unlimited</td>
+        </tr>
+        <tr>
+          <td><strong>Book preview</strong></td>
+          <td>Watermarked</td>
+          <td>Watermarked</td>
+          <td>Full quality</td>
+          <td>Full quality</td>
+        </tr>
+        <tr>
+          <td><strong>PDF export</strong></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>Per book</td>
+          <td class="price" style="color: var(--sage);">Clean export</td>
+        </tr>
+        <tr>
+          <td><strong>Sharing</strong></td>
+          <td><span class="badge badge-no">No</span></td>
+          <td>View-only</td>
+          <td>View-only</td>
+          <td>Full sharing</td>
+        </tr>
+        <tr>
+          <td><strong>Print discount</strong></td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td>&mdash;</td>
+          <td class="price">15% off forever</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-label">No Account &mdash; 5 Scans</div>
+      <h3>Prove the Magic First</h3>
+      <p>Let Karen scan 3&ndash;5 recipes before asking for an email. The AI extraction is the aha moment. Cost to us: $0.004 total. No account = no storage commitment.</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Free Account &mdash; 25/Month</div>
+      <h3>Enough for a Real Project</h3>
+      <p>100 scans over 4 weekends. Karen can scan her whole recipe box before paying a dime. Caps freeloader exposure at $0.018/user/month (optimized).</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Book Purchaser &mdash; Unlimited</div>
+      <h3>Reward the Buyer</h3>
+      <p>First book order unlocks unlimited scanning. Aligns cost exposure with revenue &mdash; someone who orders a $69 book has given us ~$45 in margin. They've earned all-you-can-scan.</p>
+    </div>
+    <div class="card">
+      <div class="card-label">Keeper Pass &mdash; $59</div>
+      <h3>Power User Tier</h3>
+      <p>For food bloggers, genealogy hobbyists, and church cookbook committees. Unlimited everything + 15% off all books forever. $59 covers years of API costs even at heavy usage.</p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top: 2rem;">
+    <span class="callout-label">The Safety Valve</span>
+    <p>At 25 scans/month per free user: 1,000 free users = $18/month in API (optimized). Most will scan 5&ndash;15 items, not the full 25. Add a dormant account cleanup policy &mdash; archive R2 images after 6 months of inactivity to cap storage liability.</p>
+  </div>
+</section>
+
+<section class="page-accent">
+  <div class="inner">
+    <span class="section-number">06b &mdash; Book Pricing</span>
+    <h2>Three Tiers, Named for Emotion</h2>
+    <p class="subtitle">Karen doesn't know what "60# uncoated" means. Simplify choices. Name them for what they mean.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Classic</h3>
+        <p class="pricing-desc">Softcover &middot; B&W interior</p>
+        <div class="pricing-amount">$39</div>
+        <div class="pricing-unit">up to 60 pages</div>
+        <ul class="pricing-features">
+          <li>Perfect for personal copies</li>
+          <li>Matte softcover</li>
+          <li>Black & white interior</li>
+          <li>Standard uncoated paper</li>
+          <li>+$0.35 per extra page</li>
+        </ul>
+      </div>
+      <div class="pricing-card featured">
+        <h3>Premium</h3>
+        <p class="pricing-desc">Hardcover &middot; Full color</p>
+        <div class="pricing-amount">$69</div>
+        <div class="pricing-unit">up to 60 pages</div>
+        <ul class="pricing-features">
+          <li>The gift-worthy keepsake</li>
+          <li>Durable hardcover binding</li>
+          <li>Full color interior</li>
+          <li>Standard uncoated paper</li>
+          <li>+$0.35 per extra page</li>
+        </ul>
+      </div>
+      <div class="pricing-card">
+        <h3>Heirloom</h3>
+        <p class="pricing-desc">Hardcover &middot; Color &middot; Coated paper</p>
+        <div class="pricing-amount">$79</div>
+        <div class="pricing-unit">up to 60 pages</div>
+        <ul class="pricing-features">
+          <li>Museum-quality preservation</li>
+          <li>Durable hardcover binding</li>
+          <li>Full color interior</li>
+          <li>Premium 80# coated paper</li>
+          <li>+$0.35 per extra page</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top: 2rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th>Our Price</th>
+            <th>Lulu Cost</th>
+            <th>Stripe Fee</th>
+            <th>Net Revenue</th>
+            <th>Margin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Classic</strong> (60pg)</td>
+            <td class="price">$39</td>
+            <td>~$10</td>
+            <td>~$1.43</td>
+            <td class="price">$27.57</td>
+            <td><strong>71%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Premium</strong> (60pg)</td>
+            <td class="price">$69</td>
+            <td>~$20</td>
+            <td>~$2.30</td>
+            <td class="price">$46.70</td>
+            <td><strong>68%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Heirloom</strong> (60pg)</td>
+            <td class="price">$79</td>
+            <td>~$23</td>
+            <td>~$2.59</td>
+            <td class="price">$53.41</td>
+            <td><strong>68%</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Premium</strong> (120pg)</td>
+            <td class="price">$90</td>
+            <td>~$28</td>
+            <td>~$2.91</td>
+            <td class="price">$59.09</td>
+            <td><strong>66%</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top: 2.5rem;">Multi-Copy Discounts</h3>
+    <p class="lead">Karen orders 4 copies. This is the norm, not the exception. Make it easy and rewarding.</p>
+    <div class="table-wrap" style="margin-top: 1rem;">
+      <table>
+        <thead>
+          <tr><th>Quantity</th><th>Discount</th><th>Example: 4x Premium</th><th>Per Copy</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1&ndash;2</td><td>None</td><td>$138</td><td>$69</td></tr>
+          <tr><td>3&ndash;4</td><td><strong>15% off</strong></td><td class="price">$234.60</td><td>$58.65</td></tr>
+          <tr><td>5+</td><td><strong>20% off</strong></td><td class="price">$276</td><td>$55.20</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <span class="section-number">06c &mdash; Keeper Pass</span>
+  <h2>For the 5&ndash;10% Who Need More</h2>
+  <p class="subtitle">One-time purchase, not subscription. Matches the mental model of this audience.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; align-items: start;">
+    <div>
+      <div class="pricing-card featured" style="transform: none;">
+        <h3>Keeper Pass</h3>
+        <p class="pricing-desc">One-time purchase &middot; Yours forever</p>
+        <div class="pricing-amount">$59</div>
+        <div class="pricing-unit">pay once, keep forever</div>
+        <ul class="pricing-features">
+          <li>Unlimited collections</li>
+          <li>Clean PDF export (no watermark)</li>
+          <li>Priority AI reprocessing</li>
+          <li><strong>15% off all book orders forever</strong></li>
+          <li>Early access to new features</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h3>Why One-Time, Not Subscription</h3>
+      <p>$59 one-time feels like "buying the full version" &mdash; a familiar software purchasing pattern for Boomers and Gen X. No cancellation anxiety. No renewal surprise.</p>
+      <p style="margin-top: 1rem;"><strong>The math still works:</strong> Even a power user doing 500 scans costs us ~$0.10 in API calls. The $59 is nearly pure margin.</p>
+      <p style="margin-top: 1rem;"><strong>The 15% print discount</strong> creates ongoing revenue without subscription friction. Keeper Pass pays for itself on the first book order (~$10 saved on a Premium book).</p>
+      <p style="margin-top: 1rem;"><strong>When to offer it:</strong> Post-purchase confirmation email. "Loved making this book? Get 15% off your next one forever." Don't upsell during the emotional design moment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ REVENUE MODEL ════════════════════════════════════════ -->
+<section class="page-dark">
+  <div class="inner">
+    <span class="section-number">07 &mdash; Revenue Projection</span>
+    <h2>Subscription vs. Project Pricing</h2>
+    <p class="subtitle">Modeled on 1,000 new users. Project pricing generates approximately 5x more revenue because it removes the gate before the purchase moment.</p>
+
+    <div class="compare-grid">
+      <div class="compare-block compare-old">
+        <h4>Current: Subscription + Book</h4>
+        <div class="compare-line">
+          <span class="label">Sign-ups</span>
+          <span class="value">1,000</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Subscribe (5%)</span>
+          <span class="value">50 &times; $40 = $2,000</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Order books (60% of subs)</span>
+          <span class="value">30 &times; $100 = $3,000</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Year 2 renewals (40%)</span>
+          <span class="value">20 &times; $40 = $800</span>
+        </div>
+        <div class="compare-total">
+          <span class="label">Year 1 Revenue</span>
+          <span class="value">~$5,000</span>
+        </div>
+      </div>
+
+      <div class="compare-block compare-new">
+        <h4>Proposed: Project Pricing</h4>
+        <div class="compare-line">
+          <span class="label">Sign-ups</span>
+          <span class="value">1,000</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Design a book (15%)</span>
+          <span class="value">150 users</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Purchase (80% of designers)</span>
+          <span class="value">120 &times; $163 = $19,500</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Keeper Pass (2%)</span>
+          <span class="value">20 &times; $59 = $1,180</span>
+        </div>
+        <div class="compare-line">
+          <span class="label">Referrals from gifted books</span>
+          <span class="value">30 &times; $163 = $4,875</span>
+        </div>
+        <div class="compare-total">
+          <span class="label">Year 1 Revenue</span>
+          <span class="value">~$25,555</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="revenue-bar-group">
+      <div class="revenue-bar-label">
+        <h4 style="color: rgba(250,246,241,0.45);">Subscription Model</h4>
+        <span class="revenue-amount" style="color: rgba(250,246,241,0.45);">$5,000</span>
+      </div>
+      <div class="revenue-bar" style="background: rgba(250,246,241,0.06);">
+        <div class="revenue-bar-fill" style="width: 20%; background: rgba(250,246,241,0.15);">Subs + Books</div>
+      </div>
+      <div class="revenue-bar-label">
+        <h4 style="color: var(--terracotta-light);">Project Model</h4>
+        <span class="revenue-amount" style="color: var(--terracotta-light);">$25,555</span>
+      </div>
+      <div class="revenue-bar" style="background: rgba(250,246,241,0.06);">
+        <div class="revenue-bar-fill" style="width: 100%; background: linear-gradient(90deg, var(--terracotta) 0%, var(--terracotta-light) 100%);">Books + Keeper + Referrals</div>
+      </div>
+    </div>
+
+    <p class="lead" style="margin-top: 1rem;">The project model wins because: more users reach the purchase moment (no subscription gate), multi-copy orders are natural (gifts), and every book on a kitchen counter is a marketing asset.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ SEASONAL ════════════════════════════════════════ -->
+<section class="page">
+  <span class="section-number">08 &mdash; Seasonal Strategy</span>
+  <h2>The Emotional Calendar</h2>
+  <p class="subtitle">KeptPages is driven by emotional triggers, not feature adoption cycles. The revenue calendar follows the heart, not the SaaS playbook.</p>
+
+  <div class="season-grid">
+    <div class="season-card">
+      <div class="season-icon">&#127876;</div>
+      <div class="season-name">Holiday Gifting</div>
+      <div class="season-months">Oct &ndash; Dec</div>
+      <div class="season-pct">~50%</div>
+    </div>
+    <div class="season-card">
+      <div class="season-icon">&#128144;</div>
+      <div class="season-name">Mother's Day</div>
+      <div class="season-months">Apr &ndash; May</div>
+      <div class="season-pct">~15%</div>
+    </div>
+    <div class="season-card">
+      <div class="season-icon">&#128141;</div>
+      <div class="season-name">Weddings &amp; Father's Day</div>
+      <div class="season-months">May &ndash; Jun</div>
+      <div class="season-pct">~12%</div>
+    </div>
+    <div class="season-card">
+      <div class="season-icon">&#128166;</div>
+      <div class="season-name">Life Events</div>
+      <div class="season-months">Year-round</div>
+      <div class="season-pct">~23%</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="callout-label">Campaign Opportunities</span>
+    <p><strong>Mother's Day:</strong> "Give her back the recipes she gave you." 20% off first book.<br>
+    <strong>Christmas:</strong> "Order by Dec 10 for guaranteed delivery." Free shipping on 3+ copies.<br>
+    <strong>Year-round:</strong> Life events (estate cleanouts, retirement, downsizing) are always-on triggers that need SEO, not promotions.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ GIFT FLOW ════════════════════════════════════════ -->
+<section class="page-accent">
+  <div class="inner">
+    <span class="section-number">09 &mdash; Growth Multiplier</span>
+    <h2>The Gift Flow</h2>
+    <p class="subtitle">Every book that lands on a kitchen counter is an ad. Build the referral loop into the product.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-label">Add-on</div>
+        <h3>Gift Message Insert</h3>
+        <div class="card-price">+$3</div>
+        <p>Printed card tucked inside the book with a personal message. Emotional value far exceeds cost (~$0.50).</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Add-on</div>
+        <h3>Gift Wrapping</h3>
+        <div class="card-price">+$8</div>
+        <p>Premium branded wrapping with KeptPages seal. Turns the unboxing into a moment. Cost: ~$2&ndash;3.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Growth Engine</div>
+        <h3>Scanning Kit Card</h3>
+        <div class="card-price">+$5</div>
+        <p>Physical card with QR code: "Have family recipes of your own? Scan them free." Turns every gift recipient into a potential new customer. Cost: ~$1.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top: 2rem;">
+      <span class="callout-label">The Referral Math</span>
+      <p>If Karen orders 4 books and includes the Scanning Kit Card, that's 3 people (excluding herself) who receive a branded invitation to try KeptPages. If 25% convert, that's ~1 new book-ordering customer per original order &mdash; a <em class="highlight">built-in referral loop with zero ad spend</em>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ FRICTION POINTS ════════════════════════════════════════ -->
+<section class="page">
+  <span class="section-number">10 &mdash; Friction Elimination</span>
+  <h2>Remove Every Barrier Between Karen and Her Book</h2>
+  <p class="subtitle">The customer journey should feel like making the book, not like configuring software.</p>
+
+  <ol class="friction-list">
+    <li>
+      <div>
+        <strong>Let her scan before creating an account.</strong><br>
+        The AI extraction is the aha moment. Let Karen scan 3&ndash;5 recipes before asking for an email. Prove the magic first.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Show the book preview early.</strong><br>
+        Even with 5 scans, auto-generate a preview of what the book could look like. Make her imagine holding it. This is what converts browsers to buyers.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Name book tiers emotionally, not technically.</strong><br>
+        "Classic / Premium / Heirloom" instead of "Softcover B&W 60# uncoated." Karen doesn't speak print jargon. She speaks gift-giving.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Make multi-copy ordering dead simple.</strong><br>
+        "How many copies?" with a quantity selector and automatic discount display. Not a separate flow. Not a coupon code. One click.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Show shipping estimates on the book preview page.</strong><br>
+        "Order today, arrives by [date]" removes the "Will it get here by Christmas?" anxiety that kills conversions in Q4.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Don't upsell during the emotional moment.</strong><br>
+        When Karen is choosing her cover photo and tearing up, don't pitch the Keeper Pass. Let her buy the book. Offer the upgrade in the post-purchase confirmation email.
+      </div>
+    </li>
+  </ol>
+</section>
+
+<!-- ════════════════════════════════════════ STRATEGIC MOAT ════════════════════════════════════════ -->
+<section class="page-dark">
+  <div class="inner">
+    <span class="section-number">11 &mdash; Strategic Differentiation</span>
+    <h2>Our Moat</h2>
+    <p class="subtitle">No competitor combines all three. This is the defensible position.</p>
+
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.75rem;">&#129504;</div>
+        <h3 style="color: var(--cream);">AI Intelligence</h3>
+        <p style="color: rgba(250,246,241,0.6);">95%+ accuracy on faded cursive handwriting. Gemini 2.5 Flash primary, Claude Sonnet fallback. Structured extraction of ingredients, instructions, categories &mdash; not just raw text.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.75rem;">&#127912;</div>
+        <h3 style="color: var(--cream);">Rich Design</h3>
+        <p style="color: rgba(250,246,241,0.6);">Full WYSIWYG book designer with custom cover photos, title pages, color themes, and page layouts. Not a template picker &mdash; a real design tool that feels personal.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.75rem;">&#128214;</div>
+        <h3 style="color: var(--cream);">Physical Output</h3>
+        <p style="color: rgba(250,246,241,0.6);">Professional print-on-demand via Lulu. Hardcover, softcover, coil binding. No minimum orders. Ships directly to the customer or gift recipient.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top: 2.5rem;">
+      <span class="callout-label">Emotional Narrative Advantage</span>
+      <p style="color: rgba(250,246,241,0.8);">"Preserve Grandma's recipes" is a stronger story than any competitor tells. Heritage Cookbook and CreateMyCookbook feel utilitarian. KeptPages should <em class="highlight">own the emotional space</em> &mdash; this isn't a tool, it's an act of love.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ NEXT STEPS ════════════════════════════════════════ -->
+<section class="page">
+  <span class="section-number">12 &mdash; Recommended Next Steps</span>
+  <h2>Implementation Priorities</h2>
+  <p class="subtitle">Ordered by revenue impact and implementation effort.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Action</th>
+          <th>Impact</th>
+          <th>Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: rgba(197, 48, 48, 0.05);">
+          <td><strong style="color: #c53030;">0</strong></td>
+          <td><strong style="color: #c53030;">Ship the Gemini thinkingBudget: 0 fix immediately</strong><br>One-line code change. Disables unnecessary thinking tokens on Gemini 2.5 Flash. Reduces per-scan cost by ~97% ($0.008 &rarr; $0.0007). Must ship before any pricing model change.</td>
+          <td><span class="badge badge-yes">Critical</span></td>
+          <td>5 min</td>
+        </tr>
+        <tr>
+          <td><strong>1</strong></td>
+          <td><strong>Replace subscription gate with bounded free tier + book purchase model</strong><br>5 scans without account, 25/mo free, unlimited unlocked with first book order. Monetize on book orders.</td>
+          <td><span class="badge badge-yes">Very High</span></td>
+          <td>Medium</td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td><strong>Restructure book pricing into Classic / Premium / Heirloom tiers</strong><br>Simplify from technical options to emotional tiers at $39/$69/$79.</td>
+          <td><span class="badge badge-yes">High</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td><strong>Add multi-copy ordering with quantity discounts</strong><br>15% off at 3+ copies, 20% off at 5+. Single-click quantity selector.</td>
+          <td><span class="badge badge-yes">High</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td><strong>Build the Keeper Pass as a one-time purchase</strong><br>$59 for unlimited collections, PDF export, and 15% off all books forever.</td>
+          <td><span class="badge badge-partial">Medium</span></td>
+          <td>Medium</td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td><strong>Add gift flow (message insert, wrapping, scanning kit card)</strong><br>+$3/$8/$5 add-ons. Scanning kit card is the built-in referral engine.</td>
+          <td><span class="badge badge-yes">High</span></td>
+          <td>Medium</td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td>
+          <td><strong>Enable scan-before-signup (anonymous scanning)</strong><br>Let users scan 3&ndash;5 recipes before creating an account.</td>
+          <td><span class="badge badge-partial">Medium</span></td>
+          <td>High</td>
+        </tr>
+        <tr>
+          <td><strong>7</strong></td>
+          <td><strong>SEO campaign targeting life-event keywords</strong><br>"Digitize handwritten recipes," "preserve family cookbook," "memorial recipe book."</td>
+          <td><span class="badge badge-yes">High</span></td>
+          <td>Ongoing</td>
+        </tr>
+        <tr>
+          <td><strong>8</strong></td>
+          <td><strong>Seasonal promotion calendar</strong><br>Mother's Day (April), Christmas ordering deadline (December), ongoing life-event content.</td>
+          <td><span class="badge badge-partial">Medium</span></td>
+          <td>Low</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════ FOOTER ════════════════════════════════════════ -->
+<footer class="footer">
+  <p>KeptPages &mdash; Competitive Analysis & Pricing Strategy &mdash; March 2026 &mdash; Confidential</p>
+</footer>
+
+</body>
+</html>
