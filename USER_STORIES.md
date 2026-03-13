@@ -54,7 +54,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-CORE-3 | Wire real Supabase client | DONE | `.env` configured, `isSupabaseConfigured=true`, build passes |
 | US-CORE-4 | Auth flow E2E testing | DONE | Signup/confirm/login verified, ES256 JWT accepted by worker, wrangler upgraded to v4 |
 | US-CORE-5 | Wire Gemini API | DONE | Gemini 2.5 Flash configured, model updated from retired 2.0 Flash |
-| US-CORE-6 | Wire Claude API | TODO | |
+| US-CORE-6 | Wire Claude API | DONE | Claude Sonnet 4.6 fallback, reprocess endpoint, confidence-gated UI, rate limited |
 | US-CORE-7 | Add to Collection flow | DONE | CollectionPickerModal built, wired into ScanDetail, worker endpoints added |
 | US-CORE-8 | Add Document flow | DONE | DocumentPickerModal built, wired into Collection page, multi-select support |
 | US-CORE-9 | Scan flow E2E | DONE | Upload, process (Gemini), list, get — all verified. Migration 007 fixed scan_status enum. |
@@ -128,7 +128,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-MOBILE-4 | Mobile drawer improvements | DONE | Contextual label, drag handle, image delete visibility |
 | US-MOBILE-5 | Touch-friendly canvas interactions | DONE | Larger transformer anchors on touch devices |
 
-**Completed: 111/116** | **Remaining: 5**
+**Completed: 112/116** | **Remaining: 4**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -137,7 +137,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 **Phase 4 — Content & Growth:** US-BLOG-1→12 ("Between the Pages" — articles, SEO, evergreen content; US-BLOG-13 skipped)
 **Phase 5 — Launch Readiness:** US-QA-10→12 (pre-launch)
 **DONE — Phase 7 — Book Creation Polish:** US-COVER-1 (PDF cover fidelity), US-MOBILE-1→5 (book designer mobile UX)
-**Parked:** US-CORE-6 (Claude API fallback — optional)
+**DONE:** US-CORE-6 (Claude Sonnet 4.6 fallback)
 
 ### Key Credentials & Resources (do not commit)
 - **Supabase project:** `jvvcbekzmsnziulpewwh` (https://jvvcbekzmsnziulpewwh.supabase.co)
@@ -167,7 +167,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **INFRA** — Infrastructure & DevOps | 9 | 8 | 0 (+1 skipped) |
 | **BLOG** — "Between the Pages" Content | 13 | 12 | 0 (+1 skipped) |
 | **PAY** — Payments & Subscriptions | 16 | 16 | 0 |
-| **CORE** — Auth, API Wiring & Features | 13 | 12 | 1 |
+| **CORE** — Auth, API Wiring & Features | 13 | 13 | 0 |
 | **EXPORT** — PDF Export Customization | 9 | 9 | 0 |
 | **QA** — Testing & Launch Readiness | 12 | 9 | 3 |
 | **BOOK** — Visual Book Designer | 13 | 13 | 0 |
@@ -175,7 +175,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **SCAN** — Multi-Page Scanning | 5 | 5 | 0 |
 | **COVER** — PDF Cover Fidelity | 1 | 1 | 0 |
 | **MOBILE** — Book Designer Mobile UX | 5 | 5 | 0 |
-| **Total** | **116** | **111** | **5** |
+| **Total** | **116** | **112** | **4** |
 
 ---
 
@@ -910,18 +910,18 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-CORE-6: Wire Claude API key for reprocess/fallback extraction
+### US-CORE-6: Wire Claude API key for reprocess/fallback extraction ✅ DONE
 **As a** user viewing a low-confidence result
 **I want to** click "Reprocess with AI" to re-extract via Claude Sonnet
 **So that** I get a more accurate transcription
 
 **Acceptance Criteria:**
-- [ ] `ANTHROPIC_API_KEY` configured as Workers secret
-- [ ] `POST /scan/:id/reprocess` sends image to Claude Sonnet API with previous result as context
-- [ ] On success, scan record updated with new extracted data, confidence, `ai_model: 'claude-sonnet'`
-- [ ] Reprocessed JSON stored in R2
-- [ ] On error, scan status set to `'error'` with message
-- [ ] "Reprocess with AI" button (visible when `confidence < 0.7`) triggers flow and reloads editor
+- [x] `ANTHROPIC_API_KEY` configured as Workers secret
+- [x] `POST /scan/:id/reprocess` sends image to Claude Sonnet 4.6 API with previous result as context
+- [x] On success, scan record updated with new extracted data, confidence, `ai_model: 'claude-sonnet'`
+- [x] Reprocessed JSON stored in R2
+- [x] On error, scan status set to `'error'` with message
+- [x] "Reprocess with AI" button (visible when `confidence < 0.7`) triggers flow and reloads editor
 
 **Dependencies:** US-CORE-5
 **Estimate:** M

@@ -70,7 +70,7 @@ describe('sendToClaude', () => {
 
       const [, options] = globalThis.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
-      expect(body.model).toBe('claude-sonnet-4-20250514');
+      expect(body.model).toBe('claude-sonnet-4-6');
       expect(body.max_tokens).toBe(4096);
     });
   });

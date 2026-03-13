@@ -7,7 +7,7 @@
 import { arrayBufferToBase64 } from './gemini.js';
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
 
 const MULTI_PAGE_PROMPT_PREFIX = `You are analyzing multiple pages/images of the SAME document. Combine all content into a single unified extraction. For recipes, merge all ingredients into one list and all instructions into one sequential list. For letters or documents, combine the text in page order into one continuous document.
 
