@@ -40,7 +40,7 @@ export default function Landing() {
     };
   }, []);
 
-  const goToSignup = () => navigate('/signup');
+  const goToSignup = () => navigate('/try');
   const goToLogin = () => navigate('/login');
 
   return (
