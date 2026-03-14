@@ -179,10 +179,10 @@ describe('Collections Routes', () => {
   // ───── POST / ── Create collection ────────────────────────────────────────
   describe('POST / - Create collection', () => {
     it('creates a collection and returns 201', async () => {
-      // 1st from('profiles') -> isFreeTier check
+      // 1st from('profiles') -> getCollectionLimit check
       mockFrom('profiles', { data: { tier: 'free' }, error: null });
-      // 2nd from('collections') -> count check
-      mockFrom('collections', { data: null, error: null, count: 2 });
+      // 2nd from('collections') -> count check (free limit is 2, count=1 so under limit)
+      mockFrom('collections', { data: null, error: null, count: 1 });
       // 3rd from('collections') -> insert
       mockFrom('collections', {
         data: {
@@ -203,17 +203,40 @@ describe('Collections Routes', () => {
       expect(res._body.name).toBe('New Collection');
     });
 
-    it('returns 403 when free tier limit is reached', async () => {
-      mockFrom('profiles', { data: { tier: 'free' }, error: null });
-      mockFrom('collections', { data: null, error: null, count: 5 });
+    it('allows keeper tier users to create unlimited collections', async () => {
+      // keeper tier → Infinity limit, no count check needed
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
+      // goes straight to insert (no count query since limit is Infinity)
+      mockFrom('collections', {
+        data: {
+          id: 'col-keeper',
+          name: 'Keeper Collection',
+          description: null,
+          created_at: '2025-06-01T00:00:00Z',
+        },
+        error: null,
+      });
 
-      const c = createMockContext({ body: { name: 'Sixth' } });
+      const c = createMockContext({ body: { name: 'Keeper Collection' } });
+      const handler = getHandler('POST', '/');
+      const res = await handler(c);
+
+      expect(res._status).toBe(201);
+      expect(res._body.id).toBe('col-keeper');
+    });
+
+    it('returns 403 when free tier limit is reached', async () => {
+      // Free tier limit is 2
+      mockFrom('profiles', { data: { tier: 'free' }, error: null });
+      mockFrom('collections', { data: null, error: null, count: 2 });
+
+      const c = createMockContext({ body: { name: 'Third' } });
       const handler = getHandler('POST', '/');
       const res = await handler(c);
 
       expect(res._status).toBe(403);
       expect(res._body.error).toBe('Collection limit reached');
-      expect(res._body.limit).toBe(5);
+      expect(res._body.limit).toBe(2);
     });
 
     it('returns 500 when count query errors', async () => {
@@ -505,7 +528,36 @@ describe('Collections Routes', () => {
 
   // ───── POST /:id/export ── Export PDF ─────────────────────────────────────
   describe('POST /:id/export - Export PDF', () => {
-    it('generates a PDF export', async () => {
+    it('returns 403 for free tier users', async () => {
+      // getUserTier returns 'free'
+      mockFrom('profiles', { data: { tier: 'free' }, error: null });
+
+      const c = createMockContext({ params: { id: 'col-1' }, body: {} });
+      const handler = getHandler('POST', '/:id/export');
+      const res = await handler(c);
+
+      expect(res._status).toBe(403);
+      expect(res._body.error).toBe('PDF export not available');
+      expect(res._body.upsell).toBe(true);
+    });
+
+    it('returns 403 for book_purchaser without paid book for this collection', async () => {
+      // getUserTier returns 'book_purchaser'
+      mockFrom('profiles', { data: { tier: 'book_purchaser' }, error: null });
+      // books query for completed book → none found
+      mockFrom('books', { data: null, error: null });
+
+      const c = createMockContext({ params: { id: 'col-1' }, body: {} });
+      const handler = getHandler('POST', '/:id/export');
+      const res = await handler(c);
+
+      expect(res._status).toBe(403);
+      expect(res._body.error).toBe('PDF export not available');
+    });
+
+    it('generates a PDF export for keeper tier', async () => {
+      // getUserTier returns 'keeper'
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
       mockFrom('collections', {
         data: {
           id: 'col-1',
@@ -546,6 +598,8 @@ describe('Collections Routes', () => {
     });
 
     it('returns 400 when collection has no documents', async () => {
+      // getUserTier returns 'keeper' (bypass tier gate)
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
       mockFrom('collections', {
         data: { id: 'col-1', name: 'Empty', description: null },
         error: null,
@@ -561,6 +615,8 @@ describe('Collections Routes', () => {
     });
 
     it('returns 404 when collection not found', async () => {
+      // getUserTier returns 'keeper' (bypass tier gate)
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
       mockFrom('collections', { data: null, error: { message: 'not found' } });
 
       const c = createMockContext({ params: { id: 'bad-id' }, body: {} });

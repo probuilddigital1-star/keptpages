@@ -3,8 +3,8 @@
 ## Tech Stack
 - **Frontend:** React 18 + Vite, Tailwind CSS, Zustand stores, React Router v6
 - **Backend:** Cloudflare Worker (Hono), Supabase (Postgres + Auth), R2 storage, KV rate limiting
-- **Testing:** Vitest (frontend + worker), Playwright (E2E), 1,452+ tests across 89 files
-- **Payments:** Stripe (checkout, portal, webhooks), Lulu Print API for book orders
+- **Testing:** Vitest (frontend + worker), Playwright (E2E), 1,548+ tests across 91 files
+- **Payments:** Stripe (one-time Keeper Pass + book orders), Lulu Print API for book fulfillment
 - **AI:** Gemini 2.5 Flash for scan processing, Claude Sonnet fallback
 
 ## Key Directories
@@ -29,12 +29,17 @@
 - `md:` (768px) — small desktop
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
-## Current Status (2026-03-12)
-- **111/116 user stories complete**
-- PDF Cover Fidelity (COVER): **1/1 COMPLETE** — divider line, photo position, color match
-- Book Designer Mobile UX (MOBILE): **5/5 COMPLETE** — toolbar, page nav, action bar, drawer, touch canvas
-- "Between the Pages" content hub (BLOG): **12/12 COMPLETE** (US-BLOG-13 skipped)
-- Multi-Page Scanning (SCAN): **5/5 COMPLETE**
-- Pre-launch checklist (US-QA-10): **COMPLETE**
-- All tests passing (1,458 tests: 796 frontend + 662 worker, 90 files)
-- Remaining work: Production validation (US-QA-12), Claude API fallback (1 parked)
+## Current Status (2026-03-14)
+- **124/128 user stories complete** (PRICING epic: 12/12 complete)
+- Pricing Restructure (PRICING): **12/12 DONE** — subscription → project-based model complete
+- All prior epics complete (COVER, MOBILE, BLOG, SCAN, QA-10, PRICING)
+- All tests passing (1,548 tests: 832 frontend + 716 worker, 91 files)
+- Remaining work: Production validation (US-QA-12) — final go/no-go before launch
+
+## Pricing Model (2026-03-14)
+- **4 customer tiers:** No Account (5 scans), Free (25 scans, 2 collections), Book Purchaser (unlimited scans, 3 collections), Keeper Pass ($59 one-time, unlimited)
+- **3 book tiers:** Classic ($39, PB/BW), Premium ($69, CW/FC), Heirloom ($79, CW/FC/80#)
+- **3 add-ons:** Glossy cover (free), Coil binding (+$8), Color interior (+$10, Classic only)
+- **Discounts:** Multi-copy (15% at 3+, 20% at 5+), Keeper Pass (15% off all books)
+- **PDF export gating:** free=blocked, book_purchaser=per-book, keeper=full
+- Config source of truth: `packages/web/src/config/plans.js`

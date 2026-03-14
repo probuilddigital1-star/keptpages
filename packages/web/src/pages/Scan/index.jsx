@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useScanStore } from '@/stores/scanStore';
 import { useDocumentsStore } from '@/stores/documentsStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -20,12 +21,15 @@ const STEP_CAMERA = 'camera'; // Live camera
 const STEP_PREVIEW = 'preview'; // Image preprocessor
 const STEP_PAGES = 'pages'; // Multi-page staging
 const STEP_UPLOADING = 'uploading'; // Upload + process
+const STEP_ANON_RESULT = 'anon_result'; // Anonymous scan result
 
 export default function ScanPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const collectionId = location.state?.collectionId;
   const collectionName = location.state?.collectionName;
+  const user = useAuthStore((s) => s.user);
+  const isAnonymous = !user;
   const {
     uploadScan,
     addPage,
@@ -36,13 +40,18 @@ export default function ScanPage() {
     addStagedPage,
     removeStagedPage,
     clearStagedPages,
+    uploadAnonymousScan,
+    getAnonymousScanCount,
+    getAnonymousScansRemaining,
   } = useScanStore();
   const addToCollection = useDocumentsStore((s) => s.addToCollection);
-  const { tier, usage, limits, canScan, upgrade, loading: upgradeLoading, fetchSubscription } = useSubscriptionStore();
+  const { tier, usage, limits, canScan, purchaseKeeperPass, loading: upgradeLoading, fetchSubscription } = useSubscriptionStore();
 
   useEffect(() => {
-    fetchSubscription().catch(() => {});
-  }, [fetchSubscription]);
+    if (!isAnonymous) {
+      fetchSubscription().catch(() => {});
+    }
+  }, [fetchSubscription, isAnonymous]);
 
   // Cleanup staged pages on unmount
   useEffect(() => {
@@ -54,12 +63,20 @@ export default function ScanPage() {
   const [step, setStep] = useState(STEP_CHOOSE);
   const [rawFile, setRawFile] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [anonResult, setAnonResult] = useState(null);
 
-  const isFree = tier === 'free';
+  // Anonymous scan counter
+  const anonScansUsed = isAnonymous ? getAnonymousScanCount() : 0;
+  const anonScansRemaining = isAnonymous ? getAnonymousScansRemaining() : 5;
+  const anonAtLimit = isAnonymous && anonScansRemaining <= 0;
+
+  // Authenticated scan counter
+  const isFree = !isAnonymous && tier === 'free';
   const scansUsed = usage.scans ?? 0;
   const scansLimit = limits.scans ?? 25;
-  const atLimit = !canScan();
+  const atLimit = isAnonymous ? anonAtLimit : !canScan();
 
   // ---- Handlers ----
 
@@ -112,10 +129,37 @@ export default function ScanPage() {
   }
 
   function handlePreprocessConfirm(processedBlob) {
+    if (isAnonymous) {
+      // Anonymous flow: process immediately (single-page only)
+      handleAnonymousScan(processedBlob);
+      return;
+    }
     // Add to pages array and move to PAGES step
     addStagedPage(processedBlob);
     setRawFile(null);
     setStep(STEP_PAGES);
+  }
+
+  async function handleAnonymousScan(blob) {
+    setRawFile(null);
+    setStep(STEP_UPLOADING);
+    setUploadError(null);
+    try {
+      const file = new File([blob], `scan-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const result = await uploadAnonymousScan(file);
+      setAnonResult(result);
+      setStep(STEP_ANON_RESULT);
+      toast('Scan complete!');
+      // If this was their last free scan, show signup prompt
+      if (result._remaining <= 0) {
+        setShowSignupPrompt(true);
+      }
+    } catch (err) {
+      const msg = err.message || 'Scan failed. Please try again.';
+      setUploadError(msg);
+      setStep(STEP_CHOOSE);
+      toast(msg, 'error');
+    }
   }
 
   function handleAddAnotherPage() {
@@ -186,8 +230,12 @@ export default function ScanPage() {
   }
 
   async function handleUpgrade() {
+    if (isAnonymous) {
+      navigate('/signup');
+      return;
+    }
     try {
-      const result = await upgrade();
+      const result = await purchaseKeeperPass();
       if (result?.url) {
         window.location.href = result.url;
       }
@@ -222,8 +270,13 @@ export default function ScanPage() {
           </p>
         </div>
 
-        {/* Scan counter for free users */}
-        {isFree && (
+        {/* Scan counter */}
+        {isAnonymous && (
+          <Badge variant={anonAtLimit ? 'terracotta' : 'default'}>
+            {anonScansUsed} of 5 free scans used
+          </Badge>
+        )}
+        {!isAnonymous && isFree && (
           <Badge variant={atLimit ? 'terracotta' : 'default'}>
             {scansUsed} of {scansLimit} scans used
           </Badge>
@@ -244,11 +297,13 @@ export default function ScanPage() {
                 You&apos;ve reached your free scan limit
               </p>
               <p className="font-ui text-xs text-walnut-secondary mt-1">
-                Upgrade to Keeper for unlimited scans and collections.
+                {isAnonymous
+                  ? 'Create a free account for 25 scans/month.'
+                  : 'Get Keeper Pass for unlimited scans and collections.'}
               </p>
             </div>
-            <Button size="sm" onClick={() => setShowUpgradeModal(true)}>
-              Upgrade
+            <Button size="sm" onClick={() => isAnonymous ? navigate('/signup') : setShowUpgradeModal(true)}>
+              {isAnonymous ? 'Sign Up Free' : 'Get Keeper Pass'}
             </Button>
           </div>
         </Card>
@@ -486,26 +541,136 @@ export default function ScanPage() {
         </Card>
       )}
 
-      {/* Upgrade Modal */}
+      {/* Anonymous scan result */}
+      {step === STEP_ANON_RESULT && anonResult && (
+        <Card className="p-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center">
+                <svg className="h-5 w-5 text-sage" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-semibold text-walnut">
+                  {anonResult.title || 'Scan Complete'}
+                </h2>
+                {anonResult._remaining > 0 && (
+                  <p className="font-ui text-xs text-walnut-secondary">
+                    {anonResult._remaining} free {anonResult._remaining === 1 ? 'scan' : 'scans'} remaining
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Preview of extracted data */}
+            {anonResult.description && (
+              <p className="font-body text-sm text-walnut-secondary">{anonResult.description}</p>
+            )}
+            {anonResult.ingredients && anonResult.ingredients.length > 0 && (
+              <div>
+                <h3 className="font-ui text-sm font-medium text-walnut mb-1">Ingredients</h3>
+                <ul className="font-body text-sm text-walnut-secondary space-y-0.5">
+                  {anonResult.ingredients.slice(0, 5).map((ing, i) => (
+                    <li key={i}>{typeof ing === 'string' ? ing : ing.text || ing.name || JSON.stringify(ing)}</li>
+                  ))}
+                  {anonResult.ingredients.length > 5 && (
+                    <li className="text-walnut-muted">...and {anonResult.ingredients.length - 5} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* CTA to sign up */}
+            <div className="bg-cream-alt border border-border-light rounded-md p-4 mt-2">
+              <p className="font-ui text-sm text-walnut mb-3">
+                Create a free account to save your scans, organize collections, and order printed books.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setAnonResult(null);
+                    setStep(STEP_CHOOSE);
+                  }}
+                >
+                  Scan Another
+                </Button>
+                <Button onClick={() => navigate('/signup')}>
+                  Sign Up Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Signup Prompt Modal (shown after using all free scans) */}
       <Modal
-        open={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        title="Upgrade to Keeper"
+        open={showSignupPrompt}
+        onClose={() => setShowSignupPrompt(false)}
+        title="You've used all 5 free scans"
         size="sm"
       >
         <div className="flex flex-col gap-4">
           <p className="font-body text-walnut-secondary">
-            You&apos;ve used all {scansLimit} free scans. Upgrade to{' '}
-            <span className="font-medium text-walnut">Keeper</span> for
-            unlimited scans, unlimited collections, and more.
+            Create a free account to get 25 scans/month and save your recipes permanently.
+          </p>
+
+          <ul className="flex flex-col gap-2">
+            {[
+              'Save and edit your scans',
+              '25 scans per month',
+              'Organize into collections',
+              'Order beautiful printed books',
+            ].map((feature) => (
+              <li key={feature} className="flex items-center gap-2 font-ui text-sm text-walnut">
+                <svg className="h-4 w-4 text-sage shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex gap-3 mt-2">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowSignupPrompt(false)}
+            >
+              Maybe Later
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => navigate('/signup')}
+            >
+              Sign Up Free
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Upgrade Modal (authenticated free users) */}
+      <Modal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title="Get Keeper Pass"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="font-body text-walnut-secondary">
+            You&apos;ve used all {scansLimit} free scans. Get{' '}
+            <span className="font-medium text-walnut">Keeper Pass</span> for
+            $59 one-time and unlock unlimited access.
           </p>
 
           <ul className="flex flex-col gap-2">
             {[
               'Unlimited scans',
               'Unlimited collections',
-              'AI reprocessing',
-              'Priority support',
+              'Full PDF export',
+              '15% off all books',
             ].map((feature) => (
               <li key={feature} className="flex items-center gap-2 font-ui text-sm text-walnut">
                 <svg className="h-4 w-4 text-sage shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -529,7 +694,7 @@ export default function ScanPage() {
               loading={upgradeLoading}
               onClick={handleUpgrade}
             >
-              Upgrade Now
+              Get Keeper Pass
             </Button>
           </div>
         </div>

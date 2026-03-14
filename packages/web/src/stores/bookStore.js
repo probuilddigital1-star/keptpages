@@ -485,11 +485,10 @@ export const useBookStore = create(
         }
       },
 
-      orderBook: async (bookId, shippingAddress, quantity = 1, printOptions = null) => {
+      orderBook: async (bookId, shippingAddress, quantity = 1, bookTier = 'premium', addons = []) => {
         set({ loading: true });
         try {
-          const body = { shippingAddress, quantity };
-          if (printOptions) body.printOptions = printOptions;
+          const body = { shippingAddress, quantity, bookTier, addons };
           const order = await api.post(`/books/${bookId}/order`, body);
           set({ loading: false });
           return order;

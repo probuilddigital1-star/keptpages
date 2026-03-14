@@ -3,37 +3,74 @@ import userEvent from '@testing-library/user-event';
 import Pricing from './Pricing';
 
 describe('Pricing', () => {
-  it('renders "Free Forever" tier', () => {
+  it('renders section heading text', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('Free Forever')).toBeInTheDocument();
+    expect(screen.getByText('Pricing')).toBeInTheDocument();
+    expect(screen.getByText(/honest prices/i)).toBeInTheDocument();
   });
 
-  it('renders "$0" price', () => {
+  it('renders subheading about free scanning', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('$0')).toBeInTheDocument();
+    expect(screen.getByText(/scan for free/i)).toBeInTheDocument();
   });
 
-  it('renders "to start" label next to price', () => {
+  it('renders all three book tier names', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('to start')).toBeInTheDocument();
+    expect(screen.getByText('Classic')).toBeInTheDocument();
+    expect(screen.getByText('Premium')).toBeInTheDocument();
+    expect(screen.getByText('Heirloom')).toBeInTheDocument();
   });
 
-  it('renders "$39.99" Keeper price', () => {
+  it('renders book tier prices', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText(/\$39\.99/)).toBeInTheDocument();
+    expect(screen.getByText('$39')).toBeInTheDocument();
+    expect(screen.getByText('$69')).toBeInTheDocument();
+    expect(screen.getByText('$79')).toBeInTheDocument();
   });
 
-  it('renders Keeper Plan name', () => {
+  it('renders "Most Popular" badge on Premium tier', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('Keeper Plan')).toBeInTheDocument();
+    expect(screen.getByText('Most Popular')).toBeInTheDocument();
   });
 
-  it('renders feature list items', () => {
+  it('renders extra page pricing', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('25 free scans')).toBeInTheDocument();
-    expect(screen.getByText('1 collection')).toBeInTheDocument();
-    expect(screen.getByText('PDF export')).toBeInTheDocument();
-    expect(screen.getByText('No credit card required')).toBeInTheDocument();
+    const extraPageTexts = screen.getAllByText(/\+\$0\.35\/page over 60/);
+    expect(extraPageTexts.length).toBe(3);
+  });
+
+  it('renders add-on options', () => {
+    render(<Pricing onCtaClick={vi.fn()} />);
+    expect(screen.getByText(/glossy cover finish/i)).toBeInTheDocument();
+    expect(screen.getByText(/coil binding/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/color interior/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders Keeper Pass callout with price', () => {
+    render(<Pricing onCtaClick={vi.fn()} />);
+    expect(screen.getByText('Keeper Pass')).toBeInTheDocument();
+    expect(screen.getByText('$59')).toBeInTheDocument();
+  });
+
+  it('renders Keeper Pass as one-time, not subscription', () => {
+    render(<Pricing onCtaClick={vi.fn()} />);
+    expect(screen.getByText(/not a subscription/i)).toBeInTheDocument();
+  });
+
+  it('renders Keeper Pass features', () => {
+    render(<Pricing onCtaClick={vi.fn()} />);
+    expect(screen.getByText('Unlimited scans')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited collections')).toBeInTheDocument();
+    expect(screen.getByText('Full PDF export')).toBeInTheDocument();
+    expect(screen.getByText('Family sharing')).toBeInTheDocument();
+    expect(screen.getByText('15% off all books forever')).toBeInTheDocument();
+  });
+
+  it('renders free tier messaging', () => {
+    render(<Pricing onCtaClick={vi.fn()} />);
+    expect(screen.getByText(/start free/i)).toBeInTheDocument();
+    expect(screen.getByText(/25 scans/i)).toBeInTheDocument();
+    expect(screen.getByText(/no credit card/i)).toBeInTheDocument();
   });
 
   it('renders CTA button', () => {
@@ -51,11 +88,5 @@ describe('Pricing', () => {
     await user.click(screen.getByRole('button', { name: /get started free/i }));
 
     expect(handleClick).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders section heading text', () => {
-    render(<Pricing onCtaClick={vi.fn()} />);
-    expect(screen.getByText('Simple Pricing')).toBeInTheDocument();
-    expect(screen.getByText(/start free/i)).toBeInTheDocument();
   });
 });

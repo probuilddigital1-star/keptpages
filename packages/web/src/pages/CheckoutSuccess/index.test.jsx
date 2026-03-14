@@ -17,14 +17,14 @@ describe('CheckoutSuccess', () => {
     expect(screen.getByText('Pages')).toBeInTheDocument();
   });
 
-  it('renders Welcome to Keeper for default (keeper) type', () => {
+  it('renders Welcome to Keeper Pass for default (keeper) type', () => {
     renderWithRoute('/checkout/success?type=keeper');
-    expect(screen.getByText('Welcome to Keeper!')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Keeper Pass!')).toBeInTheDocument();
   });
 
-  it('renders the subscription active message for keeper', () => {
+  it('renders the Keeper Pass active message for keeper', () => {
     renderWithRoute('/checkout/success?type=keeper');
-    expect(screen.getByText(/your subscription is now active/i)).toBeInTheDocument();
+    expect(screen.getByText(/your keeper pass is now active/i)).toBeInTheDocument();
   });
 
   it('renders Book Order Confirmed for book type', () => {
@@ -61,10 +61,10 @@ describe('CheckoutSuccess', () => {
   it('shows feature list for keeper type', () => {
     renderWithRoute('/checkout/success?type=keeper');
     expect(screen.getByText('What you can do now')).toBeInTheDocument();
-    expect(screen.getByText('Scan unlimited family documents')).toBeInTheDocument();
-    expect(screen.getByText('Create unlimited collections')).toBeInTheDocument();
-    expect(screen.getByText('Share collections with family')).toBeInTheDocument();
-    expect(screen.getByText('Access priority AI processing')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited scans')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited collections')).toBeInTheDocument();
+    expect(screen.getByText('Family sharing')).toBeInTheDocument();
+    expect(screen.getByText('15% off all books')).toBeInTheDocument();
   });
 
   it('does not show feature list for book type', () => {
@@ -74,6 +74,6 @@ describe('CheckoutSuccess', () => {
 
   it('defaults to keeper type when no type param is provided', () => {
     renderWithRoute('/checkout/success');
-    expect(screen.getByText('Welcome to Keeper!')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to Keeper Pass!')).toBeInTheDocument();
   });
 });

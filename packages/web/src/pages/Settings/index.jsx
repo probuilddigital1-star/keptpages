@@ -10,7 +10,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import { api } from '@/services/api';
-import { stripeService } from '@/services/stripe';
 import { PLANS } from '@/config/plans';
 import { formatDate } from '@/utils/formatters';
 
@@ -22,12 +21,9 @@ export default function Settings() {
   // Subscription state
   const tier = useSubscriptionStore((s) => s.tier);
   const usage = useSubscriptionStore((s) => s.usage);
-  const subscription = useSubscriptionStore((s) => s.subscription);
   const subLoading = useSubscriptionStore((s) => s.loading);
   const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
-  const upgrade = useSubscriptionStore((s) => s.upgrade);
-  const cancelSub = useSubscriptionStore((s) => s.cancelSubscription);
-  const openPortal = useSubscriptionStore((s) => s.openPortal);
+  const purchaseKeeperPass = useSubscriptionStore((s) => s.purchaseKeeperPass);
 
   // Profile form
   const [displayName, setDisplayName] = useState('');
@@ -37,13 +33,10 @@ export default function Settings() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Modals
-  const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
-  const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exportingData, setExportingData] = useState(false);
-  const [openingPortal, setOpeningPortal] = useState(false);
 
   useEffect(() => {
     fetchSubscription().catch(() => {});
@@ -103,48 +96,17 @@ export default function Settings() {
     }
   }, []);
 
-  // Upgrade
+  // Upgrade to Keeper Pass
   const handleUpgrade = useCallback(async () => {
     try {
-      const result = await upgrade();
+      const result = await purchaseKeeperPass();
       if (result?.url) {
         window.location.href = result.url;
       }
     } catch {
       toast('Failed to start upgrade. Please try again.', 'error');
     }
-  }, [upgrade]);
-
-  // Cancel subscription (via stripeService)
-  const handleCancelSubscription = useCallback(async () => {
-    setCancelling(true);
-    try {
-      await cancelSub();
-      toast('Subscription cancelled. You will retain access until the end of your billing period.');
-      setShowCancelModal(false);
-    } catch {
-      toast('Failed to cancel subscription.', 'error');
-    } finally {
-      setCancelling(false);
-    }
-  }, [cancelSub]);
-
-  // Open Stripe Customer Portal
-  const handleManageSubscription = useCallback(async () => {
-    setOpeningPortal(true);
-    try {
-      const url = await openPortal();
-      if (url) {
-        window.location.href = url;
-      } else {
-        toast('Could not open billing portal. Please try again.', 'error');
-      }
-    } catch {
-      toast('Failed to open billing portal.', 'error');
-    } finally {
-      setOpeningPortal(false);
-    }
-  }, [openPortal]);
+  }, [purchaseKeeperPass]);
 
   // Export data
   const handleExportData = useCallback(async () => {
@@ -187,7 +149,12 @@ export default function Settings() {
   }, [deleteConfirm, logout]);
 
   const email = user?.email || '';
-  const planInfo = tier === 'keeper' ? PLANS.KEEPER : PLANS.FREE;
+  const planInfo =
+    tier === 'keeper'
+      ? PLANS.KEEPER_PASS
+      : tier === 'book_purchaser'
+        ? PLANS.BOOK_PURCHASER
+        : PLANS.FREE;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-container-md mx-auto">
@@ -268,6 +235,9 @@ export default function Settings() {
             <Badge variant={tier === 'keeper' ? 'terracotta' : 'default'}>
               {planInfo.name}
             </Badge>
+            {tier === 'keeper' && (
+              <Badge variant="sage">Active</Badge>
+            )}
           </div>
 
           {/* Usage stats */}
@@ -290,17 +260,27 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Free users: upgrade card */}
-          {tier === 'free' && (
+          {/* Keeper users: active info */}
+          {tier === 'keeper' && (
+            <div className="bg-sage-light border border-sage/20 rounded-md p-5">
+              <p className="font-ui text-sm text-walnut">
+                You have unlimited access to all KeptPages features and{' '}
+                <span className="font-semibold text-terracotta">15% off all book orders</span>.
+              </p>
+            </div>
+          )}
+
+          {/* Free / Book Purchaser users: Keeper Pass upsell */}
+          {tier !== 'keeper' && (
             <div className="bg-terracotta-light border border-terracotta/20 rounded-md p-6">
               <h3 className="font-display text-lg font-semibold text-walnut mb-1">
-                Upgrade to Keeper
+                Get Keeper Pass
               </h3>
               <p className="font-body text-sm text-walnut-secondary mb-4">
-                Unlock the full power of KeptPages for your family.
+                Unlock the full power of KeptPages for your family with a one-time purchase.
               </p>
               <ul className="space-y-2 mb-5">
-                {PLANS.KEEPER.features.map((feature) => (
+                {PLANS.KEEPER_PASS.features.map((feature) => (
                   <li
                     key={feature}
                     className="flex items-center gap-2 font-ui text-sm text-walnut"
@@ -323,58 +303,15 @@ export default function Settings() {
               </ul>
               <div className="flex items-end gap-2 mb-4">
                 <span className="font-display text-3xl font-bold text-terracotta">
-                  ${PLANS.KEEPER.price}
+                  ${PLANS.KEEPER_PASS.price}
                 </span>
                 <span className="font-ui text-sm text-walnut-secondary pb-1">
-                  / year
+                  one-time
                 </span>
               </div>
               <Button onClick={handleUpgrade} loading={subLoading} size="lg">
-                Upgrade Now
+                Get Keeper Pass
               </Button>
-            </div>
-          )}
-
-          {/* Keeper users: billing info */}
-          {tier === 'keeper' && (
-            <div>
-              {subscription?.currentPeriodEnd && (
-                <p className="font-ui text-sm text-walnut-secondary mb-4">
-                  Next billing date:{' '}
-                  <span className="font-medium text-walnut">
-                    {formatDate(subscription.currentPeriodEnd)}
-                  </span>
-                </p>
-              )}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={handleManageSubscription}
-                  loading={openingPortal}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-4 h-4"
-                  >
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-                    <line x1="1" y1="10" x2="23" y2="10" />
-                  </svg>
-                  Manage Subscription
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowCancelModal(true)}
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                >
-                  Cancel Subscription
-                </Button>
-              </div>
             </div>
           )}
         </Card>
@@ -432,38 +369,6 @@ export default function Settings() {
           </div>
         </Card>
       </section>
-
-      {/* ================================================================= */}
-      {/* Cancel Subscription Modal                                         */}
-      {/* ================================================================= */}
-      <Modal
-        open={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        title="Cancel Subscription"
-        size="sm"
-      >
-        <p className="font-body text-walnut-secondary mb-6">
-          Are you sure you want to cancel your Keeper subscription? You will
-          retain access until the end of your current billing period.
-        </p>
-        <div className="flex gap-3 justify-end">
-          <Button
-            variant="ghost"
-            onClick={() => setShowCancelModal(false)}
-            disabled={cancelling}
-          >
-            Keep Subscription
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleCancelSubscription}
-            loading={cancelling}
-            className="bg-red-500 hover:bg-red-600"
-          >
-            Cancel Subscription
-          </Button>
-        </div>
-      </Modal>
 
       {/* ================================================================= */}
       {/* Delete Account Modal                                              */}

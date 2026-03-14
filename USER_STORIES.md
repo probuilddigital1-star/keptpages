@@ -19,7 +19,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-INFRA-6 | DNS and domain routing | DONE | api/app/www CNAME records, root CNAME to pages.dev, Worker custom domain, SSL pending auto-issue |
 | US-INFRA-7 | GitHub Actions secrets | DONE | 6 secrets set: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD |
 | US-INFRA-8 | Local dev environment | DONE | Worker + frontend both start clean, wrangler v4 upgraded |
-| US-INFRA-9 | Supabase storage buckets | SKIP | Using R2 for all file storage instead of Supabase Storage |
+| US-INFRA-9 | Supabase storage buckets | CANCELLED | Using R2 for all file storage instead of Supabase Storage |
 | US-BLOG-1 | "Between the Pages" DB schema | DONE | `articles` table, `article_status` enum, indexes, category constraint |
 | US-BLOG-2 | Articles migration | DONE | Migration 014: articles table + migration 015: 10 seed articles |
 | US-BLOG-3 | Articles public API | DONE | `GET /api/articles`, `GET /api/articles/:slug` with pagination, category/tag filters |
@@ -127,8 +127,20 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-MOBILE-3 | Mobile element action bar | DONE | Delete, edit text buttons when element selected on mobile |
 | US-MOBILE-4 | Mobile drawer improvements | DONE | Contextual label, drag handle, image delete visibility |
 | US-MOBILE-5 | Touch-friendly canvas interactions | DONE | Larger transformer anchors on touch devices |
+| US-PRICING-1 | Database migration for pricing restructure | DONE | Migration 017: book_purchaser enum, profile columns, updated limit functions |
+| US-PRICING-2 | Pricing config & named book tiers | DONE | Rewrite plans.js: 4 tiers, 3 book tiers, 3 add-ons, calculateBookPrice, resolvePrintOptions |
+| US-PRICING-3 | No-account anonymous scans | DONE | Backend + frontend: /try route, localStorage counter, "X of 5 free scans", signup prompt, publicScan tests |
+| US-PRICING-4 | Keeper Pass & Stripe payment restructure | DONE | $59 one-time checkout, book tier pricing, webhook tier upgrades, subscription code removed |
+| US-PRICING-5 | Tier-aware collection limits & backend routes | DONE | Per-tier limits (2/3/∞), profile fields, stripe/cancel/portal return 400 |
+| US-PRICING-6 | PDF export gating by tier | DONE | free=403, book_purchaser=per-book, keeper=full. Preview gating too. |
+| US-PRICING-7 | Frontend subscription store rewrite | DONE | 4-tier state, purchaseKeeperPass(), canExportPdf(), bookDiscount() |
+| US-PRICING-8 | Landing page pricing redesign | DONE | 3 book tier cards, add-on callouts, Keeper Pass banner, free messaging |
+| US-PRICING-9 | Book order flow with named tiers | DONE | OrderPanel 3-tier selector, add-on toggles, multi-copy + keeper discounts |
+| US-PRICING-10 | Settings, dashboard & checkout UI updates | DONE | Multi-tier settings, Keeper Pass upsell, tier-aware dashboard, checkout success |
+| US-PRICING-11 | Lulu integration for book tiers | DONE | TIER_TO_PRINT_OPTIONS map, addon overrides, resolvePrintOptionsFromTier() |
+| US-PRICING-12 | Admin account migration & subscription cleanup | DONE | Migration migrates owner, subscription cancel/portal removed, legacy handlers minimal |
 
-**Completed: 112/116** | **Remaining: 4**
+**Completed: 124/128** | **Remaining: 4**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -175,7 +187,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **SCAN** — Multi-Page Scanning | 5 | 5 | 0 |
 | **COVER** — PDF Cover Fidelity | 1 | 1 | 0 |
 | **MOBILE** — Book Designer Mobile UX | 5 | 5 | 0 |
-| **Total** | **116** | **112** | **4** |
+| **PRICING** — Pricing Restructure | 12 | 12 | 0 |
+| **Total** | **127** | **124** | **3** |
 
 ---
 
@@ -2075,3 +2088,244 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Files:** `packages/web/src/components/book/PageCanvas.jsx`
 **Estimate:** S
+
+---
+
+## Epic 12: Pricing Restructure — Subscription → Project (PRICING)
+
+### US-PRICING-1: Database migration for pricing restructure — DONE
+**As a** developer
+**I want to** update the database schema to support the new 4-tier pricing model
+**So that** the backend can enforce tier-specific limits and track Keeper Pass and book purchases
+
+**Acceptance Criteria:**
+- [ ] `'book_purchaser'` value added to `subscription_tier` enum
+- [ ] `profiles` table has new columns: `keeper_pass_purchased_at TIMESTAMPTZ`, `first_book_purchased_at TIMESTAMPTZ`, `book_discount_percent INTEGER DEFAULT 0`
+- [ ] `can_create_scan()` function updated: returns TRUE for `keeper` and `book_purchaser` tiers, checks `< 25` for free
+- [ ] `can_create_collection()` function updated: keeper=unlimited, book_purchaser < 3, free < 2
+- [ ] Owner/admin account migrated: `keeper_pass_purchased_at = now()`, `book_discount_percent = 15`, `tier = 'keeper'`
+- [ ] Migration applies cleanly with `supabase db push`
+
+**Files:** `supabase/migrations/017_pricing_restructure.sql` (new)
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-PRICING-2: Pricing config & named book tiers — DONE
+**As a** developer
+**I want to** rewrite the pricing configuration to use 4 customer tiers and 3 named book tiers
+**So that** both frontend and backend share a single source of truth for all pricing logic
+
+**Acceptance Criteria:**
+- [ ] `PLANS` object has 4 tiers: NO_ACCOUNT (5 scans, 1 collection), FREE (25 scans, 2 collections), BOOK_PURCHASER (unlimited scans, 3 collections), KEEPER_PASS ($59 one-time, unlimited)
+- [ ] `BOOK_TIERS` object has 3 presets: classic ($39, PB/BW), premium ($69, CW/FC, featured), heirloom ($79, CW/FC/080CW444)
+- [ ] `TIER_LIMITS` map defines pdfExport and sharing capabilities per tier
+- [ ] `calculateBookPrice(pageCount, tierId, quantity, keeperDiscount)` correctly calculates: base + extra pages (over 60 at $0.35) + multi-copy discount (15% at 3+, 20% at 5+) + keeper 15% discount
+- [ ] Old exports removed: KEEPER_MONTHLY, KEEPER, BOOK_PRICING, PRINT_OPTIONS, DEFAULT_PRINT_OPTIONS, calculateOptionModifiers
+- [ ] All existing imports updated across the codebase
+
+**Files:** `packages/web/src/config/plans.js`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-PRICING-3: No-account anonymous scans — DONE
+**As a** visitor without an account
+**I want to** scan up to 5 recipes without creating an account
+**So that** I can experience the AI extraction magic before committing to sign up
+
+**Acceptance Criteria:**
+- [ ] `POST /api/public/scan` endpoint accepts image upload without authentication
+- [ ] IP-based rate limiting via KV: 5 scans per IP per 24 hours (`anon-scan:${ip}`, 86400s TTL)
+- [ ] Images stored temporarily in R2 under `anonymous/${ip-hash}/` prefix
+- [ ] Gemini AI extraction runs and returns structured JSON in the response
+- [ ] Frontend shows "X of 5 free scans used" counter (from localStorage)
+- [ ] After 5th scan, shows prompt: "Create a free account for 25 scans/month"
+- [ ] `api.js` has `publicUpload()` method (no Authorization header)
+- [ ] Rate limiter returns 429 with clear message when limit reached
+
+**Files:** `packages/worker/src/routes/publicScan.js` (new), `packages/worker/src/index.js`, `packages/worker/src/middleware/rateLimit.js`, `packages/web/src/stores/scanStore.js`, `packages/web/src/services/api.js`, `packages/web/src/pages/Scan/index.jsx`
+**Dependencies:** US-PRICING-2 (TIER_LIMITS)
+**Estimate:** L
+
+---
+
+### US-PRICING-4: Keeper Pass & Stripe payment restructure — DONE
+**As a** user who wants unlimited features
+**I want to** purchase a one-time Keeper Pass for $59
+**So that** I get unlimited scans, collections, PDF exports, and 15% off all books without a recurring subscription
+
+**Acceptance Criteria:**
+- [ ] `createCheckoutSession` handles `keeper_pass` plan with `mode: 'payment'` (one-time, not subscription)
+- [ ] Stripe Price ID sourced from `STRIPE_PRICE_KEEPER_PASS` env var
+- [ ] Webhook `checkout.session.completed` for keeper_pass sets `tier: 'keeper'`, `keeper_pass_purchased_at`, `book_discount_percent: 15`
+- [ ] `calculateBookUnitPrice` uses 3-tier lookup: classic=3900, premium=6900, heirloom=7900 + extra pages at 35 cents over 60
+- [ ] `createBookCheckoutSession` accepts `bookTier` string, applies multi-copy discount (15% at 3+, 20% at 5+), applies keeper 15% discount
+- [ ] Book order webhook upgrades free users to `book_purchaser` tier on first purchase, sets `first_book_purchased_at`
+- [ ] Subscription creation code removed (no new monthly/yearly checkouts)
+- [ ] Legacy subscription webhook handlers kept minimal for safety
+
+**Files:** `packages/worker/src/services/stripe.js`
+**Dependencies:** US-PRICING-1 (DB columns), US-PRICING-2 (BOOK_TIERS config)
+**Estimate:** L
+
+---
+
+### US-PRICING-5: Tier-aware collection limits & backend routes — DONE
+**As a** user on any tier
+**I want** my collection limit to match my tier
+**So that** free users get 2, book purchasers get 3, and keeper pass holders get unlimited collections
+
+**Acceptance Criteria:**
+- [ ] `collections.js` uses tier-aware limits: `{free: 2, book_purchaser: 3, keeper: Infinity}` (replaces hardcoded `FREE_TIER_MAX_COLLECTIONS = 5`)
+- [ ] `isFreeTier()` replaced with `getCollectionLimit(supabase, userId)` that reads `profile.tier`
+- [ ] Error message updated: "Upgrade to Keeper Pass or order a book to create more collections"
+- [ ] `stripe.js` route accepts `keeper_pass` plan in checkout
+- [ ] `user.js` profile response includes `keeperPassPurchasedAt`, `firstBookPurchasedAt`, `bookDiscountPercent`
+- [ ] Cancel/portal routes return appropriate error for non-legacy users
+
+**Files:** `packages/worker/src/routes/collections.js`, `packages/worker/src/routes/stripe.js`, `packages/worker/src/routes/user.js`
+**Dependencies:** US-PRICING-1 (DB), US-PRICING-4 (Stripe)
+**Estimate:** M
+
+---
+
+### US-PRICING-6: PDF export gating by tier — DONE
+**As a** product owner
+**I want** PDF exports gated by tier
+**So that** free users have a reason to purchase a book or Keeper Pass instead of exporting to PDF and printing elsewhere
+
+**Acceptance Criteria:**
+- [ ] `POST /collections/:id/export` returns 403 for free/no_account users with message: "Order a book or get Keeper Pass to export PDFs"
+- [ ] Book purchasers can export only for collections with a completed book order (`payment_status: 'succeeded'`)
+- [ ] Keeper Pass holders can export any collection
+- [ ] `GET /books/:id/preview` gated: keeper=allowed, book_purchaser=allowed if book paid, free=403
+- [ ] Frontend export button shows upsell modal for free users instead of export options
+- [ ] Upsell modal has two CTAs: "Order a Book" and "Get Keeper Pass"
+
+**Files:** `packages/worker/src/routes/collections.js` (export endpoint), `packages/worker/src/routes/books.js` (preview endpoint), `packages/web/src/components/collection/ExportOptionsModal.jsx`
+**Dependencies:** US-PRICING-1 (DB tier), US-PRICING-5 (tier lookup pattern)
+**Estimate:** M
+
+---
+
+### US-PRICING-7: Frontend subscription store rewrite — DONE
+**As a** frontend developer
+**I want** the subscription store to support 4 tiers with project-based pricing logic
+**So that** all UI components can gate features based on the user's tier
+
+**Acceptance Criteria:**
+- [ ] `tierLimits` map covers all 4 tiers: no_account, free, book_purchaser, keeper
+- [ ] `purchaseKeeperPass()` replaces `upgrade(plan)` — creates one-time $59 checkout
+- [ ] `cancelSubscription()` and `openPortal()` removed
+- [ ] Computed getters: `canExportPdf()`, `bookDiscount()`, `isKeeperPass`, `isBookPurchaser`
+- [ ] Tier derivation trusts `profile.tier` from DB directly (no subscription status fallback)
+- [ ] `canScan()` and `canCreateCollection()` return correct values for all tiers
+
+**Files:** `packages/web/src/stores/subscriptionStore.js`
+**Dependencies:** US-PRICING-2 (TIER_LIMITS), US-PRICING-5 (profile fields)
+**Estimate:** M
+
+---
+
+### US-PRICING-8: Landing page pricing redesign — DONE
+**As a** visitor on the landing page
+**I want to** see clear book pricing tiers and the Keeper Pass option
+**So that** I understand what I'll pay and can choose the right tier for my project
+
+**Acceptance Criteria:**
+- [ ] Pricing section shows 3 book tier cards: Classic ($39), Premium ($69, "Most Popular"), Heirloom ($79)
+- [ ] Each card shows: name, price, key specs (binding, interior, paper), per-extra-page cost
+- [ ] Keeper Pass callout: $59 one-time, unlimited everything, 15% off all books
+- [ ] "Free to start" messaging: scan for free, pay when you print
+- [ ] "Get Started Free" CTA preserved
+- [ ] Old subscription pricing ($39.99/yr) completely removed
+- [ ] Responsive: cards stack on mobile
+
+**Files:** `packages/web/src/components/landing/Pricing.jsx`
+**Dependencies:** US-PRICING-2 (BOOK_TIERS, PLANS)
+**Estimate:** M
+
+---
+
+### US-PRICING-9: Book order flow with named tiers — DONE
+**As a** user ordering a printed book
+**I want to** choose from Classic, Premium, or Heirloom tiers
+**So that** I can pick the right quality level without configuring individual print options
+
+**Acceptance Criteria:**
+- [ ] OrderPanel shows 3 book tier radio cards (replacing binding/interior/paper/cover dropdowns)
+- [ ] Premium card has "Most Popular" badge
+- [ ] Each card shows: name, price, brief description, key specs
+- [ ] Multi-copy discount displayed: "15% off at 3+ copies, 20% off at 5+"
+- [ ] Keeper Pass 15% discount shown if applicable: "Keeper Pass discount: -15%"
+- [ ] Price updates live as tier/quantity changes
+- [ ] Extra page cost displayed: "+$0.35/page over 60"
+- [ ] `bookTier` string passed to checkout instead of `printOptions` object
+
+**Files:** `packages/web/src/components/book/OrderPanel.jsx`
+**Dependencies:** US-PRICING-2 (calculateBookPrice), US-PRICING-7 (bookDiscount)
+**Estimate:** M
+
+---
+
+### US-PRICING-10: Settings, dashboard & checkout UI updates — DONE
+**As a** user on any tier
+**I want** the settings page, dashboard, and checkout success page to reflect my actual tier
+**So that** I see relevant information and upgrade paths
+
+**Acceptance Criteria:**
+- [ ] Settings: shows current tier name (Free / Book Purchaser / Keeper Pass)
+- [ ] Settings: Keeper Pass holders see "Active" badge and 15% book discount info
+- [ ] Settings: Free/Book Purchaser see Keeper Pass upsell with benefits list
+- [ ] Settings: subscription cancel/manage buttons removed (no subscriptions)
+- [ ] Dashboard: scan progress bar shows tier-appropriate limit (25 for free)
+- [ ] Dashboard: upgrade CTA says "Get Keeper Pass" instead of "Upgrade to Keeper"
+- [ ] Dashboard: collection count shows tier limit
+- [ ] CheckoutSuccess: Keeper Pass purchase shows "Welcome to Keeper Pass!" with benefits
+- [ ] CheckoutSuccess: first book purchase shows "Book Purchaser benefits unlocked" message
+
+**Files:** `packages/web/src/pages/Settings/index.jsx`, `packages/web/src/pages/Dashboard/index.jsx`, `packages/web/src/pages/CheckoutSuccess/index.jsx`
+**Dependencies:** US-PRICING-7 (subscription store)
+**Estimate:** M
+
+---
+
+### US-PRICING-11: Lulu integration for book tiers — DONE
+**As a** developer
+**I want** the Lulu print API to accept book tier names instead of raw print options
+**So that** the order fulfillment pipeline uses the correct print configuration for each named tier
+
+**Acceptance Criteria:**
+- [ ] `TIER_TO_PRINT_OPTIONS` map: classic→{PB,BW,060UW444,M}, premium→{CW,FC,060UW444,M}, heirloom→{CW,FC,080CW444,M}
+- [ ] `createProject` accepts `bookTier` string parameter, maps to print options internally
+- [ ] `buildPodPackageId` builds correct Lulu package ID from tier-derived options
+- [ ] `handleBookPaymentCompleted` in stripe.js extracts `book_tier` from Stripe metadata
+- [ ] Existing Lulu package ID format preserved (tier mapping produces same codes)
+
+**Files:** `packages/worker/src/services/lulu.js`, `packages/worker/src/services/stripe.js` (handleBookPaymentCompleted)
+**Dependencies:** US-PRICING-4 (Stripe metadata)
+**Estimate:** S
+
+---
+
+### US-PRICING-12: Admin account migration & subscription cleanup — DONE
+**As a** developer
+**I want to** cleanly migrate the owner's account and remove dead subscription code
+**So that** the codebase has no unused subscription paths and the admin retains full access
+
+**Acceptance Criteria:**
+- [ ] Owner's Stripe subscription canceled (manual step)
+- [ ] Owner's profile: tier='keeper', keeper_pass_purchased_at set, book_discount_percent=15
+- [ ] Admin access via ADMIN_EMAILS env var confirmed unaffected
+- [ ] Subscription-specific UI removed from Settings (cancel button, portal link, period end display)
+- [ ] `stripeService.cancelSubscription()` and `stripeService.createPortalSession()` removed from frontend
+- [ ] Legacy webhook handlers minimized (kept for safety but no active subscription creation)
+- [ ] All tests pass with subscription code removed
+- [ ] Clean build: `pnpm vite build` succeeds
+
+**Files:** `packages/web/src/pages/Settings/index.jsx`, `packages/web/src/stores/subscriptionStore.js`, `packages/web/src/services/stripe.js`, `packages/worker/src/services/stripe.js`
+**Dependencies:** US-PRICING-4, US-PRICING-7, US-PRICING-10 (all subscription-related changes done first)
+**Estimate:** M

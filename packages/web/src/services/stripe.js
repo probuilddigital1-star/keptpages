@@ -19,12 +19,4 @@ export const stripeService = {
   /** Create a Stripe Checkout session and return { url } */
   createCheckout: (plan, options = {}) =>
     api.post('/stripe/checkout', { plan, metadata: options }),
-
-  /** Create a Stripe Customer Portal session and return { url } */
-  createPortalSession: () =>
-    api.post('/stripe/portal'),
-
-  /** Cancel the current subscription at period end */
-  cancelSubscription: () =>
-    api.post('/stripe/cancel'),
 };

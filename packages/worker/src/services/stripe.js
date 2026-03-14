@@ -1,14 +1,35 @@
 /**
- * Stripe integration service for subscription and one-time payments.
- * Handles checkout session creation and webhook event processing.
+ * Stripe integration service for one-time payments and book orders.
+ * Handles Keeper Pass ($59 one-time), book checkout sessions with
+ * named tiers + add-ons, and webhook event processing.
  */
 
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+// ── Book pricing (must match frontend plans.js) ────────────────────────────
+
+const BOOK_TIER_PRICES = { classic: 3900, premium: 6900, heirloom: 7900 };
+const BOOK_ADDON_PRICES = { glossy: 0, coil: 800, color: 1000 };
+const FREE_PAGES = 60;
+const PER_EXTRA_PAGE = 35; // cents
+
+const BOOK_TIER_LABELS = {
+  classic: 'Classic (Softcover, B&W)',
+  premium: 'Premium (Hardcover, Full Color)',
+  heirloom: 'Heirloom (Hardcover, Premium Paper)',
+};
+
+// ── Multi-Copy Discount Tiers ───────────────────────────────────────────────
+
+function getMultiCopyDiscount(quantity) {
+  if (quantity >= 5) return 0.20;
+  if (quantity >= 3) return 0.15;
+  return 0;
+}
+
 /**
  * Generate a signed public URL for an R2 file so Lulu can fetch it.
- * Uses HMAC(key + service_key) as a simple auth token.
  */
 async function getSignedFileUrl(apiBase, r2Key, env) {
   const encoder = new TextEncoder();
@@ -19,9 +40,6 @@ async function getSignedFileUrl(apiBase, r2Key, env) {
   return `${apiBase}/api/public/files/${token}/${r2Key}`;
 }
 
-/**
- * Initialize the Stripe client.
- */
 function getStripe(env) {
   if (!env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured');
@@ -32,182 +50,135 @@ function getStripe(env) {
   });
 }
 
-/**
- * Get a Supabase client for server-side operations.
- */
 function getSupabase(env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 }
 
 /**
- * Get price IDs, preferring env-configured values over defaults.
- * Allows Stripe price IDs to be set via env vars without code changes.
+ * Get or create a Stripe customer for a user.
  */
-function getPriceIds(env) {
-  return {
-    keeper_monthly: env.STRIPE_PRICE_KEEPER_MONTHLY || 'price_keeper_monthly',
-    keeper_yearly: env.STRIPE_PRICE_KEEPER_YEARLY || 'price_keeper_yearly',
-    book_order: env.STRIPE_PRICE_BOOK_ORDER || 'price_book_order',
-  };
+async function getOrCreateCustomer(userId, stripe, supabase) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('stripe_customer_id, email')
+    .eq('id', userId)
+    .single();
+
+  let customerId = profile?.stripe_customer_id;
+
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      metadata: { supabase_user_id: userId },
+      email: profile?.email || undefined,
+    });
+    customerId = customer.id;
+
+    await supabase
+      .from('profiles')
+      .update({ stripe_customer_id: customerId })
+      .eq('id', userId);
+  }
+
+  return customerId;
 }
 
 /**
- * Create a Stripe Checkout session for a subscription or one-time payment.
- *
- * @param {string} userId - The authenticated user's ID
- * @param {string} plan - Plan identifier (e.g., 'keeper_monthly', 'keeper_yearly', 'book_order')
- * @param {object} env - Worker environment bindings
- * @param {object} [metadata] - Additional metadata (e.g., bookId for book orders)
- * @returns {Promise<{ sessionId: string, url: string }>}
+ * Create a Stripe Checkout session for a Keeper Pass (one-time $59).
  */
 export async function createCheckoutSession(userId, plan, env, metadata = {}) {
   const stripe = getStripe(env);
   const supabase = getSupabase(env);
+  const customerId = await getOrCreateCustomer(userId, stripe, supabase);
 
-  // Look up or create a Stripe customer for this user
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('stripe_customer_id, email')
-    .eq('id', userId)
-    .single();
-
-  let customerId = profile?.stripe_customer_id;
-
-  if (!customerId) {
-    // Create a new Stripe customer
-    const customer = await stripe.customers.create({
-      metadata: { supabase_user_id: userId },
-      email: profile?.email || undefined,
-    });
-    customerId = customer.id;
-
-    // Save the Stripe customer ID
-    await supabase
-      .from('profiles')
-      .update({ stripe_customer_id: customerId })
-      .eq('id', userId);
+  if (plan !== 'keeper_pass') {
+    throw new Error(`Unknown plan: ${plan}. Only 'keeper_pass' is supported.`);
   }
 
-  const priceIds = getPriceIds(env);
-  const priceId = priceIds[plan];
+  const priceId = env.STRIPE_PRICE_KEEPER_PASS;
   if (!priceId) {
-    throw new Error(`Unknown plan: ${plan}`);
+    throw new Error('STRIPE_PRICE_KEEPER_PASS env var is not configured');
   }
 
-  const isSubscription = plan.includes('monthly') || plan.includes('yearly');
-  const successUrl = `${env.APP_URL || 'https://keptpages.com'}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${env.APP_URL || 'https://keptpages.com'}/checkout/cancel`;
+  const appUrl = env.APP_URL || 'https://app.keptpages.com';
+  const successUrl = `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=keeper`;
+  const cancelUrl = `${appUrl}/checkout/cancel`;
 
-  const sessionParams = {
+  const session = await stripe.checkout.sessions.create({
     customer: customerId,
-    mode: isSubscription ? 'subscription' : 'payment',
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
+    mode: 'payment',
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {
       user_id: userId,
-      plan,
+      plan: 'keeper_pass',
       ...metadata,
     },
-  };
+  });
 
-  // Allow promo codes for subscriptions
-  if (isSubscription) {
-    sessionParams.allow_promotion_codes = true;
-  }
-
-  const session = await stripe.checkout.sessions.create(sessionParams);
-
-  return {
-    sessionId: session.id,
-    url: session.url,
-  };
+  return { sessionId: session.id, url: session.url };
 }
 
-// Print option price modifiers in cents (must match frontend PRINT_OPTIONS)
-const OPTION_MODIFIERS = {
-  binding: { PB: 0, CW: 1500, CO: 500 },
-  interior: { BW: 0, FC: 2000 },
-  paper: { '060UW444': 0, '080CW444': 800 },
-  cover: { M: 0, G: 0 },
-};
-
-const BINDING_LABELS = { PB: 'Paperback', CW: 'Hardcover', CO: 'Coil Bound' };
-const INTERIOR_LABELS = { BW: 'B&W', FC: 'Full Color' };
-
 /**
- * Calculate book unit price in cents from page count and print options.
- * Unified formula: base $79 + $0.50/page over 40 + option modifiers, capped at $149 + modifiers.
+ * Calculate book unit price in cents from tier + addons + page count.
  */
-function calculateBookUnitPrice(pageCount, printOptions = {}) {
-  const BASE = 7900; // cents
-  const MAX_BASE = 14900; // cents
-  const PER_EXTRA_PAGE = 50; // cents
-  const FREE_PAGES = 40;
+function calculateBookUnitPrice(pageCount, bookTier, addons = []) {
+  const basePrice = BOOK_TIER_PRICES[bookTier];
+  if (basePrice === undefined) throw new Error(`Unknown book tier: ${bookTier}`);
+
+  let unitPrice = basePrice;
+
+  for (const addonId of addons) {
+    const addonPrice = BOOK_ADDON_PRICES[addonId];
+    if (addonPrice === undefined) continue;
+    // Color addon only valid for classic
+    if (addonId === 'color' && bookTier !== 'classic') continue;
+    unitPrice += addonPrice;
+  }
 
   const extraPages = Math.max(0, pageCount - FREE_PAGES);
-  const basePrice = Math.min(BASE + extraPages * PER_EXTRA_PAGE, MAX_BASE);
+  unitPrice += extraPages * PER_EXTRA_PAGE;
 
-  let modifiers = 0;
-  for (const [group, value] of Object.entries(printOptions)) {
-    const groupMods = OPTION_MODIFIERS[group];
-    if (groupMods && groupMods[value] !== undefined) {
-      modifiers += groupMods[value];
-    }
-  }
-
-  return basePrice + modifiers;
+  return unitPrice;
 }
 
 /**
- * Create a Stripe Checkout session for a book order (one-time payment).
- * Uses dynamic pricing based on page count, quantity, and print options.
- *
- * @param {string} userId - The authenticated user's ID
- * @param {object} book - The book record from the database
- * @param {object} shippingAddress - Shipping address for the order
- * @param {number} quantity - Number of copies to order
- * @param {object} env - Worker environment bindings
- * @param {object} [printOptions] - User-selected print options
- * @returns {Promise<{ sessionId: string, url: string }>}
+ * Create a Stripe Checkout session for a book order.
+ * Uses named book tiers + addons instead of raw print options.
  */
-export async function createBookCheckoutSession(userId, book, shippingAddress, quantity, env, printOptions = {}) {
+export async function createBookCheckoutSession(userId, book, shippingAddress, quantity, env, bookTier = 'classic', addons = []) {
   const stripe = getStripe(env);
   const supabase = getSupabase(env);
+  const customerId = await getOrCreateCustomer(userId, stripe, supabase);
 
-  // Look up or create a Stripe customer for this user
+  // Fetch user profile for keeper discount
   const { data: profile } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, email')
+    .select('tier, book_discount_percent')
     .eq('id', userId)
     .single();
 
-  let customerId = profile?.stripe_customer_id;
+  const keeperDiscount = profile?.book_discount_percent === 15;
+  const unitPrice = calculateBookUnitPrice(book.page_count || 0, bookTier, addons);
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      metadata: { supabase_user_id: userId },
-      email: profile?.email || undefined,
-    });
-    customerId = customer.id;
-
-    await supabase
-      .from('profiles')
-      .update({ stripe_customer_id: customerId })
-      .eq('id', userId);
+  // Apply multi-copy discount
+  let totalCents = unitPrice * quantity;
+  const multiDiscount = getMultiCopyDiscount(quantity);
+  if (multiDiscount > 0) {
+    totalCents = Math.round(totalCents * (1 - multiDiscount));
   }
 
-  const unitPrice = calculateBookUnitPrice(book.page_count || 0, printOptions);
+  // Apply keeper 15% discount
+  if (keeperDiscount) {
+    totalCents = Math.round(totalCents * 0.85);
+  }
 
-  // Build description from print options
-  const bindingLabel = BINDING_LABELS[printOptions.binding] || 'Paperback';
-  const interiorLabel = INTERIOR_LABELS[printOptions.interior] || 'B&W';
-  const description = `KeptPages Book \u2014 ${bindingLabel}, ${interiorLabel}, ${book.page_count || 0} pages`;
+  // Per-unit amount for Stripe (total / quantity, rounded)
+  const stripeUnitAmount = Math.round(totalCents / quantity);
+
+  const tierLabel = BOOK_TIER_LABELS[bookTier] || bookTier;
+  const addonLabels = addons.filter(a => BOOK_ADDON_PRICES[a] !== undefined).join(', ');
+  const description = `KeptPages Book — ${tierLabel}${addonLabels ? `, ${addonLabels}` : ''}, ${book.page_count || 0} pages`;
 
   const appUrl = env.APP_URL || 'https://app.keptpages.com';
   const successUrl = `${appUrl}/app/book/${book.id}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
@@ -224,7 +195,7 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
             name: `Printed Book: ${book.title}`,
             description,
           },
-          unit_amount: unitPrice,
+          unit_amount: stripeUnitAmount,
         },
         quantity,
       },
@@ -236,101 +207,21 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
       book_id: book.id,
       quantity: String(quantity),
       shipping_address: JSON.stringify(shippingAddress),
-      print_options: JSON.stringify(printOptions),
+      book_tier: bookTier,
+      addons: JSON.stringify(addons),
     },
   });
 
-  return {
-    sessionId: session.id,
-    url: session.url,
-  };
-}
-
-/**
- * Cancel a subscription at the end of the current billing period.
- *
- * @param {string} userId - The authenticated user's ID
- * @param {object} env - Worker environment bindings
- * @returns {Promise<{ message: string }>}
- */
-export async function cancelSubscription(userId, env) {
-  const stripe = getStripe(env);
-  const supabase = getSupabase(env);
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('stripe_subscription_id, stripe_customer_id')
-    .eq('id', userId)
-    .single();
-
-  if (!profile?.stripe_subscription_id) {
-    throw new Error('No active subscription found');
-  }
-
-  // Cancel at end of period (not immediately)
-  await stripe.subscriptions.update(profile.stripe_subscription_id, {
-    cancel_at_period_end: true,
-  });
-
-  // Update profiles table
-  await supabase
-    .from('profiles')
-    .update({
-      subscription_status: 'canceling',
-      subscription_updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
-
-  // Update subscriptions table if it exists for this user
-  await supabase
-    .from('subscriptions')
-    .update({ cancel_at_period_end: true })
-    .eq('stripe_subscription_id', profile.stripe_subscription_id);
-
-  return { message: 'Subscription will be canceled at the end of the current billing period' };
-}
-
-/**
- * Create a Stripe Customer Portal session for managing billing.
- *
- * @param {string} userId - The authenticated user's ID
- * @param {object} env - Worker environment bindings
- * @returns {Promise<{ url: string }>}
- */
-export async function createPortalSession(userId, env) {
-  const stripe = getStripe(env);
-  const supabase = getSupabase(env);
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('stripe_customer_id')
-    .eq('id', userId)
-    .single();
-
-  if (!profile?.stripe_customer_id) {
-    throw new Error('No Stripe customer found. Please subscribe first.');
-  }
-
-  const appUrl = env.APP_URL || 'https://app.keptpages.com';
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${appUrl}/app/settings`,
-  });
-
-  return { url: session.url };
+  return { sessionId: session.id, url: session.url };
 }
 
 /**
  * Handle a completed book order payment.
  * Creates the Lulu print job after payment succeeds.
- *
- * @param {object} session - The Stripe checkout session
- * @param {object} supabase - Supabase client instance
- * @param {object} env - Worker environment bindings
  */
 async function handleBookPaymentCompleted(session, supabase, env) {
   const bookId = session.metadata.book_id;
+  const userId = session.metadata.user_id;
   const quantity = parseInt(session.metadata.quantity, 10) || 1;
 
   let shippingAddress;
@@ -341,13 +232,15 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     return;
   }
 
-  let printOptions = {};
+  // Extract book tier and addons from metadata
+  const bookTier = session.metadata.book_tier || 'classic';
+  let addons = [];
   try {
-    if (session.metadata.print_options) {
-      printOptions = JSON.parse(session.metadata.print_options);
+    if (session.metadata.addons) {
+      addons = JSON.parse(session.metadata.addons);
     }
   } catch {
-    console.error('Failed to parse print options from checkout metadata');
+    console.error('Failed to parse addons from checkout metadata');
   }
 
   // Update book with payment info
@@ -361,12 +254,27 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     })
     .eq('id', bookId);
 
+  // Upgrade free users to book_purchaser on first book purchase
+  if (userId) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tier, first_book_purchased_at')
+      .eq('id', userId)
+      .single();
+
+    if (profile && !profile.first_book_purchased_at) {
+      const updates = { first_book_purchased_at: new Date().toISOString() };
+      if (profile.tier === 'free') {
+        updates.tier = 'book_purchaser';
+      }
+      await supabase.from('profiles').update(updates).eq('id', userId);
+    }
+  }
+
   // Now fulfill the order via Lulu
   try {
-    // Dynamically import Lulu service to avoid circular dependency
     const { createProject, createOrder } = await import('./lulu.js');
 
-    // Fetch the book to get PDF keys
     const { data: book, error: bookError } = await supabase
       .from('books')
       .select('*')
@@ -383,16 +291,14 @@ async function handleBookPaymentCompleted(session, supabase, env) {
       return;
     }
 
-    // Generate signed public URLs for Lulu to fetch PDFs
     const apiBase = env.API_BASE_URL || 'https://api.keptpages.com';
     const interiorUrl = await getSignedFileUrl(apiBase, book.interior_pdf_key, env);
     const coverUrl = await getSignedFileUrl(apiBase, book.cover_pdf_key, env);
 
-    // Create Lulu project with user-selected print options and place order
-    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, printOptions);
+    // Pass bookTier + addons to Lulu (createProject resolves print options internally)
+    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, bookTier, addons);
     const order = await createOrder(luluProject.id, shippingAddress, quantity, env);
 
-    // Update book record with Lulu order info
     await supabase
       .from('books')
       .update({
@@ -407,7 +313,6 @@ async function handleBookPaymentCompleted(session, supabase, env) {
       .eq('id', bookId);
   } catch (err) {
     console.error('Lulu fulfillment failed after payment:', err);
-    // Mark the book so the admin can manually fulfill
     await supabase
       .from('books')
       .update({
@@ -421,10 +326,6 @@ async function handleBookPaymentCompleted(session, supabase, env) {
 
 /**
  * Handle incoming Stripe webhook events.
- * Updates subscription status and records in Supabase.
- *
- * @param {object} event - The verified Stripe event object
- * @param {object} env - Worker environment bindings
  */
 export async function handleWebhookEvent(event, env) {
   const supabase = getSupabase(env);
@@ -439,20 +340,31 @@ export async function handleWebhookEvent(event, env) {
         return;
       }
 
-      if (session.mode === 'subscription') {
-        // Subscription checkout completed — activate the plan
+      if (session.metadata.plan === 'keeper_pass') {
+        // Keeper Pass one-time purchase
         await supabase
           .from('profiles')
           .update({
-            subscription_status: 'active',
-            subscription_plan: session.metadata.plan,
-            stripe_subscription_id: session.subscription,
             tier: 'keeper',
+            keeper_pass_purchased_at: new Date().toISOString(),
+            book_discount_percent: 15,
             subscription_updated_at: new Date().toISOString(),
           })
           .eq('id', userId);
+
+        // Record the payment
+        await supabase.from('payments').insert({
+          user_id: userId,
+          stripe_session_id: session.id,
+          stripe_payment_intent: session.payment_intent,
+          amount: session.amount_total,
+          currency: session.currency,
+          status: 'succeeded',
+          payment_type: 'keeper_pass',
+          metadata: session.metadata,
+        });
       } else if (session.mode === 'payment') {
-        // One-time payment — record it
+        // One-time payment (book order or other)
         await supabase.from('payments').insert({
           user_id: userId,
           stripe_session_id: session.id,
@@ -464,46 +376,50 @@ export async function handleWebhookEvent(event, env) {
           metadata: session.metadata,
         });
 
-        // If this is a book order, trigger the Lulu fulfillment
         if (session.metadata.book_id) {
           await handleBookPaymentCompleted(session, supabase, env);
         }
+      } else if (session.mode === 'subscription') {
+        // Legacy subscription handling (kept for safety)
+        await supabase
+          .from('profiles')
+          .update({
+            subscription_status: 'active',
+            subscription_plan: session.metadata.plan,
+            stripe_subscription_id: session.subscription,
+            tier: 'keeper',
+            subscription_updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId);
       }
       break;
     }
 
+    // Legacy subscription handlers (kept minimal for safety)
     case 'customer.subscription.updated': {
       const subscription = event.data.object;
       const customerId = subscription.customer;
 
-      // Find the user by Stripe customer ID
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, keeper_pass_purchased_at')
         .eq('stripe_customer_id', customerId)
         .single();
 
       if (profile) {
+        // Don't downgrade Keeper Pass holders if their legacy subscription changes
+        if (profile.keeper_pass_purchased_at) break;
+
         const updateData = {
           subscription_status: subscription.status,
-          subscription_plan: subscription.items?.data?.[0]?.price?.lookup_key || null,
           subscription_updated_at: new Date().toISOString(),
-          subscription_period_end: subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000).toISOString()
-            : null,
         };
 
-        // Set tier based on subscription status
-        if (subscription.status === 'active' || subscription.status === 'trialing') {
-          updateData.tier = 'keeper';
-        } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           updateData.tier = 'free';
         }
 
-        await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', profile.id);
+        await supabase.from('profiles').update(updateData).eq('id', profile.id);
       }
       break;
     }
@@ -514,11 +430,11 @@ export async function handleWebhookEvent(event, env) {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, keeper_pass_purchased_at')
         .eq('stripe_customer_id', customerId)
         .single();
 
-      if (profile) {
+      if (profile && !profile.keeper_pass_purchased_at) {
         await supabase
           .from('profiles')
           .update({
@@ -543,7 +459,6 @@ export async function handleWebhookEvent(event, env) {
         .single();
 
       if (profile) {
-        // Record the successful payment
         await supabase.from('payments').insert({
           user_id: profile.id,
           stripe_invoice_id: invoice.id,
@@ -556,15 +471,6 @@ export async function handleWebhookEvent(event, env) {
             billing_reason: invoice.billing_reason,
           },
         });
-
-        // Ensure subscription status is active after successful payment
-        await supabase
-          .from('profiles')
-          .update({
-            subscription_status: 'active',
-            subscription_updated_at: new Date().toISOString(),
-          })
-          .eq('id', profile.id);
       }
       break;
     }

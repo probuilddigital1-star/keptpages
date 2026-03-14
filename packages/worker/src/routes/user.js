@@ -22,10 +22,10 @@ user.get('/profile', async (c) => {
   const authUser = c.get('user');
   const supabase = getSupabase(c.env);
 
-  // Fetch profile (including Stripe/subscription fields from migration 009)
+  // Fetch profile (including pricing restructure fields from migration 017)
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, tier, scan_count, collection_count, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_plan, subscription_period_end, subscription_updated_at, created_at, updated_at')
+    .select('id, display_name, avatar_url, tier, scan_count, collection_count, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_plan, subscription_period_end, subscription_updated_at, keeper_pass_purchased_at, first_book_purchased_at, book_discount_percent, created_at, updated_at')
     .eq('id', authUser.id)
     .single();
 
@@ -72,6 +72,9 @@ user.get('/profile', async (c) => {
             cancelAtPeriodEnd: false,
           }
         : null,
+    keeperPassPurchasedAt: profile.keeper_pass_purchased_at || null,
+    firstBookPurchasedAt: profile.first_book_purchased_at || null,
+    bookDiscountPercent: profile.book_discount_percent || 0,
     stripeCustomerId: profile.stripe_customer_id || null,
     isAdmin: isAdminEmail(authUser.email, c.env),
     createdAt: profile.created_at,

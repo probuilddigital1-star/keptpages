@@ -21,6 +21,31 @@ export default function CheckoutSuccess() {
   }, []);
 
   const isBook = type === 'book';
+  const isKeeper = type === 'keeper';
+
+  // Determine title, message, and feature list based on checkout type
+  let title, message, features;
+  if (isKeeper) {
+    title = 'Welcome to Keeper Pass!';
+    message =
+      'Your Keeper Pass is now active. You have unlimited access to all KeptPages features and 15% off every book order.';
+    features = [
+      'Unlimited scans',
+      'Unlimited collections',
+      'Full PDF export',
+      'Family sharing',
+      '15% off all books',
+    ];
+  } else if (isBook) {
+    title = 'Book Order Confirmed!';
+    message =
+      'Your book order has been placed successfully. We will begin preparing your beautiful keepsake book right away. Your account has been upgraded to Book Purchaser with unlimited scans!';
+    features = null;
+  } else {
+    title = 'Purchase Complete!';
+    message = 'Your purchase was successful. Thank you for using KeptPages!';
+    features = null;
+  }
 
   return (
     <div className="min-h-screen bg-cream pt-[3px] flex flex-col">
@@ -82,13 +107,11 @@ export default function CheckoutSuccess() {
             </div>
 
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-walnut mb-3">
-              {isBook ? 'Book Order Confirmed!' : 'Welcome to Keeper!'}
+              {title}
             </h1>
 
             <p className="font-body text-walnut-secondary mb-2">
-              {isBook
-                ? 'Your book order has been placed successfully. We will begin preparing your beautiful keepsake book right away.'
-                : 'Your subscription is now active. You have unlimited access to all of KeptPages\u2019 features.'}
+              {message}
             </p>
 
             {sessionId && (
@@ -114,18 +137,13 @@ export default function CheckoutSuccess() {
               )}
             </div>
 
-            {!isBook && (
+            {features && (
               <div className="mt-8 pt-6 border-t border-border-light">
                 <h3 className="font-ui text-sm font-medium text-walnut mb-3">
                   What you can do now
                 </h3>
                 <ul className="text-left space-y-2">
-                  {[
-                    'Scan unlimited family documents',
-                    'Create unlimited collections',
-                    'Share collections with family',
-                    'Access priority AI processing',
-                  ].map((item) => (
+                  {features.map((item) => (
                     <li
                       key={item}
                       className="flex items-center gap-2 font-ui text-sm text-walnut-secondary"

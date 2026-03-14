@@ -787,7 +787,7 @@ describe('Books routes', () => {
     it('creates checkout session successfully', async () => {
       // books select
       mockFrom('books', { data: readyBook, error: null });
-      // books update (print_options)
+      // books update (print_options with bookTier + addons)
       mockFrom('books', { data: null, error: null });
       // books update (session info)
       mockFrom('books', { data: null, error: null });
@@ -801,8 +801,27 @@ describe('Books routes', () => {
       const json = await res.json();
       expect(json.sessionId).toBe('cs_test_123');
       expect(json.url).toContain('checkout.stripe.com');
+      // New signature: (userId, book, addr, qty, env, bookTier, addons)
       expect(createBookCheckoutSession).toHaveBeenCalledWith(
-        'user-123', readyBook, validAddr, 2, ENV, {}
+        'user-123', readyBook, validAddr, 2, ENV, 'classic', []
+      );
+    });
+
+    it('passes bookTier and addons to checkout session', async () => {
+      mockFrom('books', { data: readyBook, error: null });
+      mockFrom('books', { data: null, error: null });
+      mockFrom('books', { data: null, error: null });
+
+      const res = await app.request('/books/b1/order', postOpts({
+        shippingAddress: validAddr,
+        quantity: 1,
+        bookTier: 'premium',
+        addons: ['coil'],
+      }), ENV);
+
+      expect(res.status).toBe(200);
+      expect(createBookCheckoutSession).toHaveBeenCalledWith(
+        'user-123', readyBook, validAddr, 1, ENV, 'premium', ['coil']
       );
     });
 
@@ -849,18 +868,38 @@ describe('Books routes', () => {
       expect(json.error).toContain('street1');
     });
 
-    it('returns 400 with invalid print options', async () => {
-      mockFrom('books', { data: readyBook, error: null });
-
+    it('returns 400 with invalid book tier', async () => {
       const res = await app.request('/books/b1/order', postOpts({
         shippingAddress: validAddr,
-        printOptions: { binding: 'INVALID' },
+        bookTier: 'ultra_deluxe',
       }), ENV);
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain('Invalid print options');
-      expect(json.error).toContain('binding');
+      expect(json.error).toContain('Invalid book tier');
+    });
+
+    it('returns 400 with invalid addons', async () => {
+      const res = await app.request('/books/b1/order', postOpts({
+        shippingAddress: validAddr,
+        addons: ['laser_etching'],
+      }), ENV);
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain('Invalid addons');
+    });
+
+    it('returns 400 when color addon used with non-classic tier', async () => {
+      const res = await app.request('/books/b1/order', postOpts({
+        shippingAddress: validAddr,
+        bookTier: 'premium',
+        addons: ['color'],
+      }), ENV);
+
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toContain('Color interior add-on');
     });
 
     it('returns 404 when book not found', async () => {
@@ -879,7 +918,7 @@ describe('Books routes', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   describe('GET /books/:id/preview', () => {
-    it('returns the interior PDF for preview', async () => {
+    it('returns 403 for free tier users', async () => {
       mockFrom('books', {
         data: {
           id: 'b1', user_id: 'user-123', title: 'My Book',
@@ -887,6 +926,26 @@ describe('Books routes', () => {
         },
         error: null,
       });
+      // getUserTier → free
+      mockFrom('profiles', { data: { tier: 'free' }, error: null });
+
+      const res = await app.request('/books/b1/preview', { method: 'GET' }, ENV);
+
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toContain('PDF preview not available');
+    });
+
+    it('returns the interior PDF for preview (keeper tier)', async () => {
+      mockFrom('books', {
+        data: {
+          id: 'b1', user_id: 'user-123', title: 'My Book',
+          interior_pdf_key: 'user-123/books/b1/interior.pdf', status: 'ready',
+        },
+        error: null,
+      });
+      // getUserTier → keeper
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
 
       const pdfBody = new Uint8Array([37, 80, 68, 70]);
       ENV.PROCESSED.get = vi.fn(() => Promise.resolve({
@@ -908,7 +967,7 @@ describe('Books routes', () => {
       expect(res.status).toBe(404);
     });
 
-    it('returns 400 when PDF not generated yet', async () => {
+    it('returns 400 when PDF not generated yet (keeper tier)', async () => {
       mockFrom('books', {
         data: {
           id: 'b1', user_id: 'user-123', title: 'My Book',
@@ -924,7 +983,7 @@ describe('Books routes', () => {
       expect(json.error).toContain('not been generated');
     });
 
-    it('returns 404 when PDF file not found in storage', async () => {
+    it('returns 404 when PDF file not found in storage (keeper tier)', async () => {
       mockFrom('books', {
         data: {
           id: 'b1', user_id: 'user-123', title: 'My Book',
@@ -932,6 +991,8 @@ describe('Books routes', () => {
         },
         error: null,
       });
+      // getUserTier → keeper
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
 
       ENV.PROCESSED.get = vi.fn(() => null);
 
@@ -1043,10 +1104,10 @@ describe('Books routes', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// validatePrintOptions (exported indirectly, test via order route behavior)
+// bookTier + addons validation (via order route behavior)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('validatePrintOptions (via order route)', () => {
+describe('bookTier + addons validation (via order route)', () => {
   const app = createApp(booksRoutes, '/books');
   const validAddr = {
     name: 'Jane', street1: '123 Main', city: 'Town',
@@ -1067,61 +1128,8 @@ describe('validatePrintOptions (via order route)', () => {
     return app;
   }
 
-  it('accepts valid print options', async () => {
-    mockFrom('books', { data: readyBook, error: null });
-    // print_options update
-    mockFrom('books', { data: null, error: null });
-    // session update
-    mockFrom('books', { data: null, error: null });
-
-    const res = await app.request('/books/b1/order', postOpts({
-      shippingAddress: validAddr,
-      printOptions: { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'G' },
-    }), ENV);
-
-    expect(res.status).toBe(200);
-  });
-
-  it('rejects unknown print option keys', async () => {
-    const res = await app.request('/books/b1/order', postOpts({
-      shippingAddress: validAddr,
-      printOptions: { unknownKey: 'value' },
-    }), ENV);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toContain('Unknown print option');
-  });
-
-  it('rejects invalid print option values', async () => {
-    const res = await app.request('/books/b1/order', postOpts({
-      shippingAddress: validAddr,
-      printOptions: { binding: 'XX' },
-    }), ENV);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toContain('Invalid value for binding');
-    expect(json.error).toContain('Allowed');
-  });
-
-  it('accepts empty print options (uses defaults)', async () => {
-    mockFrom('books', { data: readyBook, error: null });
-    // print_options update
-    mockFrom('books', { data: null, error: null });
-    // session update
-    mockFrom('books', { data: null, error: null });
-
-    const res = await app.request('/books/b1/order', postOpts({
-      shippingAddress: validAddr,
-      printOptions: {},
-    }), ENV);
-
-    expect(res.status).toBe(200);
-  });
-
-  it('accepts each valid binding type', async () => {
-    for (const binding of ['PB', 'CW', 'CO']) {
+  it('accepts each valid book tier', async () => {
+    for (const bookTier of ['classic', 'premium', 'heirloom']) {
       supabaseFromResults = {};
       mockFrom('books', { data: readyBook, error: null });
       mockFrom('books', { data: null, error: null });
@@ -1129,10 +1137,74 @@ describe('validatePrintOptions (via order route)', () => {
 
       const res = await app.request('/books/b1/order', postOpts({
         shippingAddress: validAddr,
-        printOptions: { binding },
+        bookTier,
       }), ENV);
 
       expect(res.status).toBe(200);
     }
+  });
+
+  it('rejects invalid book tier', async () => {
+    const res = await app.request('/books/b1/order', postOpts({
+      shippingAddress: validAddr,
+      bookTier: 'platinum',
+    }), ENV);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain('Invalid book tier');
+  });
+
+  it('accepts valid addons', async () => {
+    mockFrom('books', { data: readyBook, error: null });
+    mockFrom('books', { data: null, error: null });
+    mockFrom('books', { data: null, error: null });
+
+    const res = await app.request('/books/b1/order', postOpts({
+      shippingAddress: validAddr,
+      bookTier: 'classic',
+      addons: ['glossy', 'coil', 'color'],
+    }), ENV);
+
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects invalid addons', async () => {
+    const res = await app.request('/books/b1/order', postOpts({
+      shippingAddress: validAddr,
+      addons: ['gold_leaf'],
+    }), ENV);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain('Invalid addons');
+  });
+
+  it('rejects color addon with non-classic tier', async () => {
+    const res = await app.request('/books/b1/order', postOpts({
+      shippingAddress: validAddr,
+      bookTier: 'heirloom',
+      addons: ['color'],
+    }), ENV);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toContain('Color interior add-on');
+  });
+
+  it('defaults to classic tier when no bookTier provided', async () => {
+    mockFrom('books', { data: readyBook, error: null });
+    mockFrom('books', { data: null, error: null });
+    mockFrom('books', { data: null, error: null });
+
+    const res = await app.request('/books/b1/order', postOpts({
+      shippingAddress: validAddr,
+    }), ENV);
+
+    expect(res.status).toBe(200);
+    // Verify classic was used as default
+    expect(createBookCheckoutSession).toHaveBeenCalledWith(
+      'user-123', readyBook, validAddr, 1, ENV, 'classic', []
+    );
   });
 });

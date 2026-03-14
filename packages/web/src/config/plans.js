@@ -1,141 +1,224 @@
+/**
+ * KeptPages pricing configuration.
+ * Single source of truth for customer tiers, book tiers, add-ons, and pricing.
+ */
+
+// ── Customer Tiers ──────────────────────────────────────────────────────────
+
 export const PLANS = {
+  NO_ACCOUNT: {
+    id: 'no_account',
+    name: 'No Account',
+    limits: { scans: 5, collections: 1 },
+  },
   FREE: {
     id: 'free',
-    name: 'Free Forever',
+    name: 'Free',
     price: 0,
-    limits: {
-      scans: 25,
-      collections: 5,
-    },
+    limits: { scans: 25, collections: 2 },
     features: [
-      '25 document scans',
-      '5 collections',
+      '25 scans per month',
+      '2 collections',
       'AI text extraction',
-      'Basic PDF export',
+      'No credit card required',
     ],
   },
-  KEEPER_MONTHLY: {
-    id: 'keeper_monthly',
-    name: 'Keeper Monthly',
-    price: 4.99,
-    period: 'month',
-    stripePriceId: 'price_1T7MfVGzoQtucHQEAPQXYt1h',
-    limits: {
-      scans: Infinity,
-      collections: Infinity,
-    },
+  BOOK_PURCHASER: {
+    id: 'book_purchaser',
+    name: 'Book Purchaser',
+    limits: { scans: Infinity, collections: 3 },
     features: [
       'Unlimited scans',
-      'Unlimited collections',
-      'Custom PDF export',
-      'Family sharing',
-      'Priority AI processing',
-      'All document types',
+      '3 collections',
+      'PDF export for purchased books',
+      'View-only sharing',
     ],
   },
-  KEEPER: {
+  KEEPER_PASS: {
     id: 'keeper',
-    name: 'Keeper',
-    price: 39.99,
-    period: 'year',
-    stripePriceId: 'price_1T7Mh5GzoQtucHQEWuxdZKGD',
-    limits: {
-      scans: Infinity,
-      collections: Infinity,
-    },
+    name: 'Keeper Pass',
+    price: 59,
+    oneTime: true,
+    limits: { scans: Infinity, collections: Infinity },
     features: [
       'Unlimited scans',
       'Unlimited collections',
-      'Custom PDF export',
+      'Full PDF export',
       'Family sharing',
-      'Priority AI processing',
-      'All document types',
-    ],
-  },
-  BOOK_PROJECT: {
-    id: 'book_project',
-    name: 'Book Project',
-    price: 79,
-    oneTime: true,
-    stripePriceId: 'price_book_project_placeholder',
-    features: [
-      'Professional book designer',
-      '5 book templates',
-      'Custom cover design',
-      'Print-ready PDF',
+      '15% off all books forever',
     ],
   },
 };
+
+// Backwards-compatible alias (Settings, CheckoutSuccess, etc. reference PLANS.KEEPER)
+PLANS.KEEPER = PLANS.KEEPER_PASS;
+
+// ── Tier Limits (capabilities per tier) ─────────────────────────────────────
+
+export const TIER_LIMITS = {
+  no_account:     { scans: 5, collections: 1, pdfExport: false, sharing: false },
+  free:           { scans: 25, collections: 2, pdfExport: false, sharing: 'view_only' },
+  book_purchaser: { scans: Infinity, collections: 3, pdfExport: 'per_book', sharing: 'view_only' },
+  keeper:         { scans: Infinity, collections: Infinity, pdfExport: true, sharing: true },
+};
+
+// ── Book Tiers ──────────────────────────────────────────────────────────────
+
+export const BOOK_TIERS = {
+  classic: {
+    price: 3900,
+    binding: 'PB',
+    interior: 'BW',
+    paper: '060UW444',
+    cover: 'M',
+    label: 'Classic',
+    description: 'Softcover, B&W interior',
+  },
+  premium: {
+    price: 6900,
+    featured: true,
+    binding: 'CW',
+    interior: 'FC',
+    paper: '060UW444',
+    cover: 'M',
+    label: 'Premium',
+    description: 'Hardcover, Full color',
+  },
+  heirloom: {
+    price: 7900,
+    binding: 'CW',
+    interior: 'FC',
+    paper: '080CW444',
+    cover: 'M',
+    label: 'Heirloom',
+    description: 'Hardcover, Full color, premium paper',
+  },
+};
+
+// ── Book Add-Ons ────────────────────────────────────────────────────────────
+
+export const BOOK_ADDONS = {
+  glossy: {
+    price: 0,
+    cover: 'G',
+    label: 'Glossy cover finish',
+    description: 'Shiny, reflective cover',
+    tiers: 'all',
+  },
+  coil: {
+    price: 800,
+    binding: 'CO',
+    label: 'Coil/spiral binding',
+    description: 'Lays flat when open — great for kitchen use',
+    tiers: 'all',
+  },
+  color: {
+    price: 1000,
+    interior: 'FC',
+    label: 'Color interior',
+    description: 'Full color recipe pages with photos',
+    tiers: ['classic'],
+  },
+};
+
+// ── Book Pricing Constants ──────────────────────────────────────────────────
 
 export const BOOK_PRICING = {
-  base: 7900, // cents
-  max: 14900, // cents
-  perExtraPage: 50, // cents per page over 40
-  freePages: 40,
-  familyPackDiscount: 0.15, // 15% off for 5+ copies
-  familyPackMinQty: 5,
+  freePages: 60,
+  perExtraPage: 35, // cents
 };
 
-export const PRINT_OPTIONS = {
-  binding: {
-    label: 'Binding',
-    options: [
-      { value: 'PB', label: 'Paperback', description: 'Perfect-bound softcover', modifier: 0 },
-      { value: 'CW', label: 'Hardcover', description: 'Case wrap hardcover', modifier: 1500 },
-      { value: 'CO', label: 'Coil Bound', description: 'Spiral/coil binding', modifier: 500 },
-    ],
-  },
-  interior: {
-    label: 'Interior Color',
-    options: [
-      { value: 'BW', label: 'Black & White', description: 'Standard B&W printing', modifier: 0 },
-      { value: 'FC', label: 'Full Color', description: 'Full color throughout', modifier: 2000 },
-    ],
-  },
-  paper: {
-    label: 'Paper Quality',
-    options: [
-      { value: '060UW444', label: '60# Uncoated', description: 'Standard uncoated white', modifier: 0 },
-      { value: '080CW444', label: '80# Coated', description: 'Premium coated white', modifier: 800 },
-    ],
-  },
-  cover: {
-    label: 'Cover Finish',
-    options: [
-      { value: 'M', label: 'Matte', description: 'Matte laminate finish', modifier: 0 },
-      { value: 'G', label: 'Glossy', description: 'Glossy laminate finish', modifier: 0 },
-    ],
-  },
-};
+// ── Multi-Copy Discount Tiers ───────────────────────────────────────────────
 
-export const DEFAULT_PRINT_OPTIONS = {
-  binding: 'PB',
-  interior: 'BW',
-  paper: '060UW444',
-  cover: 'M',
-};
+const MULTI_COPY_DISCOUNTS = [
+  { minQty: 5, discount: 0.20 },
+  { minQty: 3, discount: 0.15 },
+];
 
 /**
- * Calculate total print option modifiers in cents.
+ * Get the multi-copy discount rate for a given quantity.
  */
-export function calculateOptionModifiers(printOptions) {
-  let total = 0;
-  for (const [group, value] of Object.entries(printOptions)) {
-    const groupConfig = PRINT_OPTIONS[group];
-    if (!groupConfig) continue;
-    const opt = groupConfig.options.find((o) => o.value === value);
-    if (opt) total += opt.modifier;
+function getMultiCopyDiscount(quantity) {
+  for (const tier of MULTI_COPY_DISCOUNTS) {
+    if (quantity >= tier.minQty) return tier.discount;
   }
+  return 0;
+}
+
+/**
+ * Calculate the total book price in cents.
+ *
+ * @param {number} pageCount - Total pages in the book
+ * @param {string} tierId - Book tier: 'classic', 'premium', or 'heirloom'
+ * @param {string[]} addons - Array of addon IDs: ['glossy', 'coil', 'color']
+ * @param {number} [quantity=1] - Number of copies
+ * @param {boolean} [keeperDiscount=false] - Whether to apply 15% Keeper Pass discount
+ * @returns {number} Total price in cents
+ */
+export function calculateBookPrice(pageCount, tierId, addons = [], quantity = 1, keeperDiscount = false) {
+  const tier = BOOK_TIERS[tierId];
+  if (!tier) throw new Error(`Unknown book tier: ${tierId}`);
+
+  // Base tier price
+  let unitPrice = tier.price;
+
+  // Add-on prices
+  for (const addonId of addons) {
+    const addon = BOOK_ADDONS[addonId];
+    if (!addon) continue;
+    // Validate tier restriction
+    if (Array.isArray(addon.tiers) && !addon.tiers.includes(tierId)) continue;
+    unitPrice += addon.price;
+  }
+
+  // Extra page charge
+  const extraPages = Math.max(0, pageCount - BOOK_PRICING.freePages);
+  unitPrice += extraPages * BOOK_PRICING.perExtraPage;
+
+  // Subtotal before discounts
+  let total = unitPrice * quantity;
+
+  // Multi-copy discount
+  const multiDiscount = getMultiCopyDiscount(quantity);
+  if (multiDiscount > 0) {
+    total = Math.round(total * (1 - multiDiscount));
+  }
+
+  // Keeper Pass 15% discount (stacks multiplicatively)
+  if (keeperDiscount) {
+    total = Math.round(total * 0.85);
+  }
+
   return total;
 }
 
 /**
- * Calculate book unit price in cents.
+ * Resolve the final print options for a book tier + addons.
+ * Addons override the tier's default values.
+ *
+ * @param {string} tierId - Book tier ID
+ * @param {string[]} addons - Array of addon IDs
+ * @returns {{ binding: string, interior: string, paper: string, cover: string }}
  */
-export function calculateBookPrice(pageCount, printOptions = DEFAULT_PRINT_OPTIONS) {
-  const extraPages = Math.max(0, pageCount - BOOK_PRICING.freePages);
-  const basePrice = BOOK_PRICING.base + extraPages * BOOK_PRICING.perExtraPage;
-  const cappedBase = Math.min(basePrice, BOOK_PRICING.max);
-  const optionModifiers = calculateOptionModifiers(printOptions);
-  return cappedBase + optionModifiers;
+export function resolvePrintOptions(tierId, addons = []) {
+  const tier = BOOK_TIERS[tierId];
+  if (!tier) throw new Error(`Unknown book tier: ${tierId}`);
+
+  const opts = {
+    binding: tier.binding,
+    interior: tier.interior,
+    paper: tier.paper,
+    cover: tier.cover,
+  };
+
+  for (const addonId of addons) {
+    const addon = BOOK_ADDONS[addonId];
+    if (!addon) continue;
+    if (Array.isArray(addon.tiers) && !addon.tiers.includes(tierId)) continue;
+    if (addon.binding) opts.binding = addon.binding;
+    if (addon.interior) opts.interior = addon.interior;
+    if (addon.cover) opts.cover = addon.cover;
+  }
+
+  return opts;
 }

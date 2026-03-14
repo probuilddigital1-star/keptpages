@@ -1,6 +1,29 @@
 import { create } from 'zustand';
 import api from '@/services/api';
 
+// --- Anonymous scan localStorage helpers ---
+const ANON_SCANS_KEY = 'keptpages_anon_scans';
+const ANON_SCANS_MAX = 5;
+
+function getAnonymousScans() {
+  try {
+    const raw = localStorage.getItem(ANON_SCANS_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    // Expire entries older than 24h
+    const cutoff = Date.now() - 86400 * 1000;
+    return data.filter((s) => s.timestamp > cutoff);
+  } catch {
+    return [];
+  }
+}
+
+function saveAnonymousScan(result) {
+  const scans = getAnonymousScans();
+  scans.push({ ...result, timestamp: Date.now() });
+  localStorage.setItem(ANON_SCANS_KEY, JSON.stringify(scans));
+}
+
 export const useScanStore = create((set, get) => ({
   // State
   currentScan: null,
@@ -111,6 +134,24 @@ export const useScanStore = create((set, get) => ({
       throw error;
     }
   },
+
+  // Anonymous scan (no auth, single page only)
+  uploadAnonymousScan: async (file) => {
+    set({ uploadProgress: 0, processing: true });
+    try {
+      const result = await api.publicUpload('/public/scan', file);
+      saveAnonymousScan(result);
+      set({ processing: false, uploadProgress: 100 });
+      return result;
+    } catch (error) {
+      set({ processing: false, uploadProgress: 0 });
+      throw error;
+    }
+  },
+
+  getAnonymousScanCount: () => getAnonymousScans().length,
+  getAnonymousScansRemaining: () => ANON_SCANS_MAX - getAnonymousScans().length,
+  getAnonymousScans: () => getAnonymousScans(),
 
   // Multi-page staging actions
   addStagedPage: (blob) => {

@@ -77,12 +77,36 @@ async function getBlob(path) {
   return res.blob();
 }
 
+/**
+ * Upload a file to a public endpoint (no Authorization header).
+ * Used for anonymous scans.
+ */
+async function publicUpload(path, file) {
+  const url = `${config.apiUrl}${path}`;
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(error.error || error.message || 'Upload failed');
+  }
+
+  return res.json();
+}
+
 export const api = {
   get: (path, opts) => request('GET', path, opts),
   post: (path, body, opts) => request('POST', path, { body, ...opts }),
   put: (path, body, opts) => request('PUT', path, { body, ...opts }),
   delete: (path, opts) => request('DELETE', path, opts),
   upload: uploadFile,
+  publicUpload,
   getBlob,
 };
 

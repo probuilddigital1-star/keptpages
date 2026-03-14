@@ -9,7 +9,7 @@ import Settings from './index';
 
 const mockLogout = vi.fn();
 const mockFetchSubscription = vi.fn().mockResolvedValue({});
-const mockUpgrade = vi.fn();
+const mockPurchaseKeeperPass = vi.fn();
 
 let uploadResolve;
 let uploadReject;
@@ -42,16 +42,29 @@ vi.mock('@/config/plans', () => ({
   PLANS: {
     FREE: {
       id: 'free',
-      name: 'Free Forever',
+      name: 'Free',
       price: 0,
-      features: ['25 document scans', '1 collection'],
+      features: ['25 scans per month', '2 collections'],
     },
-    KEEPER: {
+    BOOK_PURCHASER: {
+      id: 'book_purchaser',
+      name: 'Book Purchaser',
+      features: ['Unlimited scans', '3 collections', 'PDF export for purchased books'],
+    },
+    KEEPER_PASS: {
       id: 'keeper',
-      name: 'Keeper',
-      price: 39.99,
-      features: ['Unlimited scans', 'Unlimited collections', 'Family sharing'],
+      name: 'Keeper Pass',
+      price: 59,
+      oneTime: true,
+      features: [
+        'Unlimited scans',
+        'Unlimited collections',
+        'Full PDF export',
+        'Family sharing',
+        '15% off all books forever',
+      ],
     },
+    get KEEPER() { return this.KEEPER_PASS; },
   },
 }));
 
@@ -86,7 +99,7 @@ function setupSubscriptionStore(overrides = {}) {
     subscription: null,
     loading: false,
     fetchSubscription: mockFetchSubscription,
-    upgrade: mockUpgrade,
+    purchaseKeeperPass: mockPurchaseKeeperPass,
   };
 
   const merged = { ...defaults, ...overrides };

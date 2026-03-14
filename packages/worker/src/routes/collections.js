@@ -10,8 +10,8 @@ import { validate } from '../middleware/validate.js';
 
 const collections = new Hono();
 
-// Free tier limits
-const FREE_TIER_MAX_COLLECTIONS = 5;
+// Per-tier collection limits
+const COLLECTION_LIMITS = { free: 2, book_purchaser: 3, keeper: Infinity };
 
 /**
  * Helper to get a Supabase client from the worker environment.
@@ -21,17 +21,30 @@ function getSupabase(env) {
 }
 
 /**
- * Check if user is on the free tier.
+ * Get the collection limit for a user based on their tier.
  */
-async function isFreeTier(supabase, userId) {
+async function getCollectionLimit(supabase, userId) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('tier')
     .eq('id', userId)
     .single();
 
-  if (!profile) return true;
-  return profile.tier !== 'keeper';
+  if (!profile) return COLLECTION_LIMITS.free;
+  return COLLECTION_LIMITS[profile.tier] ?? COLLECTION_LIMITS.free;
+}
+
+/**
+ * Get user profile tier for export gating.
+ */
+async function getUserTier(supabase, userId) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tier')
+    .eq('id', userId)
+    .single();
+
+  return profile?.tier || 'free';
 }
 
 /**
@@ -90,9 +103,9 @@ collections.post(
     const body = c.get('body');
     const supabase = getSupabase(c.env);
 
-    // Check free tier limits
-    const freeTier = await isFreeTier(supabase, user.id);
-    if (freeTier) {
+    // Check per-tier collection limits
+    const collectionLimit = await getCollectionLimit(supabase, user.id);
+    if (collectionLimit !== Infinity) {
       const { count, error: countError } = await supabase
         .from('collections')
         .select('id', { count: 'exact', head: true })
@@ -103,12 +116,12 @@ collections.post(
         return c.json({ error: 'Failed to check collection limits', message: 'Failed to check collection limits' }, 500);
       }
 
-      if (count >= FREE_TIER_MAX_COLLECTIONS) {
+      if (count >= collectionLimit) {
         return c.json(
           {
             error: 'Collection limit reached',
-            message: `Free tier allows up to ${FREE_TIER_MAX_COLLECTIONS} collections. Upgrade to Keeper for unlimited collections.`,
-            limit: FREE_TIER_MAX_COLLECTIONS,
+            message: `Your plan allows up to ${collectionLimit} collections. Upgrade to Keeper Pass or order a book to create more collections.`,
+            limit: collectionLimit,
             current: count,
           },
           403
@@ -523,6 +536,36 @@ collections.post('/:id/export', async (c) => {
   const user = c.get('user');
   const collectionId = c.req.param('id');
   const supabase = getSupabase(c.env);
+
+  // Tier-based PDF export gating
+  const userTier = await getUserTier(supabase, user.id);
+  if (userTier === 'free') {
+    return c.json({
+      error: 'PDF export not available',
+      message: 'Order a book or get Keeper Pass to export PDFs.',
+      upsell: true,
+    }, 403);
+  }
+  if (userTier === 'book_purchaser') {
+    // Book purchasers can only export collections with a completed book order
+    const { data: completedBook } = await supabase
+      .from('books')
+      .select('id')
+      .eq('collection_id', collectionId)
+      .eq('user_id', user.id)
+      .eq('payment_status', 'succeeded')
+      .limit(1)
+      .maybeSingle();
+
+    if (!completedBook) {
+      return c.json({
+        error: 'PDF export not available',
+        message: 'Order a book for this collection or get Keeper Pass to export PDFs.',
+        upsell: true,
+      }, 403);
+    }
+  }
+  // keeper tier: allowed (no gate)
 
   // Parse optional export options from request body
   let body = {};

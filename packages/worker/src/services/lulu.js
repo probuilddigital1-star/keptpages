@@ -74,20 +74,44 @@ async function luluFetch(env, path, options = {}) {
   return response.json();
 }
 
+// ── Named book tier → Lulu print options mapping ───────────────────────────
+
+const TIER_TO_PRINT_OPTIONS = {
+  classic:  { binding: 'PB', interior: 'BW', paper: '060UW444', cover: 'M' },
+  premium:  { binding: 'CW', interior: 'FC', paper: '060UW444', cover: 'M' },
+  heirloom: { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'M' },
+};
+
+// Addon overrides: coil replaces binding, glossy replaces cover, color replaces interior
+const ADDON_OVERRIDES = {
+  coil:   { binding: 'CO' },
+  glossy: { cover: 'G' },
+  color:  { interior: 'FC' }, // Classic only — validated before reaching here
+};
+
 /**
- * Build a Lulu pod_package_id from user-selected print options.
+ * Resolve print options from a book tier name + addons array.
+ */
+export function resolvePrintOptionsFromTier(bookTier, addons = []) {
+  const base = TIER_TO_PRINT_OPTIONS[bookTier];
+  if (!base) throw new Error(`Unknown book tier: ${bookTier}`);
+
+  const opts = { ...base };
+  for (const addonId of addons) {
+    const overrides = ADDON_OVERRIDES[addonId];
+    if (overrides) Object.assign(opts, overrides);
+  }
+  return opts;
+}
+
+/**
+ * Build a Lulu pod_package_id from print options.
  * Format: {trim}{color}{quality}{binding}{paper}{finish}
  *
  * Example: 0850X1100BWSTDPB060UW444MXX
- *   trim    = 0850X1100 (8.5" x 11", fixed)
- *   color   = BW or FC
- *   quality = STD (fixed)
- *   binding = PB (paperback), CW (case wrap/hardcover), CO (coil)
- *   paper   = 060UW444 (60# uncoated) or 080CW444 (80# coated)
- *   finish  = MXX (matte, no linen/foil) or GXX (glossy, no linen/foil)
  *
  * @param {object} printOptions - { binding, interior, paper, cover }
- * @returns {string} 27-character Lulu pod_package_id
+ * @returns {string} Lulu pod_package_id
  */
 export function buildPodPackageId(printOptions = {}) {
   const trim = '0850X1100';
@@ -107,10 +131,12 @@ export function buildPodPackageId(printOptions = {}) {
  * @param {string} coverPdfUrl - Public URL to the cover PDF file
  * @param {string} title - Book title
  * @param {object} env - Worker environment bindings
- * @param {object} [printOptions] - User-selected print options
+ * @param {string} [bookTier='classic'] - Named book tier
+ * @param {string[]} [addons=[]] - Array of addon IDs
  * @returns {Promise<object>} The created Lulu print job / line item data
  */
-export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, printOptions = {}) {
+export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, bookTier = 'classic', addons = []) {
+  const printOptions = resolvePrintOptionsFromTier(bookTier, addons);
   const podPackageId = buildPodPackageId(printOptions);
 
   const projectData = {

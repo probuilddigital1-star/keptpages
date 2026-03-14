@@ -23,6 +23,10 @@ const mockScanStore = {
   addStagedPage: vi.fn(),
   removeStagedPage: vi.fn(),
   clearStagedPages: vi.fn(),
+  uploadAnonymousScan: vi.fn(),
+  getAnonymousScanCount: vi.fn(() => 0),
+  getAnonymousScansRemaining: vi.fn(() => 5),
+  getAnonymousScans: vi.fn(() => []),
 };
 
 const mockDocumentsStore = {
@@ -34,9 +38,14 @@ const mockSubscriptionStore = {
   usage: { scans: 5 },
   limits: { scans: 25 },
   canScan: vi.fn(() => true),
-  upgrade: vi.fn(),
+  purchaseKeeperPass: vi.fn(),
   loading: false,
   fetchSubscription: vi.fn().mockResolvedValue({}),
+};
+
+// Default: authenticated user
+const mockAuthStore = {
+  user: { id: 'user-1', email: 'test@test.com' },
 };
 
 vi.mock('@/stores/scanStore', () => ({
@@ -49,6 +58,10 @@ vi.mock('@/stores/documentsStore', () => ({
 
 vi.mock('@/stores/subscriptionStore', () => ({
   useSubscriptionStore: () => mockSubscriptionStore,
+}));
+
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector) => selector(mockAuthStore),
 }));
 
 vi.mock('@/components/ui/Toast', () => ({
@@ -135,14 +148,14 @@ describe('ScanPage', () => {
     mockSubscriptionStore.canScan.mockReturnValue(false);
     renderScan();
     expect(screen.getByText("You've reached your free scan limit")).toBeInTheDocument();
-    expect(screen.getByText('Upgrade')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /get keeper pass/i })).toBeInTheDocument();
   });
 
   it('opens upgrade modal when at limit and trying to scan', () => {
     mockSubscriptionStore.canScan.mockReturnValue(false);
     renderScan();
     fireEvent.click(screen.getByText('Take Photo'));
-    expect(screen.getByText('Upgrade to Keeper')).toBeInTheDocument();
+    expect(screen.getAllByText('Get Keeper Pass').length).toBeGreaterThanOrEqual(1);
   });
 
   it('transitions to camera step when Take Photo clicked', () => {
@@ -188,7 +201,8 @@ describe('ScanPage', () => {
     fireEvent.click(screen.getByText('Take Photo'));
     expect(screen.getByText('Unlimited scans')).toBeInTheDocument();
     expect(screen.getByText('Unlimited collections')).toBeInTheDocument();
-    expect(screen.getByText('AI reprocessing')).toBeInTheDocument();
+    expect(screen.getByText('Full PDF export')).toBeInTheDocument();
+    expect(screen.getByText('15% off all books')).toBeInTheDocument();
   });
 
   describe('Upload Photo card click handler', () => {
@@ -209,7 +223,7 @@ describe('ScanPage', () => {
 
       fireEvent.click(screen.getByText('Upload Photo'));
 
-      expect(screen.getByText('Upgrade to Keeper')).toBeInTheDocument();
+      expect(screen.getAllByText('Get Keeper Pass').length).toBeGreaterThanOrEqual(1);
     });
 
     it('transitions to preview when a file is selected via Upload Photo input', () => {

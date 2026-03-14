@@ -627,40 +627,19 @@ books.post('/:id/generate', async (c) => {
 /**
  * POST /books/:id/order
  * Create a Stripe Checkout session for a book order.
+ * Accepts named book tier + addons instead of raw print options.
  * The actual Lulu print job is created by the webhook after payment succeeds.
  */
-// Valid print option values
-const VALID_PRINT_OPTIONS = {
-  binding: ['PB', 'CW', 'CO'],
-  interior: ['BW', 'FC'],
-  paper: ['060UW444', '080CW444'],
-  cover: ['M', 'G'],
-};
-
-function validatePrintOptions(printOptions) {
-  if (!printOptions || typeof printOptions !== 'object') return null;
-  const errors = [];
-  for (const [key, value] of Object.entries(printOptions)) {
-    const allowed = VALID_PRINT_OPTIONS[key];
-    if (!allowed) {
-      errors.push(`Unknown print option: ${key}`);
-    } else if (!allowed.includes(value)) {
-      errors.push(`Invalid value for ${key}: ${value}. Allowed: ${allowed.join(', ')}`);
-    }
-  }
-  return errors.length > 0 ? errors : null;
-}
-
-// Labels for Stripe description
-const BINDING_LABELS = { PB: 'Paperback', CW: 'Hardcover', CO: 'Coil Bound' };
-const INTERIOR_LABELS = { BW: 'B&W', FC: 'Full Color' };
+const VALID_BOOK_TIERS = ['classic', 'premium', 'heirloom'];
+const VALID_ADDONS = ['glossy', 'coil', 'color'];
 
 books.post(
   '/:id/order',
   validate({
     shippingAddress: { required: true, type: 'object' },
     quantity: { required: false, type: 'number', min: 1, max: 100 },
-    printOptions: { required: false, type: 'object' },
+    bookTier: { required: false, type: 'string' },
+    addons: { required: false, type: 'array' },
   }),
   async (c) => {
     const user = c.get('user');
@@ -669,11 +648,23 @@ books.post(
     const env = c.env;
     const supabase = getSupabase(env);
 
-    // Validate print options if provided
-    const printOptions = body.printOptions || {};
-    const optionErrors = validatePrintOptions(printOptions);
-    if (optionErrors) {
-      return c.json({ error: `Invalid print options: ${optionErrors.join('; ')}` }, 400);
+    const bookTier = body.bookTier || 'classic';
+    const addons = body.addons || [];
+
+    // Validate book tier
+    if (!VALID_BOOK_TIERS.includes(bookTier)) {
+      return c.json({ error: `Invalid book tier: ${bookTier}. Allowed: ${VALID_BOOK_TIERS.join(', ')}` }, 400);
+    }
+
+    // Validate addons
+    const invalidAddons = addons.filter(a => !VALID_ADDONS.includes(a));
+    if (invalidAddons.length > 0) {
+      return c.json({ error: `Invalid addons: ${invalidAddons.join(', ')}. Allowed: ${VALID_ADDONS.join(', ')}` }, 400);
+    }
+
+    // Color addon only valid for classic tier
+    if (addons.includes('color') && bookTier !== 'classic') {
+      return c.json({ error: 'Color interior add-on is only available for the Classic tier' }, 400);
     }
 
     // Fetch book
@@ -713,10 +704,10 @@ books.post(
     try {
       const quantity = body.quantity || 1;
 
-      // Store print options on the book record
+      // Store book tier + addons on the book record
       await supabase
         .from('books')
-        .update({ print_options: printOptions })
+        .update({ print_options: { bookTier, addons } })
         .eq('id', bookId);
 
       // Create a Stripe Checkout session for the book order
@@ -726,7 +717,8 @@ books.post(
         addr,
         quantity,
         env,
-        printOptions
+        bookTier,
+        addons
       );
 
       // Store the checkout session ID on the book record
@@ -779,6 +771,30 @@ books.get('/:id/preview', async (c) => {
 
   if (!book.interior_pdf_key) {
     return c.json({ error: 'PDF has not been generated yet' }, 400);
+  }
+
+  // Tier-based preview gating
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tier')
+    .eq('id', user.id)
+    .single();
+
+  const userTier = profile?.tier || 'free';
+  if (userTier === 'free') {
+    return c.json({ error: 'PDF preview not available. Order a book or get Keeper Pass.' }, 403);
+  }
+  // book_purchaser: allow preview for paid books
+  if (userTier === 'book_purchaser') {
+    const { data: bookRecord } = await supabase
+      .from('books')
+      .select('payment_status')
+      .eq('id', bookId)
+      .eq('user_id', user.id)
+      .single();
+    if (bookRecord?.payment_status !== 'succeeded') {
+      return c.json({ error: 'PDF preview available after book purchase.' }, 403);
+    }
   }
 
   const obj = await env.PROCESSED.get(book.interior_pdf_key);

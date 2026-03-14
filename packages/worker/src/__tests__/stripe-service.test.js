@@ -1,14 +1,15 @@
 /**
  * Tests for the Stripe service (services/stripe.js).
  * Mocks: stripe module, @supabase/supabase-js createClient.
+ *
+ * Updated for pricing restructure: subscription plans removed,
+ * Keeper Pass ($59 one-time) + book tiers/addons model.
  */
 
 // ── Stripe mock ────────────────────────────────────────────────────────────────
 const mockStripeInstance = {
   customers: { create: vi.fn() },
   checkout: { sessions: { create: vi.fn() } },
-  subscriptions: { update: vi.fn() },
-  billingPortal: { sessions: { create: vi.fn() } },
 };
 
 vi.mock('stripe', () => {
@@ -23,8 +24,10 @@ const mockSupabaseChain = {
   select: vi.fn(),
   eq: vi.fn(),
   single: vi.fn(),
+  maybeSingle: vi.fn(),
   update: vi.fn(),
   insert: vi.fn(),
+  limit: vi.fn(),
 };
 
 // Every chained method returns the chain so we can keep chaining
@@ -46,14 +49,13 @@ vi.mock('../services/lulu.js', () => ({
 import {
   createCheckoutSession,
   createBookCheckoutSession,
-  cancelSubscription,
-  createPortalSession,
   handleWebhookEvent,
 } from '../services/stripe.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const baseEnv = {
   STRIPE_SECRET_KEY: 'sk_test_xxx',
+  STRIPE_PRICE_KEEPER_PASS: 'price_keeper_pass_123',
   SUPABASE_URL: 'https://test.supabase.co',
   SUPABASE_SERVICE_KEY: 'service-key',
   APP_URL: 'https://app.keptpages.com',
@@ -69,6 +71,11 @@ function resetChain(overrides = {}) {
   } else {
     mockSupabaseChain.single.mockResolvedValue({ data: null, error: null });
   }
+  if (overrides.maybeSingle) {
+    mockSupabaseChain.maybeSingle.mockResolvedValue(overrides.maybeSingle);
+  } else {
+    mockSupabaseChain.maybeSingle.mockResolvedValue({ data: null, error: null });
+  }
 }
 
 beforeEach(() => {
@@ -79,20 +86,16 @@ beforeEach(() => {
     id: 'cs_test_session',
     url: 'https://checkout.stripe.com/session',
   });
-  mockStripeInstance.subscriptions.update.mockResolvedValue({});
-  mockStripeInstance.billingPortal.sessions.create.mockResolvedValue({
-    url: 'https://billing.stripe.com/portal',
-  });
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
-// createCheckoutSession
+// createCheckoutSession (Keeper Pass only)
 // ════════════════════════════════════════════════════════════════════════════════
 describe('createCheckoutSession', () => {
   it('creates a new Stripe customer when none exists and saves customer ID', async () => {
     resetChain({ single: { data: { stripe_customer_id: null, email: 'test@example.com' } } });
 
-    await createCheckoutSession('user_1', 'keeper_monthly', baseEnv);
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
 
     expect(mockStripeInstance.customers.create).toHaveBeenCalledWith({
       metadata: { supabase_user_id: 'user_1' },
@@ -108,7 +111,7 @@ describe('createCheckoutSession', () => {
       single: { data: { stripe_customer_id: 'cus_existing', email: 'a@b.com' } },
     });
 
-    await createCheckoutSession('user_1', 'keeper_monthly', baseEnv);
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
 
     expect(mockStripeInstance.customers.create).not.toHaveBeenCalled();
     expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
@@ -116,65 +119,56 @@ describe('createCheckoutSession', () => {
     );
   });
 
-  it('creates a subscription-mode session for monthly plan', async () => {
+  it('creates a payment-mode session for keeper_pass', async () => {
     resetChain({
       single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
     });
 
-    await createCheckoutSession('user_1', 'keeper_monthly', baseEnv);
-
-    expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'subscription' }),
-    );
-  });
-
-  it('creates a subscription-mode session for yearly plan', async () => {
-    resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
-    });
-
-    await createCheckoutSession('user_1', 'keeper_yearly', baseEnv);
-
-    expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: 'subscription' }),
-    );
-  });
-
-  it('creates a payment-mode session for non-subscription plans', async () => {
-    resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
-    });
-
-    await createCheckoutSession('user_1', 'book_order', baseEnv);
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
 
     expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({ mode: 'payment' }),
     );
   });
 
-  it('enables promo codes for subscriptions only', async () => {
+  it('includes keeper_pass plan in metadata', async () => {
     resetChain({
       single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
     });
 
-    // Subscription plan → promo codes allowed
-    await createCheckoutSession('user_1', 'keeper_monthly', baseEnv);
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
+
     expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
-      expect.objectContaining({ allow_promotion_codes: true }),
+      expect.objectContaining({
+        metadata: expect.objectContaining({ plan: 'keeper_pass', user_id: 'user_1' }),
+      }),
     );
+  });
 
-    vi.clearAllMocks();
+  it('uses the STRIPE_PRICE_KEEPER_PASS price ID', async () => {
     resetChain({
       single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
     });
-    mockStripeInstance.checkout.sessions.create.mockResolvedValue({
-      id: 'cs_test', url: 'https://checkout.stripe.com/session',
+
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
+
+    expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: [{ price: 'price_keeper_pass_123', quantity: 1 }],
+      }),
+    );
+  });
+
+  it('throws when STRIPE_PRICE_KEEPER_PASS is not configured', async () => {
+    resetChain({
+      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
     });
 
-    // Non-subscription plan → no promo codes
-    await createCheckoutSession('user_1', 'book_order', baseEnv);
-    const callArg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    expect(callArg.allow_promotion_codes).toBeUndefined();
+    const envWithoutPrice = { ...baseEnv, STRIPE_PRICE_KEEPER_PASS: undefined };
+
+    await expect(createCheckoutSession('user_1', 'keeper_pass', envWithoutPrice)).rejects.toThrow(
+      'STRIPE_PRICE_KEEPER_PASS env var is not configured',
+    );
   });
 
   it('throws for an unknown plan', async () => {
@@ -182,14 +176,24 @@ describe('createCheckoutSession', () => {
       single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
     });
 
-    await expect(createCheckoutSession('user_1', 'unknown_plan', baseEnv)).rejects.toThrow(
-      'Unknown plan: unknown_plan',
+    await expect(createCheckoutSession('user_1', 'keeper_monthly', baseEnv)).rejects.toThrow(
+      "Unknown plan: keeper_monthly. Only 'keeper_pass' is supported.",
+    );
+  });
+
+  it('throws for subscription plans that no longer exist', async () => {
+    resetChain({
+      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+    });
+
+    await expect(createCheckoutSession('user_1', 'keeper_yearly', baseEnv)).rejects.toThrow(
+      "Unknown plan: keeper_yearly. Only 'keeper_pass' is supported.",
     );
   });
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
-// createBookCheckoutSession
+// createBookCheckoutSession (bookTier + addons model)
 // ════════════════════════════════════════════════════════════════════════════════
 describe('createBookCheckoutSession', () => {
   const makeBook = (overrides = {}) => ({
@@ -202,88 +206,93 @@ describe('createBookCheckoutSession', () => {
   const shippingAddress = { street: '123 Main', city: 'Anytown', state: 'CA', zip: '90210' };
 
   beforeEach(() => {
-    resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
-    });
+    // First .single() = getOrCreateCustomer profile lookup
+    // Second .single() = profile for keeper discount lookup
+    resetChain();
+    mockSupabaseChain.single
+      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } })
+      .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
   });
 
-  it('calculates correct base price for 40 pages ($79 = 7900 cents)', async () => {
+  it('uses classic tier pricing by default (40 pages → 3900 cents)', async () => {
     await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv);
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    // classic = 3900, 40 pages <= 60 free pages = no extra
+    expect(arg.line_items[0].price_data.unit_amount).toBe(3900);
+  });
+
+  it('adds per-extra-page cost for pages over 60 (80 pages classic → 3900 + 20*35 = 4600)', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 80 }), shippingAddress, 1, baseEnv);
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    expect(arg.line_items[0].price_data.unit_amount).toBe(3900 + 20 * 35);
+  });
+
+  it('uses premium tier pricing (6900 base)', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'premium');
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    expect(arg.line_items[0].price_data.unit_amount).toBe(6900);
+  });
+
+  it('uses heirloom tier pricing (7900 base)', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'heirloom');
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     expect(arg.line_items[0].price_data.unit_amount).toBe(7900);
   });
 
-  it('adds $0.50/page over 40 pages (60 pages → 8900 cents)', async () => {
-    await createBookCheckoutSession('user_1', makeBook({ page_count: 60 }), shippingAddress, 1, baseEnv);
+  it('applies color addon (+1000 cents for classic tier)', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'classic', ['color']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    expect(arg.line_items[0].price_data.unit_amount).toBe(8900);
+    expect(arg.line_items[0].price_data.unit_amount).toBe(3900 + 1000);
   });
 
-  it('caps base price at $149 (200 pages → 14900 cents)', async () => {
-    await createBookCheckoutSession('user_1', makeBook({ page_count: 200 }), shippingAddress, 1, baseEnv);
+  it('applies coil addon (+800 cents)', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'classic', ['coil']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    expect(arg.line_items[0].price_data.unit_amount).toBe(14900);
+    expect(arg.line_items[0].price_data.unit_amount).toBe(3900 + 800);
   });
 
-  it('applies hardcover modifier (+$15 = +1500 cents)', async () => {
-    await createBookCheckoutSession(
-      'user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv,
-      { binding: 'CW' },
-    );
+  it('applies multiple addons together', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'classic', ['color', 'coil']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    expect(arg.line_items[0].price_data.unit_amount).toBe(7900 + 1500);
+    // 3900 base + 1000 color + 800 coil = 5700
+    expect(arg.line_items[0].price_data.unit_amount).toBe(3900 + 1000 + 800);
   });
 
-  it('applies full-color modifier (+$20 = +2000 cents)', async () => {
-    await createBookCheckoutSession(
-      'user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv,
-      { interior: 'FC' },
-    );
+  it('ignores color addon for non-classic tiers', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'premium', ['color']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    expect(arg.line_items[0].price_data.unit_amount).toBe(7900 + 2000);
+    // color addon skipped for premium
+    expect(arg.line_items[0].price_data.unit_amount).toBe(6900);
   });
 
-  it('applies multiple print option modifiers together', async () => {
-    await createBookCheckoutSession(
-      'user_1', makeBook({ page_count: 60 }), shippingAddress, 1, baseEnv,
-      { binding: 'CW', interior: 'FC', paper: '080CW444' },
-    );
-
-    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
-    // 8900 base + 1500 hardcover + 2000 full color + 800 premium paper
-    expect(arg.line_items[0].price_data.unit_amount).toBe(8900 + 1500 + 2000 + 800);
-  });
-
-  it('builds correct description with binding and interior labels', async () => {
-    await createBookCheckoutSession(
-      'user_1', makeBook({ page_count: 100 }), shippingAddress, 1, baseEnv,
-      { binding: 'CW', interior: 'FC' },
-    );
+  it('builds description with tier label', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 60 }), shippingAddress, 1, baseEnv, 'premium');
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     const desc = arg.line_items[0].price_data.product_data.description;
-    expect(desc).toContain('Hardcover');
-    expect(desc).toContain('Full Color');
-    expect(desc).toContain('100 pages');
+    expect(desc).toContain('Premium (Hardcover, Full Color)');
+    expect(desc).toContain('60 pages');
   });
 
-  it('uses default labels when no print options provided', async () => {
-    await createBookCheckoutSession('user_1', makeBook({ page_count: 50 }), shippingAddress, 1, baseEnv);
+  it('builds description with addons listed', async () => {
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 1, baseEnv, 'classic', ['coil']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     const desc = arg.line_items[0].price_data.product_data.description;
-    expect(desc).toContain('Paperback');
-    expect(desc).toContain('B&W');
+    expect(desc).toContain('Classic (Softcover, B&W)');
+    expect(desc).toContain('coil');
   });
 
-  it('includes correct metadata (user_id, book_id, quantity, shipping, print options)', async () => {
-    const printOpts = { binding: 'PB', interior: 'BW' };
-    await createBookCheckoutSession('user_1', makeBook(), shippingAddress, 3, baseEnv, printOpts);
+  it('includes correct metadata (user_id, book_id, quantity, shipping, book_tier, addons)', async () => {
+    await createBookCheckoutSession('user_1', makeBook(), shippingAddress, 3, baseEnv, 'classic', ['coil']);
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     expect(arg.metadata).toEqual({
@@ -291,14 +300,16 @@ describe('createBookCheckoutSession', () => {
       book_id: 'book_42',
       quantity: '3',
       shipping_address: JSON.stringify(shippingAddress),
-      print_options: JSON.stringify(printOpts),
+      book_tier: 'classic',
+      addons: JSON.stringify(['coil']),
     });
   });
 
   it('creates a Stripe customer if none exists', async () => {
-    resetChain({
-      single: { data: { stripe_customer_id: null, email: 'new@user.com' } },
-    });
+    resetChain();
+    mockSupabaseChain.single
+      .mockResolvedValueOnce({ data: { stripe_customer_id: null, email: 'new@user.com' } })
+      .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
 
     await createBookCheckoutSession('user_1', makeBook(), shippingAddress, 1, baseEnv);
 
@@ -322,6 +333,26 @@ describe('createBookCheckoutSession', () => {
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     expect(arg.line_items[0].quantity).toBe(5);
   });
+
+  it('applies 15% multi-copy discount for 3+ copies', async () => {
+    // 3 copies of classic 40 pages = 3900 * 3 = 11700 * 0.85 = 9945
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 3, baseEnv);
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    const expectedTotal = Math.round(3900 * 3 * 0.85);
+    const expectedPerUnit = Math.round(expectedTotal / 3);
+    expect(arg.line_items[0].price_data.unit_amount).toBe(expectedPerUnit);
+  });
+
+  it('applies 20% multi-copy discount for 5+ copies', async () => {
+    // 5 copies of classic 40 pages = 3900 * 5 = 19500 * 0.80 = 15600
+    await createBookCheckoutSession('user_1', makeBook({ page_count: 40 }), shippingAddress, 5, baseEnv);
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    const expectedTotal = Math.round(3900 * 5 * 0.80);
+    const expectedPerUnit = Math.round(expectedTotal / 5);
+    expect(arg.line_items[0].price_data.unit_amount).toBe(expectedPerUnit);
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -330,15 +361,12 @@ describe('createBookCheckoutSession', () => {
 describe('calculateBookUnitPrice (via createBookCheckoutSession)', () => {
   const shippingAddress = { street: '1 Main' };
 
-  beforeEach(() => {
-    resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
-    });
-  });
-
-  const getUnitAmount = async (pageCount, printOptions = {}) => {
+  const getUnitAmount = async (pageCount, bookTier = 'classic', addons = []) => {
     vi.clearAllMocks();
-    resetChain({ single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } } });
+    resetChain();
+    mockSupabaseChain.single
+      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } })
+      .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
     mockStripeInstance.checkout.sessions.create.mockResolvedValue({
       id: 'cs_t', url: 'https://checkout.stripe.com/s',
     });
@@ -347,107 +375,37 @@ describe('calculateBookUnitPrice (via createBookCheckoutSession)', () => {
       'u1',
       { id: 'b1', title: 'T', page_count: pageCount },
       shippingAddress, 1, baseEnv,
-      printOptions,
+      bookTier, addons,
     );
     return mockStripeInstance.checkout.sessions.create.mock.calls[0][0].line_items[0].price_data.unit_amount;
   };
 
-  it('40 pages → 7900 cents ($79.00)', async () => {
-    expect(await getUnitAmount(40)).toBe(7900);
+  it('classic 40 pages → 3900 cents', async () => {
+    expect(await getUnitAmount(40)).toBe(3900);
   });
 
-  it('60 pages → 8900 cents (7900 + 20*50)', async () => {
-    expect(await getUnitAmount(60)).toBe(8900);
+  it('classic 80 pages → 3900 + 20*35 = 4600 cents', async () => {
+    expect(await getUnitAmount(80)).toBe(3900 + 20 * 35);
   });
 
-  it('200 pages → 14900 cents (capped at $149)', async () => {
-    expect(await getUnitAmount(200)).toBe(14900);
+  it('premium 40 pages → 6900 cents', async () => {
+    expect(await getUnitAmount(40, 'premium')).toBe(6900);
   });
 
-  it('with hardcover (CW): +1500 cents', async () => {
-    expect(await getUnitAmount(40, { binding: 'CW' })).toBe(7900 + 1500);
+  it('heirloom 40 pages → 7900 cents', async () => {
+    expect(await getUnitAmount(40, 'heirloom')).toBe(7900);
   });
 
-  it('with full color (FC): +2000 cents', async () => {
-    expect(await getUnitAmount(40, { interior: 'FC' })).toBe(7900 + 2000);
+  it('with color addon (classic): +1000 cents', async () => {
+    expect(await getUnitAmount(40, 'classic', ['color'])).toBe(3900 + 1000);
   });
 
-  it('0 pages defaults to base price', async () => {
-    expect(await getUnitAmount(0)).toBe(7900);
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════════════════
-// cancelSubscription
-// ════════════════════════════════════════════════════════════════════════════════
-describe('cancelSubscription', () => {
-  it('sets cancel_at_period_end on the Stripe subscription', async () => {
-    resetChain({
-      single: { data: { stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_1' } },
-    });
-
-    await cancelSubscription('user_1', baseEnv);
-
-    expect(mockStripeInstance.subscriptions.update).toHaveBeenCalledWith('sub_123', {
-      cancel_at_period_end: true,
-    });
+  it('with coil addon: +800 cents', async () => {
+    expect(await getUnitAmount(40, 'classic', ['coil'])).toBe(3900 + 800);
   });
 
-  it('updates profile to canceling status', async () => {
-    resetChain({
-      single: { data: { stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_1' } },
-    });
-
-    await cancelSubscription('user_1', baseEnv);
-
-    expect(mockSupabaseChain.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subscription_status: 'canceling',
-      }),
-    );
-  });
-
-  it('updates subscriptions table with cancel_at_period_end', async () => {
-    resetChain({
-      single: { data: { stripe_subscription_id: 'sub_123', stripe_customer_id: 'cus_1' } },
-    });
-
-    await cancelSubscription('user_1', baseEnv);
-
-    expect(mockSupabaseChain.update).toHaveBeenCalledWith({ cancel_at_period_end: true });
-  });
-
-  it('throws when no active subscription found', async () => {
-    resetChain({ single: { data: { stripe_subscription_id: null } } });
-
-    await expect(cancelSubscription('user_1', baseEnv)).rejects.toThrow(
-      'No active subscription found',
-    );
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════════════════
-// createPortalSession
-// ════════════════════════════════════════════════════════════════════════════════
-describe('createPortalSession', () => {
-  it('creates a portal session with correct return URL', async () => {
-    resetChain({ single: { data: { stripe_customer_id: 'cus_portal' } } });
-
-    const result = await createPortalSession('user_1', baseEnv);
-
-    expect(mockStripeInstance.billingPortal.sessions.create).toHaveBeenCalledWith({
-      customer: 'cus_portal',
-      return_url: 'https://app.keptpages.com/app/settings',
-    });
-    expect(result).toEqual({ url: 'https://billing.stripe.com/portal' });
-  });
-
-  it('throws when no Stripe customer exists', async () => {
-    resetChain({ single: { data: { stripe_customer_id: null } } });
-
-    await expect(createPortalSession('user_1', baseEnv)).rejects.toThrow(
-      'No Stripe customer found',
-    );
+  it('0 pages defaults to base price (no extra page cost)', async () => {
+    expect(await getUnitAmount(0)).toBe(3900);
   });
 });
 
@@ -455,8 +413,52 @@ describe('createPortalSession', () => {
 // handleWebhookEvent
 // ════════════════════════════════════════════════════════════════════════════════
 describe('handleWebhookEvent', () => {
-  describe('checkout.session.completed (subscription)', () => {
-    it('activates plan and sets tier to keeper', async () => {
+  describe('checkout.session.completed (keeper_pass)', () => {
+    it('activates keeper pass and sets tier to keeper', async () => {
+      resetChain();
+
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            mode: 'payment',
+            id: 'cs_kp_1',
+            payment_intent: 'pi_kp_1',
+            amount_total: 5900,
+            currency: 'usd',
+            metadata: { user_id: 'user_1', plan: 'keeper_pass' },
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      // Should upgrade profile to keeper tier
+      expect(mockSupabaseChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tier: 'keeper',
+          keeper_pass_purchased_at: expect.any(String),
+          book_discount_percent: 15,
+        }),
+      );
+
+      // Should record the payment
+      expect(mockSupabaseChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user_1',
+          stripe_session_id: 'cs_kp_1',
+          stripe_payment_intent: 'pi_kp_1',
+          amount: 5900,
+          currency: 'usd',
+          status: 'succeeded',
+          payment_type: 'keeper_pass',
+        }),
+      );
+    });
+  });
+
+  describe('checkout.session.completed (legacy subscription)', () => {
+    it('activates subscription plan and sets tier to keeper', async () => {
       resetChain();
 
       const event = {
@@ -483,7 +485,7 @@ describe('handleWebhookEvent', () => {
     });
   });
 
-  describe('checkout.session.completed (payment)', () => {
+  describe('checkout.session.completed (payment / book order)', () => {
     it('records payment in the payments table', async () => {
       resetChain();
 
@@ -494,9 +496,9 @@ describe('handleWebhookEvent', () => {
             mode: 'payment',
             id: 'cs_pay_1',
             payment_intent: 'pi_1',
-            amount_total: 7900,
+            amount_total: 3900,
             currency: 'usd',
-            metadata: { user_id: 'user_1', plan: 'book_order' },
+            metadata: { user_id: 'user_1' },
           },
         },
       };
@@ -508,7 +510,7 @@ describe('handleWebhookEvent', () => {
           user_id: 'user_1',
           stripe_session_id: 'cs_pay_1',
           stripe_payment_intent: 'pi_1',
-          amount: 7900,
+          amount: 3900,
           currency: 'usd',
           status: 'succeeded',
           payment_type: 'one_time',
@@ -518,10 +520,10 @@ describe('handleWebhookEvent', () => {
 
     it('triggers book fulfillment when book_id is present', async () => {
       // For handleBookPaymentCompleted we need special chain behavior:
-      // first .single() call returns for the initial query, subsequent calls
-      // are for the book fetch inside handleBookPaymentCompleted.
+      // first .single() for profile (tier upgrade check), then book fetch
       mockSupabaseChain.single
-        .mockResolvedValueOnce({ data: null }) // initial (not used for payment mode)
+        .mockResolvedValueOnce({ data: null }) // not used for initial
+        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } }) // profile for tier upgrade
         .mockResolvedValueOnce({
           data: {
             id: 'book_42',
@@ -538,14 +540,15 @@ describe('handleWebhookEvent', () => {
             mode: 'payment',
             id: 'cs_book_1',
             payment_intent: 'pi_book_1',
-            amount_total: 7900,
+            amount_total: 3900,
             currency: 'usd',
             metadata: {
               user_id: 'user_1',
               book_id: 'book_42',
               quantity: '1',
               shipping_address: JSON.stringify({ street: '1 Main' }),
-              print_options: JSON.stringify({ binding: 'PB' }),
+              book_tier: 'classic',
+              addons: JSON.stringify([]),
             },
           },
         },
@@ -561,9 +564,9 @@ describe('handleWebhookEvent', () => {
     });
   });
 
-  describe('customer.subscription.updated', () => {
-    it('updates subscription status and sets tier to keeper for active', async () => {
-      resetChain({ single: { data: { id: 'user_1' } } });
+  describe('customer.subscription.updated (legacy)', () => {
+    it('updates subscription status for non-keeper-pass users', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: null } } });
 
       const event = {
         type: 'customer.subscription.updated',
@@ -582,20 +585,19 @@ describe('handleWebhookEvent', () => {
       expect(mockSupabaseChain.update).toHaveBeenCalledWith(
         expect.objectContaining({
           subscription_status: 'active',
-          tier: 'keeper',
         }),
       );
     });
 
-    it('sets tier to keeper for trialing status', async () => {
-      resetChain({ single: { data: { id: 'user_1' } } });
+    it('does not update tier to keeper for active status (legacy handler is minimal)', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: null } } });
 
       const event = {
         type: 'customer.subscription.updated',
         data: {
           object: {
             customer: 'cus_1',
-            status: 'trialing',
+            status: 'active',
             current_period_end: 1700000000,
             items: { data: [{ price: { lookup_key: 'keeper_monthly' } }] },
           },
@@ -604,15 +606,37 @@ describe('handleWebhookEvent', () => {
 
       await handleWebhookEvent(event, baseEnv);
 
-      expect(mockSupabaseChain.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tier: 'keeper',
-        }),
+      // Legacy handler only sets subscription_status, does NOT set tier for active
+      const updateCall = mockSupabaseChain.update.mock.calls.find(
+        (c) => c[0]?.subscription_status === 'active'
       );
+      expect(updateCall).toBeTruthy();
+      expect(updateCall[0].tier).toBeUndefined();
     });
 
-    it('sets tier to free for canceled status', async () => {
-      resetChain({ single: { data: { id: 'user_1' } } });
+    it('does not downgrade keeper_pass holders', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: '2026-01-01T00:00:00Z' } } });
+
+      const event = {
+        type: 'customer.subscription.updated',
+        data: {
+          object: {
+            customer: 'cus_1',
+            status: 'canceled',
+            current_period_end: null,
+            items: { data: [{ price: { lookup_key: null } }] },
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      // Should NOT call update since keeper_pass_purchased_at is set
+      expect(mockSupabaseChain.update).not.toHaveBeenCalled();
+    });
+
+    it('sets tier to free for canceled status (non-keeper-pass user)', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: null } } });
 
       const event = {
         type: 'customer.subscription.updated',
@@ -637,9 +661,9 @@ describe('handleWebhookEvent', () => {
     });
   });
 
-  describe('customer.subscription.deleted', () => {
-    it('sets status to canceled and tier to free', async () => {
-      resetChain({ single: { data: { id: 'user_1' } } });
+  describe('customer.subscription.deleted (legacy)', () => {
+    it('sets status to canceled and tier to free for non-keeper-pass users', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: null } } });
 
       const event = {
         type: 'customer.subscription.deleted',
@@ -660,10 +684,27 @@ describe('handleWebhookEvent', () => {
         }),
       );
     });
+
+    it('does not downgrade keeper_pass holders on subscription deletion', async () => {
+      resetChain({ single: { data: { id: 'user_1', keeper_pass_purchased_at: '2026-01-15T00:00:00Z' } } });
+
+      const event = {
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            customer: 'cus_1',
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      expect(mockSupabaseChain.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('invoice.payment_succeeded', () => {
-    it('records payment and ensures active status', async () => {
+    it('records payment in the payments table', async () => {
       resetChain({ single: { data: { id: 'user_1' } } });
 
       const event = {
@@ -691,12 +732,6 @@ describe('handleWebhookEvent', () => {
           amount: 999,
           currency: 'usd',
           status: 'succeeded',
-        }),
-      );
-
-      expect(mockSupabaseChain.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          subscription_status: 'active',
         }),
       );
     });

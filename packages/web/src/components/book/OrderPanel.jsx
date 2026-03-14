@@ -1,58 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBookStore } from '@/stores/bookStore';
+import { useSubscriptionStore } from '@/stores/subscriptionStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import {
+  BOOK_TIERS,
+  BOOK_ADDONS,
   BOOK_PRICING,
-  PRINT_OPTIONS,
-  DEFAULT_PRINT_OPTIONS,
   calculateBookPrice,
 } from '@/config/plans';
 import { formatCurrency } from '@/utils/formatters';
 import api from '@/services/api';
 import OrderStatusPanel from './OrderStatusPanel';
-
-function PrintOptionGroup({ groupKey, config, selected, onChange }) {
-  return (
-    <div>
-      <label className="font-ui text-xs font-semibold text-walnut mb-1.5 block">{config.label}</label>
-      <div className="space-y-1.5">
-        {config.options.map((opt) => (
-          <label
-            key={opt.value}
-            className={`flex items-center gap-2.5 p-2 rounded border cursor-pointer transition-colors ${
-              selected === opt.value
-                ? 'border-terracotta bg-terracotta/5'
-                : 'border-border hover:border-walnut-muted'
-            }`}
-          >
-            <input
-              type="radio"
-              name={groupKey}
-              value={opt.value}
-              checked={selected === opt.value}
-              onChange={() => onChange(groupKey, opt.value)}
-              className="accent-terracotta"
-            />
-            <div className="flex-1 min-w-0">
-              <span className="font-ui text-xs text-walnut">{opt.label}</span>
-              <span className="font-ui text-[10px] text-walnut-muted ml-1.5">{opt.description}</span>
-            </div>
-            {opt.modifier > 0 && (
-              <span className="font-ui text-[10px] text-terracotta whitespace-nowrap">
-                +{formatCurrency(opt.modifier)}
-              </span>
-            )}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 const POST_ORDER_STATUSES = ['ordered', 'printing', 'shipped', 'delivered', 'cancelled', 'error'];
 
@@ -63,16 +26,34 @@ export default function OrderPanel({ bookId }) {
   const generatePdf = useBookStore((s) => s.generatePdf);
   const orderBook = useBookStore((s) => s.orderBook);
   const loading = useBookStore((s) => s.loading);
+  const bookDiscount = useSubscriptionStore((s) => s.bookDiscount);
+  const tier = useSubscriptionStore((s) => s.tier);
 
   const [quantity, setQuantity] = useState(1);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [printOptions, setPrintOptions] = useState({ ...DEFAULT_PRINT_OPTIONS });
+  const [bookTier, setBookTier] = useState('premium');
+  const [addons, setAddons] = useState([]);
   const [shipping, setShipping] = useState({
     name: '', email: '', street1: '', city: '', state: '', postalCode: '', country: 'US',
   });
 
-  const handleOptionChange = useCallback((group, value) => {
-    setPrintOptions((prev) => ({ ...prev, [group]: value }));
+  const handleToggleAddon = useCallback((addonId) => {
+    setAddons((prev) =>
+      prev.includes(addonId) ? prev.filter((a) => a !== addonId) : [...prev, addonId]
+    );
+  }, []);
+
+  const handleTierChange = useCallback((tierId) => {
+    setBookTier(tierId);
+    // Remove addons that are not valid for the new tier
+    setAddons((prev) =>
+      prev.filter((addonId) => {
+        const addon = BOOK_ADDONS[addonId];
+        if (!addon) return false;
+        if (addon.tiers === 'all') return true;
+        return Array.isArray(addon.tiers) && addon.tiers.includes(tierId);
+      })
+    );
   }, []);
 
   const handleGenerate = useCallback(async () => {
@@ -104,7 +85,7 @@ export default function OrderPanel({ bookId }) {
   const handleOrder = useCallback(async () => {
     if (!bookId) return;
     try {
-      const result = await orderBook(bookId, shipping, quantity, printOptions);
+      const result = await orderBook(bookId, shipping, quantity, bookTier, addons);
       if (result?.url) {
         window.location.href = result.url;
       } else {
@@ -114,16 +95,31 @@ export default function OrderPanel({ bookId }) {
     } catch {
       toast('Failed to place order.', 'error');
     }
-  }, [bookId, shipping, quantity, printOptions, orderBook, navigate]);
+  }, [bookId, shipping, quantity, bookTier, addons, orderBook, navigate]);
 
   // Show order status view for post-order books (after all hooks)
   const isPostOrder = POST_ORDER_STATUSES.includes(book?.status);
   if (isPostOrder) return <OrderStatusPanel bookId={bookId} />;
 
   const pageCount = book?.pageCount || 0;
-  const unitPrice = calculateBookPrice(pageCount, printOptions);
-  const discount = quantity >= BOOK_PRICING.familyPackMinQty ? BOOK_PRICING.familyPackDiscount : 0;
-  const totalCents = Math.round(unitPrice * quantity * (1 - discount));
+  const keeperDiscount = typeof bookDiscount === 'function' ? bookDiscount() : bookDiscount || 0;
+  const hasKeeperDiscount = keeperDiscount > 0;
+  const totalCents = calculateBookPrice(pageCount, bookTier, addons, quantity, hasKeeperDiscount);
+
+  // Compute line-item details for order summary
+  const tierConfig = BOOK_TIERS[bookTier];
+  const tierBasePrice = tierConfig?.price || 0;
+  const extraPages = Math.max(0, pageCount - BOOK_PRICING.freePages);
+  const extraPagesCost = extraPages * BOOK_PRICING.perExtraPage;
+
+  const activeAddons = addons
+    .map((id) => ({ id, ...BOOK_ADDONS[id] }))
+    .filter((a) => a.label && (a.tiers === 'all' || (Array.isArray(a.tiers) && a.tiers.includes(bookTier))));
+
+  const addonTotal = activeAddons.reduce((sum, a) => sum + a.price, 0);
+  const unitPrice = tierBasePrice + addonTotal + extraPagesCost;
+
+  const multiCopyDiscount = quantity >= 5 ? 0.20 : quantity >= 3 ? 0.15 : 0;
 
   const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.street1.trim() &&
     shipping.city.trim() && shipping.state.trim() && shipping.postalCode.trim() && book?.status === 'ready';
@@ -131,7 +127,7 @@ export default function OrderPanel({ bookId }) {
   return (
     <div className="max-w-2xl mx-auto w-full">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Generate, Print Options & Shipping */}
+        {/* Left: Generate, Book Tier, Add-Ons & Shipping */}
         <div className="space-y-6">
           {/* Generate PDF */}
           <Card className="p-5">
@@ -157,20 +153,97 @@ export default function OrderPanel({ bookId }) {
             )}
           </Card>
 
-          {/* Print Options */}
+          {/* Choose Your Book */}
           <Card className="p-5">
-            <h3 className="font-ui text-sm font-semibold text-walnut mb-4">Print Options</h3>
-            <div className="space-y-4">
-              {Object.entries(PRINT_OPTIONS).map(([key, config]) => (
-                <PrintOptionGroup
-                  key={key}
-                  groupKey={key}
-                  config={config}
-                  selected={printOptions[key]}
-                  onChange={handleOptionChange}
-                />
+            <h3 className="font-ui text-sm font-semibold text-walnut mb-4">Choose Your Book</h3>
+            <div className="space-y-2.5">
+              {Object.entries(BOOK_TIERS).map(([tierId, config]) => (
+                <label
+                  key={tierId}
+                  className={`relative flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    bookTier === tierId
+                      ? 'border-terracotta bg-terracotta/5 shadow-sm'
+                      : 'border-border hover:border-walnut-muted'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="bookTier"
+                    value={tierId}
+                    checked={bookTier === tierId}
+                    onChange={() => handleTierChange(tierId)}
+                    className="accent-terracotta mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-ui text-sm font-semibold text-walnut">{config.label}</span>
+                      {config.featured && (
+                        <span className="font-ui text-[10px] font-semibold bg-terracotta text-white px-1.5 py-0.5 rounded-full">
+                          Most Popular
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-ui text-xs text-walnut-muted mt-0.5">{config.description}</p>
+                  </div>
+                  <span className="font-ui text-sm font-semibold text-walnut whitespace-nowrap">
+                    {formatCurrency(config.price)}
+                  </span>
+                </label>
               ))}
             </div>
+
+            {/* Add-Ons */}
+            <div className="mt-5 pt-4 border-t border-border">
+              <h4 className="font-ui text-xs font-semibold text-walnut mb-3">Add-Ons</h4>
+              <div className="space-y-2.5">
+                {Object.entries(BOOK_ADDONS).map(([addonId, addon]) => {
+                  // Only show if available for current tier
+                  const available = addon.tiers === 'all' || (Array.isArray(addon.tiers) && addon.tiers.includes(bookTier));
+                  if (!available) return null;
+
+                  const isActive = addons.includes(addonId);
+                  return (
+                    <label
+                      key={addonId}
+                      className={`flex items-center gap-3 p-2.5 rounded border cursor-pointer transition-colors ${
+                        isActive
+                          ? 'border-sage bg-sage/5'
+                          : 'border-border hover:border-walnut-muted'
+                      }`}
+                    >
+                      {/* Toggle switch */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={isActive}
+                        onClick={() => handleToggleAddon(addonId)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+                          isActive ? 'bg-sage' : 'bg-walnut-muted/30'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${
+                            isActive ? 'translate-x-[18px]' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-ui text-xs text-walnut">{addon.label}</span>
+                        <p className="font-ui text-[10px] text-walnut-muted">{addon.description}</p>
+                      </div>
+                      <span className="font-ui text-[10px] text-walnut-secondary whitespace-nowrap">
+                        {addon.price === 0 ? 'Free' : `+${formatCurrency(addon.price)}`}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Multi-copy discount note */}
+            <p className="font-ui text-[10px] text-walnut-muted mt-3">
+              15% off at 3+ copies, 20% off at 5+
+            </p>
           </Card>
 
           {/* Shipping form */}
@@ -214,47 +287,66 @@ export default function OrderPanel({ bookId }) {
                 <button onClick={() => setQuantity((q) => q + 1)}
                   className="w-8 h-8 rounded border border-border flex items-center justify-center font-ui text-walnut hover:bg-cream-alt">+</button>
               </div>
-              {quantity >= BOOK_PRICING.familyPackMinQty && (
-                <span className="font-ui text-[10px] text-sage">15% family discount!</span>
+              {multiCopyDiscount > 0 && (
+                <span className="font-ui text-[10px] text-sage">
+                  {quantity >= 5 ? '20%' : '15%'} multi-copy discount!
+                </span>
               )}
             </div>
 
             <div className="space-y-2 mb-4">
+              {/* Tier base price */}
               <div className="flex justify-between font-ui text-xs">
-                <span className="text-walnut-secondary">Book{pageCount ? ` (${pageCount} pages)` : ''}</span>
-                <span className="text-walnut">{formatCurrency(BOOK_PRICING.base)}</span>
+                <span className="text-walnut-secondary">{tierConfig?.label} book{pageCount ? ` (${pageCount} pages)` : ''}</span>
+                <span className="text-walnut">{formatCurrency(tierBasePrice)}</span>
               </div>
-              {pageCount > BOOK_PRICING.freePages && (
+
+              {/* Add-on prices */}
+              {activeAddons.map((addon) => (
+                <div key={addon.id} className="flex justify-between font-ui text-xs">
+                  <span className="text-walnut-secondary">{addon.label}</span>
+                  <span className="text-walnut">
+                    {addon.price === 0 ? 'Free' : `+${formatCurrency(addon.price)}`}
+                  </span>
+                </div>
+              ))}
+
+              {/* Extra pages */}
+              {extraPages > 0 && (
                 <div className="flex justify-between font-ui text-xs">
-                  <span className="text-walnut-secondary">Extra pages ({pageCount - BOOK_PRICING.freePages})</span>
-                  <span className="text-walnut">+{formatCurrency((pageCount - BOOK_PRICING.freePages) * BOOK_PRICING.perExtraPage)}</span>
+                  <span className="text-walnut-secondary">Extra pages ({extraPages} x {formatCurrency(BOOK_PRICING.perExtraPage)}/pg)</span>
+                  <span className="text-walnut">+{formatCurrency(extraPagesCost)}</span>
                 </div>
               )}
-              {Object.entries(printOptions).map(([group, value]) => {
-                const config = PRINT_OPTIONS[group];
-                const opt = config?.options.find((o) => o.value === value);
-                if (!opt || opt.modifier === 0) return null;
-                return (
-                  <div key={group} className="flex justify-between font-ui text-xs">
-                    <span className="text-walnut-secondary">{opt.label}</span>
-                    <span className="text-walnut">+{formatCurrency(opt.modifier)}</span>
-                  </div>
-                );
-              })}
+
+              {/* Unit price */}
               <div className="flex justify-between font-ui text-xs">
                 <span className="text-walnut-secondary">Unit Price</span>
                 <span className="text-walnut">{formatCurrency(unitPrice)}</span>
               </div>
+
+              {/* Quantity */}
               <div className="flex justify-between font-ui text-xs">
                 <span className="text-walnut-secondary">Quantity</span>
                 <span className="text-walnut">&times; {quantity}</span>
               </div>
-              {discount > 0 && (
+
+              {/* Multi-copy discount */}
+              {multiCopyDiscount > 0 && (
                 <div className="flex justify-between font-ui text-xs text-sage">
-                  <span>Family Pack Discount</span>
-                  <span>-{(discount * 100).toFixed(0)}%</span>
+                  <span>Multi-Copy Discount</span>
+                  <span>-{(multiCopyDiscount * 100).toFixed(0)}%</span>
                 </div>
               )}
+
+              {/* Keeper Pass discount */}
+              {hasKeeperDiscount && (
+                <div className="flex justify-between font-ui text-xs text-sage">
+                  <span>Keeper Pass discount</span>
+                  <span>-15%</span>
+                </div>
+              )}
+
               <div className="h-px bg-border" />
               <div className="flex justify-between font-ui text-sm font-semibold">
                 <span className="text-walnut">Total</span>

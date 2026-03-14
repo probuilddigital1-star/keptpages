@@ -103,8 +103,8 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Scan usage progress bar (free users) */}
-      {tier === 'free' && scansLimit && (
+      {/* Scan usage progress bar (free and book_purchaser tiers) */}
+      {tier !== 'keeper' && scansLimit && (
         <div className="mb-8 bg-cream-surface border border-border-light rounded-md p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <span className="font-ui text-sm font-medium text-walnut">
@@ -124,10 +124,10 @@ export default function Dashboard() {
             <p className="font-ui text-xs text-terracotta mt-2">
               Running low on scans.{' '}
               <button
-                onClick={() => navigate('/app/settings')}
+                onClick={() => navigate('/app/settings#subscription')}
                 className="underline font-medium hover:text-terracotta-hover transition-colors"
               >
-                Upgrade to Keeper
+                Get Keeper Pass
               </button>{' '}
               for unlimited scans.
             </p>

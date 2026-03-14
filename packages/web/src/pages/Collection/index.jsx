@@ -32,6 +32,8 @@ export default function CollectionPage() {
   const reorderDocuments = useDocumentsStore((s) => s.reorderDocuments);
 
   const tier = useSubscriptionStore((s) => s.tier);
+  const canExportPdf = useSubscriptionStore((s) => s.canExportPdf);
+  const purchaseKeeperPass = useSubscriptionStore((s) => s.purchaseKeeperPass);
 
   // Derived
   const collection = collections.find((c) => c.id === id);
@@ -50,6 +52,7 @@ export default function CollectionPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [showExportUpsell, setShowExportUpsell] = useState(false);
   const [removeDocId, setRemoveDocId] = useState(null);
   const [removing, setRemoving] = useState(false);
 
@@ -173,14 +176,22 @@ export default function CollectionPage() {
     }
   }, [id, collection?.name]);
 
-  // Export button click — Keeper gets modal, free gets direct export
+  // Export button click — gate by tier
   const handleExportClick = useCallback(() => {
+    const exportAccess = canExportPdf();
+    if (!exportAccess) {
+      // Free users — show upsell modal
+      setShowExportUpsell(true);
+      return;
+    }
     if (tier === 'keeper') {
+      // Keeper Pass — show full export options
       setShowExportOptions(true);
     } else {
+      // Book purchaser — direct export (per-book access)
       handleExport();
     }
-  }, [tier, handleExport]);
+  }, [tier, canExportPdf, handleExport]);
 
   // Delete collection with undo window
   const deleteTimerRef = useRef(null);
@@ -645,6 +656,53 @@ export default function CollectionPage() {
         documents={documents}
         exporting={exporting}
       />
+
+      {/* Export Upsell Modal (free users) */}
+      <Modal
+        open={showExportUpsell}
+        onClose={() => setShowExportUpsell(false)}
+        title="Export PDF"
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="font-body text-walnut-secondary">
+            PDF export is available when you order a printed book or get Keeper Pass.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => {
+                setShowExportUpsell(false);
+                navigate(`/app/book/${id}`);
+              }}
+              className="w-full"
+            >
+              Order a Book
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  const result = await purchaseKeeperPass();
+                  if (result?.url) window.location.href = result.url;
+                } catch {
+                  toast('Could not start purchase. Please try again.', 'error');
+                }
+              }}
+              className="w-full"
+            >
+              Get Keeper Pass — $59
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setShowExportUpsell(false)}
+              className="w-full"
+            >
+              Maybe Later
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Add Section Modal */}
       <Modal

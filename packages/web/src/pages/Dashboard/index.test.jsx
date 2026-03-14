@@ -169,7 +169,7 @@ describe('Dashboard page', () => {
     renderDashboard();
 
     expect(screen.getByText(/running low on scans/i)).toBeInTheDocument();
-    expect(screen.getByText(/upgrade to keeper/i)).toBeInTheDocument();
+    expect(screen.getByText(/get keeper pass/i)).toBeInTheDocument();
   });
 
   it('calls fetchCollections on mount', () => {

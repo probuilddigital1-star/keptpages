@@ -24,6 +24,7 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import waitlistRoutes from './routes/waitlist.js';
 import articlesRoutes from './routes/articles.js';
+import publicScanRoutes from './routes/publicScan.js';
 
 // Stripe webhook service
 import { handleWebhookEvent } from './services/stripe.js';
@@ -82,6 +83,9 @@ app.route('/api/waitlist', waitlistRoutes);
 
 // Articles ("Between the Pages") - public listing + detail, admin sub-routes require auth
 app.route('/api/articles', articlesRoutes);
+
+// Anonymous scans - public, rate limited by IP (5 per 24h)
+app.route('/api/public/scan', publicScanRoutes);
 
 // Shared collection viewer - public, no auth
 // The share routes module defines GET /shared/:token which we mount here

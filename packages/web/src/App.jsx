@@ -72,6 +72,9 @@ export default function App() {
             <Route path="/between-the-pages/:slug" element={<ArticleDetail />} />
           </Route>
 
+          {/* Public scan (anonymous, no auth required) */}
+          <Route path="/try" element={<ScanPage />} />
+
           {/* Auth pages (guest only) */}
           <Route element={<GuestGuard />}>
             <Route path="/login" element={<Login />} />

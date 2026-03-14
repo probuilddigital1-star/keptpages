@@ -251,7 +251,7 @@ describe('bookStore', () => {
   });
 
   describe('orderBook', () => {
-    it('calls api.post with shipping address', async () => {
+    it('calls api.post with shipping address and default tier', async () => {
       const address = { street: '123 Main', city: 'Town', zip: '12345' };
       const mockOrder = { orderId: 'ord-1', status: 'placed' };
       api.post.mockResolvedValue(mockOrder);
@@ -261,22 +261,24 @@ describe('bookStore', () => {
       expect(api.post).toHaveBeenCalledWith('/books/book-1/order', {
         shippingAddress: address,
         quantity: 1,
+        bookTier: 'premium',
+        addons: [],
       });
       expect(result).toEqual(mockOrder);
       expect(useBookStore.getState().loading).toBe(false);
     });
 
-    it('forwards printOptions when provided', async () => {
+    it('forwards bookTier and addons when provided', async () => {
       const address = { street: '123 Main', city: 'Town', zip: '12345' };
-      const printOptions = { binding: 'CW', interior: 'FC', paper: '080CW444', cover: 'G' };
       api.post.mockResolvedValue({ orderId: 'ord-2' });
 
-      await useBookStore.getState().orderBook('book-1', address, 2, printOptions);
+      await useBookStore.getState().orderBook('book-1', address, 2, 'heirloom', ['coil', 'glossy']);
 
       expect(api.post).toHaveBeenCalledWith('/books/book-1/order', {
         shippingAddress: address,
         quantity: 2,
-        printOptions,
+        bookTier: 'heirloom',
+        addons: ['coil', 'glossy'],
       });
     });
 

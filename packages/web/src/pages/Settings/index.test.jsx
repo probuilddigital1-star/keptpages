@@ -9,7 +9,7 @@ import Settings from './index';
 
 const mockLogout = vi.fn();
 const mockFetchSubscription = vi.fn().mockResolvedValue({});
-const mockUpgrade = vi.fn();
+const mockPurchaseKeeperPass = vi.fn();
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: vi.fn(),
@@ -36,16 +36,30 @@ vi.mock('@/config/plans', () => ({
   PLANS: {
     FREE: {
       id: 'free',
-      name: 'Free Forever',
+      name: 'Free',
       price: 0,
-      features: ['25 document scans', '1 collection'],
+      features: ['25 scans per month', '2 collections'],
     },
-    KEEPER: {
+    BOOK_PURCHASER: {
+      id: 'book_purchaser',
+      name: 'Book Purchaser',
+      features: ['Unlimited scans', '3 collections', 'PDF export for purchased books'],
+    },
+    KEEPER_PASS: {
       id: 'keeper',
-      name: 'Keeper',
-      price: 39.99,
-      features: ['Unlimited scans', 'Unlimited collections', 'Family sharing'],
+      name: 'Keeper Pass',
+      price: 59,
+      oneTime: true,
+      features: [
+        'Unlimited scans',
+        'Unlimited collections',
+        'Full PDF export',
+        'Family sharing',
+        '15% off all books forever',
+      ],
     },
+    // Backwards-compat alias used by Settings component
+    get KEEPER() { return this.KEEPER_PASS; },
   },
 }));
 
@@ -80,7 +94,7 @@ function setupSubscriptionStore(overrides = {}) {
     subscription: null,
     loading: false,
     fetchSubscription: mockFetchSubscription,
-    upgrade: mockUpgrade,
+    purchaseKeeperPass: mockPurchaseKeeperPass,
   };
 
   const merged = { ...defaults, ...overrides };
@@ -127,38 +141,40 @@ describe('Settings page', () => {
     setupSubscriptionStore({ tier: 'free' });
     renderSettings();
 
-    expect(screen.getByText('Free Forever')).toBeInTheDocument();
+    expect(screen.getByText('Free')).toBeInTheDocument();
   });
 
   it('shows current plan badge for keeper tier', () => {
     setupSubscriptionStore({ tier: 'keeper' });
     renderSettings();
 
-    expect(screen.getByText('Keeper')).toBeInTheDocument();
+    expect(screen.getByText('Keeper Pass')).toBeInTheDocument();
   });
 
-  it('shows upgrade card for free users', () => {
+  it('shows Keeper Pass upsell card for free users', () => {
     setupSubscriptionStore({ tier: 'free' });
     renderSettings();
 
-    expect(screen.getByText('Upgrade to Keeper')).toBeInTheDocument();
-    expect(screen.getByText(/\$39\.99/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /upgrade now/i })).toBeInTheDocument();
+    // Heading + button both say "Get Keeper Pass"
+    expect(screen.getAllByText('Get Keeper Pass').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/\$59/)).toBeInTheDocument();
+    expect(screen.getByText('one-time')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /get keeper pass/i })).toBeInTheDocument();
   });
 
-  it('does not show upgrade card for keeper users', () => {
+  it('does not show Keeper Pass upsell for keeper users', () => {
     setupSubscriptionStore({ tier: 'keeper' });
     renderSettings();
 
-    expect(screen.queryByText('Upgrade to Keeper')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /upgrade now/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /get keeper pass/i })).not.toBeInTheDocument();
   });
 
-  it('shows cancel subscription button for keeper users', () => {
+  it('shows active info for keeper users', () => {
     setupSubscriptionStore({ tier: 'keeper' });
     renderSettings();
 
-    expect(screen.getByRole('button', { name: /cancel subscription/i })).toBeInTheDocument();
+    expect(screen.getByText(/unlimited access/i)).toBeInTheDocument();
+    expect(screen.getByText(/15% off all book orders/i)).toBeInTheDocument();
   });
 
   it('renders account section with delete button', () => {

@@ -279,7 +279,8 @@ describe('Collections routes', () => {
 
     it('returns 403 when free tier limit reached', async () => {
       mockFrom('profiles', { data: { tier: 'free' }, error: null });
-      mockFrom('collections', { data: null, error: null, count: 5 });
+      // Free tier limit is now 2
+      mockFrom('collections', { data: null, error: null, count: 2 });
       const res = await app.request('/collections', postOpts({ name: 'Extra' }), ENV);
       expect(res.status).toBe(403);
       const json = await res.json();
@@ -381,13 +382,26 @@ describe('Collections routes', () => {
   });
 
   describe('POST /collections/:id/export', () => {
-    it('returns 404 for non-existent collection', async () => {
+    it('returns 403 for free tier users', async () => {
+      // getUserTier returns 'free' → blocked by tier gate
+      mockFrom('profiles', { data: { tier: 'free' }, error: null });
+      const res = await app.request('/collections/nope/export', postOpts({}), ENV);
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error).toBe('PDF export not available');
+    });
+
+    it('returns 404 for non-existent collection (keeper tier)', async () => {
+      // getUserTier returns 'keeper' → passes tier gate
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
       mockFrom('collections', { data: null, error: { message: 'not found' } });
       const res = await app.request('/collections/nope/export', postOpts({}), ENV);
       expect(res.status).toBe(404);
     });
 
-    it('returns 400 when no documents in collection', async () => {
+    it('returns 400 when no documents in collection (keeper tier)', async () => {
+      // getUserTier returns 'keeper' → passes tier gate
+      mockFrom('profiles', { data: { tier: 'keeper' }, error: null });
       mockFrom('collections', { data: { id: 'c1', name: 'Empty', description: '', user_id: USER.id }, error: null });
       mockFrom('collection_items', { data: [], error: null });
       const res = await app.request('/collections/c1/export', postOpts({}), ENV);
