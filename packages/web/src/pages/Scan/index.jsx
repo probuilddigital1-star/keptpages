@@ -23,6 +23,34 @@ const STEP_PAGES = 'pages'; // Multi-page staging
 const STEP_UPLOADING = 'uploading'; // Upload + process
 const STEP_ANON_RESULT = 'anon_result'; // Anonymous scan result
 
+const DOC_TYPES = [
+  { value: 'recipe', label: 'Recipe' },
+  { value: 'letter', label: 'Letter' },
+  { value: 'journal', label: 'Journal' },
+  { value: 'artwork', label: 'Artwork' },
+];
+
+function normalizeIngredient(entry) {
+  if (typeof entry === 'string') return entry;
+  if (entry && typeof entry === 'object') {
+    const parts = [entry.amount, entry.unit, entry.item].filter(Boolean);
+    return parts.join(' ') || String(entry);
+  }
+  return String(entry ?? '');
+}
+
+function confidenceVariant(score) {
+  if (score >= 0.7) return 'sage';
+  if (score >= 0.5) return 'gold';
+  return 'terracotta';
+}
+
+function confidenceLabel(score) {
+  if (score >= 0.7) return 'High confidence';
+  if (score >= 0.5) return 'Medium confidence';
+  return 'Low confidence';
+}
+
 export default function ScanPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -66,6 +94,7 @@ export default function ScanPage() {
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [anonResult, setAnonResult] = useState(null);
+  const [anonDocType, setAnonDocType] = useState('recipe');
 
   // Anonymous scan counter
   const anonScansUsed = isAnonymous ? getAnonymousScanCount() : 0;
@@ -148,6 +177,7 @@ export default function ScanPage() {
       const file = new File([blob], `scan-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const result = await uploadAnonymousScan(file);
       setAnonResult(result);
+      setAnonDocType(result.type === 'recipe' ? 'recipe' : result.type === 'document' ? 'letter' : (result.type || 'recipe'));
       setStep(STEP_ANON_RESULT);
       toast('Scan complete!');
       // If this was their last free scan, show signup prompt
@@ -544,47 +574,229 @@ export default function ScanPage() {
       {/* Anonymous scan result */}
       {step === STEP_ANON_RESULT && anonResult && (
         <Card className="p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center">
-                <svg className="h-5 w-5 text-sage" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
+          <div className="flex flex-col gap-5">
+            {/* Header with confidence */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center shrink-0">
+                  <svg className="h-5 w-5 text-sage" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-walnut">
+                    {anonResult.title || 'Scan Complete'}
+                  </h2>
+                  {anonResult._remaining > 0 && (
+                    <p className="font-ui text-xs text-walnut-secondary">
+                      {anonResult._remaining} free {anonResult._remaining === 1 ? 'scan' : 'scans'} remaining
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-lg font-semibold text-walnut">
-                  {anonResult.title || 'Scan Complete'}
-                </h2>
-                {anonResult._remaining > 0 && (
-                  <p className="font-ui text-xs text-walnut-secondary">
-                    {anonResult._remaining} free {anonResult._remaining === 1 ? 'scan' : 'scans'} remaining
-                  </p>
-                )}
+              {typeof anonResult.confidence === 'number' && (
+                <Badge variant={confidenceVariant(anonResult.confidence)}>
+                  {confidenceLabel(anonResult.confidence)} ({Math.round(anonResult.confidence * 100)}%)
+                </Badge>
+              )}
+            </div>
+
+            {/* Document type selector */}
+            <div>
+              <label className="font-ui text-sm font-medium text-walnut block mb-2">
+                Document Type
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DOC_TYPES.map((dt) => (
+                  <button
+                    key={dt.value}
+                    type="button"
+                    onClick={() => setAnonDocType(dt.value)}
+                    className={clsx(
+                      'px-4 py-1.5 rounded-pill font-ui text-sm font-medium transition-all duration-200',
+                      anonDocType === dt.value
+                        ? 'bg-terracotta text-white shadow-btn-primary'
+                        : 'bg-cream-alt text-walnut-secondary border border-border hover:border-terracotta/30',
+                    )}
+                  >
+                    {dt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Preview of extracted data */}
-            {anonResult.description && (
-              <p className="font-body text-sm text-walnut-secondary">{anonResult.description}</p>
-            )}
-            {anonResult.ingredients && anonResult.ingredients.length > 0 && (
-              <div>
-                <h3 className="font-ui text-sm font-medium text-walnut mb-1">Ingredients</h3>
-                <ul className="font-body text-sm text-walnut-secondary space-y-0.5">
-                  {anonResult.ingredients.slice(0, 5).map((ing, i) => (
-                    <li key={i}>{typeof ing === 'string' ? ing : ing.text || ing.name || JSON.stringify(ing)}</li>
-                  ))}
-                  {anonResult.ingredients.length > 5 && (
-                    <li className="text-walnut-muted">...and {anonResult.ingredients.length - 5} more</li>
+            {/* Structured data display based on selected doc type */}
+            <div className="flex flex-col gap-4 bg-cream-surface rounded-lg p-4 border border-border-light">
+              {/* Recipe view */}
+              {anonDocType === 'recipe' && (
+                <>
+                  {anonResult.title && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Title</label>
+                      <p className="font-body text-walnut mt-0.5">{anonResult.title}</p>
+                    </div>
                   )}
-                </ul>
-              </div>
-            )}
+                  {/* Meta row: servings, prep, cook */}
+                  {(anonResult.servings || anonResult.prepTime || anonResult.cookTime) && (
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      {anonResult.servings && (
+                        <div className="flex items-center gap-1.5 text-walnut-secondary">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                          </svg>
+                          <span className="font-ui">{anonResult.servings} servings</span>
+                        </div>
+                      )}
+                      {anonResult.prepTime && (
+                        <div className="flex items-center gap-1.5 text-walnut-secondary">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-ui">Prep: {anonResult.prepTime}</span>
+                        </div>
+                      )}
+                      {anonResult.cookTime && (
+                        <div className="flex items-center gap-1.5 text-walnut-secondary">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                          </svg>
+                          <span className="font-ui">Cook: {anonResult.cookTime}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {anonResult.ingredients && anonResult.ingredients.length > 0 && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide mb-1.5 block">Ingredients</label>
+                      <ul className="font-body text-sm text-walnut space-y-1">
+                        {anonResult.ingredients.map((ing, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-terracotta mt-1.5 shrink-0">
+                              <svg className="h-2 w-2" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" /></svg>
+                            </span>
+                            <span>{normalizeIngredient(ing)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {anonResult.instructions && anonResult.instructions.length > 0 && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide mb-1.5 block">Instructions</label>
+                      <ol className="font-body text-sm text-walnut space-y-2">
+                        {anonResult.instructions.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2.5">
+                            <span className="font-ui text-xs font-bold text-terracotta bg-terracotta/10 rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">
+                              {i + 1}
+                            </span>
+                            <span>{typeof step === 'string' ? step : String(step)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {anonResult.notes && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Notes</label>
+                      <p className="font-body text-sm text-walnut-secondary mt-0.5 whitespace-pre-wrap">{anonResult.notes}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Letter view */}
+              {anonDocType === 'letter' && (
+                <>
+                  {anonResult.title && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Title</label>
+                      <p className="font-body text-walnut mt-0.5">{anonResult.title}</p>
+                    </div>
+                  )}
+                  {(anonResult.from || anonResult.to) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {anonResult.from && (
+                        <div>
+                          <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">From</label>
+                          <p className="font-body text-sm text-walnut mt-0.5">{anonResult.from}</p>
+                        </div>
+                      )}
+                      {anonResult.to && (
+                        <div>
+                          <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">To</label>
+                          <p className="font-body text-sm text-walnut mt-0.5">{anonResult.to}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {anonResult.date && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Date</label>
+                      <p className="font-body text-sm text-walnut mt-0.5">{anonResult.date}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Content</label>
+                    <p className="font-body text-sm text-walnut mt-0.5 whitespace-pre-wrap">{anonResult.content || anonResult.notes || ''}</p>
+                  </div>
+                </>
+              )}
+
+              {/* Journal view */}
+              {anonDocType === 'journal' && (
+                <>
+                  {anonResult.title && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Title</label>
+                      <p className="font-body text-walnut mt-0.5">{anonResult.title}</p>
+                    </div>
+                  )}
+                  {anonResult.date && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Date</label>
+                      <p className="font-body text-sm text-walnut mt-0.5">{anonResult.date}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Content</label>
+                    <p className="font-body text-sm text-walnut mt-0.5 whitespace-pre-wrap">{anonResult.content || anonResult.notes || ''}</p>
+                  </div>
+                </>
+              )}
+
+              {/* Artwork view */}
+              {anonDocType === 'artwork' && (
+                <>
+                  {anonResult.title && (
+                    <div>
+                      <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Title</label>
+                      <p className="font-body text-walnut mt-0.5">{anonResult.title}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="font-ui text-xs font-medium text-walnut-muted uppercase tracking-wide">Description</label>
+                    <p className="font-body text-sm text-walnut-secondary mt-0.5 whitespace-pre-wrap">{anonResult.content || anonResult.notes || ''}</p>
+                  </div>
+                </>
+              )}
+
+              {/* Warnings */}
+              {anonResult.warnings && anonResult.warnings.length > 0 && (
+                <div className="bg-terracotta-light rounded-md px-3 py-2 border border-terracotta/20">
+                  <p className="font-ui text-xs font-medium text-terracotta mb-1">AI Warnings</p>
+                  <ul className="font-ui text-xs text-walnut-secondary space-y-0.5">
+                    {anonResult.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             {/* CTA to sign up */}
-            <div className="bg-cream-alt border border-border-light rounded-md p-4 mt-2">
+            <div className="bg-cream-alt border border-border-light rounded-md p-4">
               <p className="font-ui text-sm text-walnut mb-3">
-                Create a free account to save your scans, organize collections, and order printed books.
+                Create a free account to save your scans, edit the text, organize collections, and order printed books.
               </p>
               <div className="flex gap-3">
                 <Button
