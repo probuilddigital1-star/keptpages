@@ -291,6 +291,48 @@ async function handleBookPaymentCompleted(session, supabase, env) {
       return;
     }
 
+    // Regenerate cover PDF with the correct binding type for this order
+    const { resolvePrintOptionsFromTier } = await import('./lulu.js');
+    const { generateCoverPdf } = await import('./pdf.js');
+    const printOptions = resolvePrintOptionsFromTier(bookTier, addons);
+    const bindingType = printOptions.binding; // PB, CW, or CO
+
+    // Build cover data from book's stored cover design
+    const coverDesign = book.customization?.coverDesign || book.cover_design || {};
+    const coverData = {
+      title: coverDesign.title || book.title,
+      subtitle: coverDesign.subtitle || book.subtitle,
+      author: coverDesign.author || book.author,
+      colorScheme: coverDesign.colorScheme || 'default',
+      layout: coverDesign.layout || 'centered',
+      photoBytes: null,
+      photoMimeType: null,
+      fontFamily: book.customization?.globalSettings?.fontFamily || null,
+    };
+
+    // Fetch cover photo from R2 if available
+    const photoKey = coverDesign.photoKey;
+    if (photoKey) {
+      try {
+        const photoObj = await env.PROCESSED.get(photoKey);
+        if (photoObj) {
+          coverData.photoBytes = new Uint8Array(await photoObj.arrayBuffer());
+          coverData.photoMimeType = coverDesign.photoMimeType || 'image/jpeg';
+        }
+      } catch (err) {
+        console.error('Cover photo R2 fetch failed during fulfillment:', err?.message || err);
+      }
+    }
+
+    // Regenerate cover with binding-specific spine width
+    const isBlueprint = book.customization?.pages?.length > 0;
+    const coverPdf = await generateCoverPdf(coverData, book.page_count, isBlueprint ? env : null, bindingType);
+
+    // Overwrite cover PDF in R2 with binding-correct version
+    await env.PROCESSED.put(book.cover_pdf_key, coverPdf, {
+      httpMetadata: { contentType: 'application/pdf' },
+    });
+
     const apiBase = env.API_BASE_URL || 'https://api.keptpages.com';
     const interiorUrl = await getSignedFileUrl(apiBase, book.interior_pdf_key, env);
     const coverUrl = await getSignedFileUrl(apiBase, book.cover_pdf_key, env);

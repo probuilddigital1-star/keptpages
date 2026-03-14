@@ -5,7 +5,7 @@
  * Uses the real pdf-lib library (no mocking) since it runs fine in Node.
  */
 
-import { generateBookPdf, generateCoverPdf, renderBlueprintBook } from '../services/pdf.js';
+import { generateBookPdf, generateCoverPdf, calculateSpineWidth, renderBlueprintBook } from '../services/pdf.js';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 
 describe('generateBookPdf', () => {
@@ -615,11 +615,11 @@ describe('generateCoverPdf', () => {
       expect(largePageWidth).toBeGreaterThan(smallPageWidth);
     });
 
-    it('calculates spine width proportionally to page count', async () => {
-      // Spine width formula: pageCount * 0.0025 inches * 72 pt/inch
-      // 100 pages: 0.25" * 72 = 18pt
-      // 200 pages: 0.50" * 72 = 36pt
-      // Difference should be ~18pt
+    it('calculates spine width using PB formula by default', async () => {
+      // PB spine width formula: (pages / 444) + 0.06 inches * 72 pt/inch
+      // 100 pages: (100/444 + 0.06) * 72 ≈ 20.54pt
+      // 200 pages: (200/444 + 0.06) * 72 ≈ 36.76pt
+      // Difference should be (100/444) * 72 ≈ 16.22pt
       const cover100 = await PDFDocument.load(
         await generateCoverPdf(sampleBook, 100)
       );
@@ -631,8 +631,32 @@ describe('generateCoverPdf', () => {
       const width200 = cover200.getPage(0).getWidth();
       const difference = width200 - width100;
 
-      // 100 extra pages * 0.0025" * 72 pt/in = 18pt
-      expect(difference).toBeCloseTo(18, 0);
+      // 100 extra pages / 444 * 72 ≈ 16.22pt
+      expect(difference).toBeCloseTo((100 / 444) * 72, 0);
+    });
+
+    it('CW binding produces wider cover than PB for same page count', async () => {
+      const coverPB = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 60, null, 'PB')
+      );
+      const coverCW = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 60, null, 'CW')
+      );
+
+      // CW 60 pages = 0.25" spine, PB 60 pages = (60/444)+0.06 ≈ 0.195"
+      expect(coverCW.getPage(0).getWidth()).toBeGreaterThan(coverPB.getPage(0).getWidth());
+    });
+
+    it('CO binding produces narrowest cover (no spine)', async () => {
+      const coverPB = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 100, null, 'PB')
+      );
+      const coverCO = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 100, null, 'CO')
+      );
+
+      // CO has no spine, so cover should be narrower
+      expect(coverCO.getPage(0).getWidth()).toBeLessThan(coverPB.getPage(0).getWidth());
     });
   });
 
@@ -895,5 +919,86 @@ describe('renderBlueprintBook', () => {
 
     expect(result.buffer).toBeInstanceOf(ArrayBuffer);
     expect(result.pageCount).toBeGreaterThan(0);
+  });
+});
+
+// ===== calculateSpineWidth Unit Tests =====
+
+describe('calculateSpineWidth', () => {
+  // PB (softcover) — formula: (pages / 444) + 0.06
+  describe('PB (softcover)', () => {
+    it('60 pages → (60/444) + 0.06', () => {
+      expect(calculateSpineWidth(60, 'PB')).toBeCloseTo((60 / 444) + 0.06, 6);
+    });
+
+    it('100 pages → (100/444) + 0.06', () => {
+      expect(calculateSpineWidth(100, 'PB')).toBeCloseTo((100 / 444) + 0.06, 6);
+    });
+
+    it('444 pages → (444/444) + 0.06 = 1.06', () => {
+      expect(calculateSpineWidth(444, 'PB')).toBeCloseTo(1.06, 6);
+    });
+  });
+
+  // CW (hardcover) — lookup table
+  describe('CW (hardcover)', () => {
+    it('pages < 24 → 0.25', () => {
+      expect(calculateSpineWidth(10, 'CW')).toBe(0.25);
+    });
+
+    it('24 pages → 0.25 (first bracket)', () => {
+      expect(calculateSpineWidth(24, 'CW')).toBe(0.25);
+    });
+
+    it('84 pages → 0.25 (boundary)', () => {
+      expect(calculateSpineWidth(84, 'CW')).toBe(0.25);
+    });
+
+    it('85 pages → 0.50 (next bracket)', () => {
+      expect(calculateSpineWidth(85, 'CW')).toBe(0.5);
+    });
+
+    it('140 pages → 0.50 (boundary)', () => {
+      expect(calculateSpineWidth(140, 'CW')).toBe(0.5);
+    });
+
+    it('500 pages → 1.375', () => {
+      expect(calculateSpineWidth(500, 'CW')).toBe(1.375);
+    });
+
+    it('800 pages → 2.0625 (last bracket)', () => {
+      expect(calculateSpineWidth(800, 'CW')).toBe(2.0625);
+    });
+
+    it('801+ pages → 2.125', () => {
+      expect(calculateSpineWidth(801, 'CW')).toBe(2.125);
+    });
+  });
+
+  // CO (coil) — always 0
+  describe('CO (coil)', () => {
+    it('always returns 0', () => {
+      expect(calculateSpineWidth(60, 'CO')).toBe(0);
+      expect(calculateSpineWidth(500, 'CO')).toBe(0);
+    });
+  });
+
+  // Edge cases
+  describe('edge cases', () => {
+    it('0 pages returns 0', () => {
+      expect(calculateSpineWidth(0)).toBe(0);
+    });
+
+    it('negative pages returns 0', () => {
+      expect(calculateSpineWidth(-5)).toBe(0);
+    });
+
+    it('defaults to PB when no binding type specified', () => {
+      expect(calculateSpineWidth(100)).toBeCloseTo((100 / 444) + 0.06, 6);
+    });
+
+    it('null pages returns 0', () => {
+      expect(calculateSpineWidth(null)).toBe(0);
+    });
   });
 });

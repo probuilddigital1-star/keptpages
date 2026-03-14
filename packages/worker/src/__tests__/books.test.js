@@ -630,6 +630,9 @@ describe('Books routes', () => {
       expect(json.pageCount).toBe(24);
       expect(generateBookPdf).toHaveBeenCalled();
       expect(generateCoverPdf).toHaveBeenCalled();
+      // Should pass 'CW' as 4th arg (widest spine for safe preview)
+      const coverCall = generateCoverPdf.mock.calls[0];
+      expect(coverCall[3]).toBe('CW'); // 4th arg is binding type for widest spine preview
       expect(ENV.PROCESSED.put).toHaveBeenCalledTimes(2);
     });
 

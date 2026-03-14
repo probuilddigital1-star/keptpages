@@ -831,19 +831,53 @@ function getCoverColorScheme(schemeId) {
 }
 
 /**
+ * Calculate the spine width in inches based on page count and binding type.
+ * Uses Lulu's official spine width specs:
+ * - PB (softcover): (pages / 444) + 0.06" (444 PPI for both 060UW444 and 080CW444)
+ * - CW (hardcover): Lookup table from Lulu docs
+ * - CO (coil): No spine (0")
+ *
+ * @param {number} pageCount - Total interior page count
+ * @param {string} bindingType - 'PB', 'CW', or 'CO'
+ * @returns {number} Spine width in inches
+ */
+export function calculateSpineWidth(pageCount, bindingType = 'PB') {
+  if (!pageCount || pageCount < 1) return 0;
+  switch (bindingType) {
+    case 'CO': return 0; // Coil — no spine
+    case 'CW': { // Hardcover — lookup table from Lulu docs
+      const table = [
+        [84, 0.25], [140, 0.5], [168, 0.625], [194, 0.6875], [222, 0.75], [250, 0.8125],
+        [278, 0.875], [306, 0.9375], [334, 1.0], [360, 1.0625], [388, 1.125], [416, 1.1875],
+        [444, 1.25], [472, 1.3125], [500, 1.375], [528, 1.4375], [556, 1.5], [582, 1.5625],
+        [610, 1.625], [638, 1.6875], [666, 1.75], [694, 1.8125], [722, 1.875], [750, 1.9375],
+        [778, 2.0], [800, 2.0625],
+      ];
+      if (pageCount < 24) return 0.25;
+      for (const [maxPages, width] of table) {
+        if (pageCount <= maxPages) return width;
+      }
+      return 2.125; // 800+
+    }
+    case 'PB': default: return (pageCount / 444) + 0.06;
+  }
+}
+
+/**
  * Generate a cover PDF for a book.
- * Cover dimensions depend on page count (affects spine width).
+ * Cover dimensions depend on page count and binding type (affects spine width).
  *
  * @param {object} coverData - { title, subtitle, author, colorScheme, layout, photoBytes, photoMimeType, fontFamily }
  * @param {number} pageCount - Total interior page count
  * @param {object|null} env - Worker env for loading custom fonts (null for legacy/standard fonts)
+ * @param {string} bindingType - 'PB', 'CW', or 'CO' (defaults to 'PB')
  * @returns {Promise<ArrayBuffer>}
  */
-export async function generateCoverPdf(coverData, pageCount, env) {
+export async function generateCoverPdf(coverData, pageCount, env, bindingType = 'PB') {
   const pdfDoc = await PDFDocument.create();
 
-  // Calculate spine width: approximately 0.0025" per page for B&W, 0.002252" per page for color
-  const spineWidthInches = pageCount * 0.0025;
+  // Calculate spine width using Lulu's official specs for the binding type
+  const spineWidthInches = calculateSpineWidth(pageCount, bindingType);
   const spineWidthPt = spineWidthInches * 72;
 
   // Cover dimensions: back + spine + front, with bleed

@@ -543,7 +543,7 @@ books.post('/:id/generate', async (c) => {
       photoBytes: coverPhotoBytes,
       photoMimeType: coverPhotoMimeType,
       fontFamily: isBlueprint ? (blueprint.globalSettings?.fontFamily || 'fraunces') : null,
-    }, pageCount, isBlueprint ? env : null);
+    }, pageCount, isBlueprint ? env : null, 'CW');
 
     // Store PDFs in R2
     const interiorKey = `${user.id}/books/${bookId}/interior.pdf`;

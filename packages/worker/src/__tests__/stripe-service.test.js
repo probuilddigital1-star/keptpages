@@ -43,6 +43,17 @@ vi.mock('@supabase/supabase-js', () => ({
 vi.mock('../services/lulu.js', () => ({
   createProject: vi.fn().mockResolvedValue({ id: 'lulu_proj_1' }),
   createOrder: vi.fn().mockResolvedValue({ id: 'lulu_order_1', totalCost: 2500 }),
+  resolvePrintOptionsFromTier: vi.fn((tier, addons = []) => {
+    const base = { classic: { binding: 'PB' }, premium: { binding: 'CW' }, heirloom: { binding: 'CW' } }[tier] || { binding: 'PB' };
+    if (addons.includes('coil')) base.binding = 'CO';
+    return base;
+  }),
+}));
+
+// ── Dynamic import mock for pdf.js (used for cover regeneration in webhook) ──
+vi.mock('../services/pdf.js', () => ({
+  generateCoverPdf: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70, 99])),
+  calculateSpineWidth: vi.fn().mockReturnValue(0.25),
 }));
 
 // ── Import the module under test AFTER mocks are set up ────────────────────────
@@ -59,6 +70,10 @@ const baseEnv = {
   SUPABASE_URL: 'https://test.supabase.co',
   SUPABASE_SERVICE_KEY: 'service-key',
   APP_URL: 'https://app.keptpages.com',
+  PROCESSED: {
+    get: vi.fn().mockResolvedValue(null),
+    put: vi.fn().mockResolvedValue(undefined),
+  },
 };
 
 function resetChain(overrides = {}) {
@@ -519,17 +534,21 @@ describe('handleWebhookEvent', () => {
     });
 
     it('triggers book fulfillment when book_id is present', async () => {
-      // For handleBookPaymentCompleted we need special chain behavior:
-      // first .single() for profile (tier upgrade check), then book fetch
+      const { createProject, createOrder } = await import('../services/lulu.js');
+      const { generateCoverPdf } = await import('../services/pdf.js');
+
+      // handleBookPaymentCompleted calls .single() twice:
+      // 1st: profile tier upgrade check, 2nd: book fetch
       mockSupabaseChain.single
-        .mockResolvedValueOnce({ data: null }) // not used for initial
-        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } }) // profile for tier upgrade
+        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } })
         .mockResolvedValueOnce({
           data: {
             id: 'book_42',
             interior_pdf_key: 'interior.pdf',
             cover_pdf_key: 'cover.pdf',
             title: 'Test Book',
+            page_count: 40,
+            cover_design: { title: 'Test Book', colorScheme: 'default', layout: 'centered' },
           },
         });
 
@@ -556,10 +575,134 @@ describe('handleWebhookEvent', () => {
 
       await handleWebhookEvent(event, baseEnv);
 
+      // Payment recorded
       expect(mockSupabaseChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           payment_type: 'book_order',
         }),
+      );
+
+      // Cover regenerated with correct binding type
+      expect(generateCoverPdf).toHaveBeenCalled();
+
+      // Lulu fulfillment actually triggered
+      expect(createProject).toHaveBeenCalled();
+      expect(createOrder).toHaveBeenCalled();
+
+      // Book status updated to ordered
+      expect(mockSupabaseChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'ordered',
+          lulu_project_id: 'lulu_proj_1',
+          lulu_order_id: 'lulu_order_1',
+        }),
+      );
+    });
+
+    it('regenerates cover PDF with correct binding type before Lulu submission', async () => {
+      const { generateCoverPdf } = await import('../services/pdf.js');
+      const { resolvePrintOptionsFromTier } = await import('../services/lulu.js');
+
+      mockSupabaseChain.single
+        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } }) // profile check
+        .mockResolvedValueOnce({  // book fetch
+          data: {
+            id: 'book_42',
+            interior_pdf_key: 'u1/books/b1/interior.pdf',
+            cover_pdf_key: 'u1/books/b1/cover.pdf',
+            title: 'My Book',
+            page_count: 60,
+            cover_design: { title: 'My Book', subtitle: 'Sub', author: 'Auth', colorScheme: 'midnight', layout: 'centered' },
+          },
+        });
+
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            mode: 'payment',
+            id: 'cs_cover_regen',
+            payment_intent: 'pi_regen',
+            amount_total: 6900,
+            currency: 'usd',
+            metadata: {
+              user_id: 'user_1',
+              book_id: 'book_42',
+              quantity: '1',
+              shipping_address: JSON.stringify({ street: '1 Main' }),
+              book_tier: 'premium',
+              addons: JSON.stringify([]),
+            },
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      // Should resolve print options for premium → CW binding
+      expect(resolvePrintOptionsFromTier).toHaveBeenCalledWith('premium', []);
+
+      // Should regenerate cover with CW binding type
+      expect(generateCoverPdf).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'My Book', colorScheme: 'midnight' }),
+        60,
+        null,  // non-blueprint book
+        'CW',
+      );
+
+      // Should upload regenerated cover to R2
+      expect(baseEnv.PROCESSED.put).toHaveBeenCalledWith(
+        'u1/books/b1/cover.pdf',
+        expect.anything(),
+        expect.objectContaining({ httpMetadata: { contentType: 'application/pdf' } }),
+      );
+    });
+
+    it('regenerates cover with CO binding when coil addon is selected', async () => {
+      const { generateCoverPdf } = await import('../services/pdf.js');
+
+      mockSupabaseChain.single
+        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } }) // profile check
+        .mockResolvedValueOnce({  // book fetch
+          data: {
+            id: 'book_42',
+            interior_pdf_key: 'u1/books/b1/interior.pdf',
+            cover_pdf_key: 'u1/books/b1/cover.pdf',
+            title: 'Coil Book',
+            page_count: 40,
+            cover_design: { title: 'Coil Book', colorScheme: 'default', layout: 'centered' },
+          },
+        });
+
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            mode: 'payment',
+            id: 'cs_coil',
+            payment_intent: 'pi_coil',
+            amount_total: 4700,
+            currency: 'usd',
+            metadata: {
+              user_id: 'user_1',
+              book_id: 'book_42',
+              quantity: '1',
+              shipping_address: JSON.stringify({ street: '1 Main' }),
+              book_tier: 'classic',
+              addons: JSON.stringify(['coil']),
+            },
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      // Should regenerate cover with CO binding type (coil addon)
+      expect(generateCoverPdf).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Coil Book' }),
+        40,
+        null,
+        'CO',
       );
     });
   });

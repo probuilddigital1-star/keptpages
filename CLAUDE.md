@@ -3,7 +3,7 @@
 ## Tech Stack
 - **Frontend:** React 18 + Vite, Tailwind CSS, Zustand stores, React Router v6
 - **Backend:** Cloudflare Worker (Hono), Supabase (Postgres + Auth), R2 storage, KV rate limiting
-- **Testing:** Vitest (frontend + worker), Playwright (E2E), 1,548+ tests across 91 files
+- **Testing:** Vitest (frontend + worker), Playwright (E2E), 1,571+ tests across 91 files
 - **Payments:** Stripe (one-time Keeper Pass + book orders), Lulu Print API for book fulfillment
 - **AI:** Gemini 2.5 Flash for scan processing, Claude Sonnet fallback
 
@@ -30,10 +30,10 @@
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
 ## Current Status (2026-03-14)
-- **124/128 user stories complete** (PRICING epic: 12/12 complete)
-- Pricing Restructure (PRICING): **12/12 DONE** — subscription → project-based model complete
-- All prior epics complete (COVER, MOBILE, BLOG, SCAN, QA-10, PRICING)
-- All tests passing (1,548 tests: 832 frontend + 716 worker, 91 files)
+- **127/131 user stories complete** (LULU epic: 3/3 complete)
+- Lulu Print Spec Fixes (LULU): **3/3 DONE** — correct spine width per binding type, cover regeneration at fulfillment
+- All prior epics complete (COVER, MOBILE, BLOG, SCAN, QA-10, PRICING, LULU)
+- All tests passing (1,571 tests: 832 frontend + 739 worker, 91 files)
 - Remaining work: Production validation (US-QA-12) — final go/no-go before launch
 
 ## Pricing Model (2026-03-14)

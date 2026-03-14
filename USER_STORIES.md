@@ -139,8 +139,11 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-PRICING-10 | Settings, dashboard & checkout UI updates | DONE | Multi-tier settings, Keeper Pass upsell, tier-aware dashboard, checkout success |
 | US-PRICING-11 | Lulu integration for book tiers | DONE | TIER_TO_PRINT_OPTIONS map, addon overrides, resolvePrintOptionsFromTier() |
 | US-PRICING-12 | Admin account migration & subscription cleanup | DONE | Migration migrates owner, subscription cancel/portal removed, legacy handlers minimal |
+| US-LULU-1 | Correct spine width calculation per binding type | DONE | calculateSpineWidth(): PB formula, CW lookup table, CO=0 |
+| US-LULU-2 | Regenerate cover PDF at fulfillment with correct binding | DONE | Webhook regenerates cover with binding-specific spine before Lulu submission |
+| US-LULU-3 | Lulu print spec tests & validation | DONE | Spine width unit tests, cover dimension tests, binding type coverage, sandbox validated |
 
-**Completed: 124/128** | **Remaining: 4**
+**Completed: 127/131** | **Remaining: 4**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -188,7 +191,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **COVER** — PDF Cover Fidelity | 1 | 1 | 0 |
 | **MOBILE** — Book Designer Mobile UX | 5 | 5 | 0 |
 | **PRICING** — Pricing Restructure | 12 | 12 | 0 |
-| **Total** | **127** | **124** | **3** |
+| **LULU** — Lulu Print Spec Fixes | 3 | 3 | 0 |
+| **Total** | **130** | **127** | **3** |
 
 ---
 
@@ -2328,4 +2332,66 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Files:** `packages/web/src/pages/Settings/index.jsx`, `packages/web/src/stores/subscriptionStore.js`, `packages/web/src/services/stripe.js`, `packages/worker/src/services/stripe.js`
 **Dependencies:** US-PRICING-4, US-PRICING-7, US-PRICING-10 (all subscription-related changes done first)
+**Estimate:** M
+
+---
+
+## Epic 13: Lulu Print Spec Fixes (LULU)
+
+### US-LULU-1: Correct spine width calculation per binding type — DONE
+**As a** book buyer
+**I want** the cover PDF to have the correct spine width for my chosen binding type
+**So that** Lulu accepts the cover and the printed book's cover aligns properly
+
+**Acceptance Criteria:**
+- [x] New `calculateSpineWidth(pageCount, bindingType)` function exported from pdf.js
+- [x] PB (softcover): uses Lulu formula `(pages / 444) + 0.06"` (444 PPI matches both 060UW444 and 080CW444)
+- [x] CW (hardcover): uses Lulu lookup table (24-84pg→0.25", 84-140→0.50", ... up to 800+→2.125")
+- [x] CO (coil): returns 0 (no spine — cover is front + back only)
+- [x] `generateCoverPdf` accepts new `bindingType` parameter (defaults to `'PB'` for backward compat)
+- [x] Old formula `pageCount * 0.0025` fully replaced
+- [x] Coil covers render correctly with no spine section (existing `spineWidthPt > 20` guard handles this)
+
+**Files:** `packages/worker/src/services/pdf.js`
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-LULU-2: Regenerate cover PDF at fulfillment with correct binding — DONE
+**As a** developer
+**I want** the Stripe webhook to regenerate the cover PDF with the correct binding type before submitting to Lulu
+**So that** the cover dimensions always match the user's selected book tier regardless of when PDFs were generated
+
+**Acceptance Criteria:**
+- [x] `handleBookPaymentCompleted` in stripe.js resolves binding type from bookTier + addons
+- [x] Cover PDF regenerated with correct `bindingType` parameter (PB for classic, CW for premium/heirloom, CO if coil addon)
+- [x] Regenerated cover uploaded to R2, overwriting the preview cover
+- [x] Cover photo (if any) fetched from R2 and included in regenerated cover
+- [x] Custom fonts loaded for blueprint books during regeneration
+- [x] `POST /generate` endpoint uses `'CW'` as default binding for preview (widest spine = safe preview)
+- [x] Signed URL serves updated cover file (same R2 key)
+
+**Files:** `packages/worker/src/services/stripe.js`, `packages/worker/src/routes/books.js`
+**Dependencies:** US-LULU-1
+**Estimate:** M
+
+---
+
+### US-LULU-3: Lulu print spec tests & validation — DONE
+**As a** developer
+**I want** comprehensive tests for spine width calculations and cover dimensions
+**So that** future changes don't break Lulu print compatibility
+
+**Acceptance Criteria:**
+- [x] `calculateSpineWidth` unit tests: PB formula (60, 100, 444 pages), CW lookup boundaries (24, 84, 85, 140, 500, 800, 801), CO always 0, edge cases (0, negative, default)
+- [x] Cover PDF dimension tests: PB/CW/CO produce different widths, CO width = 2×TRIM + 2×bleed (no spine)
+- [x] Webhook cover regeneration test: verifies `generateCoverPdf` called with correct binding type
+- [x] Existing spine width tests updated from old formula to new PB formula
+- [x] `generateCoverPdf` backward-compatible (3-arg calls default to PB)
+- [x] Lulu sandbox API validated: all 6 pod_package_ids accepted, print jobs created (IDs 284974-284979)
+- [x] Existing "triggers book fulfillment" test fixed — now verifies full Lulu fulfillment chain (was silently broken)
+
+**Files:** `packages/worker/src/__tests__/pdf.test.js`, `packages/worker/src/__tests__/pdf-cover-fix.test.js`, `packages/worker/src/__tests__/books.test.js`, `packages/worker/src/__tests__/stripe-service.test.js`
+**Dependencies:** US-LULU-1, US-LULU-2
 **Estimate:** M

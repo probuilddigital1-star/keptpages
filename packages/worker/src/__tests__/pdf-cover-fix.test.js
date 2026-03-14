@@ -181,6 +181,58 @@ describe('generateCoverPdf - edge cases', () => {
   });
 });
 
+describe('generateCoverPdf - binding types', () => {
+  it('generates valid cover with CW (hardcover) binding', async () => {
+    const result = await generateCoverPdf({
+      title: 'Hardcover Book',
+      subtitle: 'CW binding',
+      author: 'Author',
+      colorScheme: 'default',
+      layout: 'centered',
+    }, 100, null, 'CW');
+
+    expect(result).toBeInstanceOf(ArrayBuffer);
+    expect(result.byteLength).toBeGreaterThan(0);
+
+    const pdf = await PDFDocument.load(result);
+    expect(pdf.getPageCount()).toBe(1);
+  });
+
+  it('generates valid cover with CO (coil) binding — no spine', async () => {
+    const result = await generateCoverPdf({
+      title: 'Coil Book',
+      subtitle: 'CO binding',
+      author: 'Author',
+      colorScheme: 'midnight',
+      layout: 'centered',
+    }, 100, null, 'CO');
+
+    expect(result).toBeInstanceOf(ArrayBuffer);
+    expect(result.byteLength).toBeGreaterThan(0);
+
+    const pdf = await PDFDocument.load(result);
+    expect(pdf.getPageCount()).toBe(1);
+
+    // CO cover should be narrower (no spine) — just front+back+bleed
+    const coWidth = pdf.getPage(0).getWidth();
+    const pbResult = await generateCoverPdf({
+      title: 'PB Book', colorScheme: 'default', layout: 'centered',
+    }, 100, null, 'PB');
+    const pbWidth = (await PDFDocument.load(pbResult)).getPage(0).getWidth();
+    expect(coWidth).toBeLessThan(pbWidth);
+  });
+
+  it('backward compatible — 3-arg call defaults to PB', async () => {
+    const result = await generateCoverPdf({
+      title: 'Default Binding',
+      colorScheme: 'default',
+      layout: 'centered',
+    }, 100, null);
+
+    expect(result).toBeInstanceOf(ArrayBuffer);
+  });
+});
+
 describe('renderBlueprintBook - title page with author and cover photo', () => {
   const baseBlueprint = (overrides = {}) => ({
     version: 1,
