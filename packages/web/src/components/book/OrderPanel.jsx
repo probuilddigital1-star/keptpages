@@ -34,7 +34,7 @@ export default function OrderPanel({ bookId }) {
   const [bookTier, setBookTier] = useState('premium');
   const [addons, setAddons] = useState([]);
   const [shipping, setShipping] = useState({
-    name: '', email: '', street1: '', city: '', state: '', postalCode: '', country: 'US',
+    name: '', email: '', phone: '', street1: '', city: '', state: '', postalCode: '', country: 'US',
   });
 
   const handleToggleAddon = useCallback((addonId) => {
@@ -121,8 +121,9 @@ export default function OrderPanel({ bookId }) {
 
   const multiCopyDiscount = quantity >= 5 ? 0.20 : quantity >= 3 ? 0.15 : 0;
 
-  const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.street1.trim() &&
-    shipping.city.trim() && shipping.state.trim() && shipping.postalCode.trim() && book?.status === 'ready';
+  const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.phone.trim() &&
+    shipping.street1.trim() && shipping.city.trim() && shipping.state.trim() &&
+    shipping.postalCode.trim() && book?.status === 'ready';
 
   return (
     <div className="max-w-2xl mx-auto w-full">
@@ -254,6 +255,8 @@ export default function OrderPanel({ bookId }) {
                 onChange={(e) => setShipping((s) => ({ ...s, name: e.target.value }))} />
               <Input label="Email" type="email" placeholder="jane@example.com" value={shipping.email}
                 onChange={(e) => setShipping((s) => ({ ...s, email: e.target.value }))} />
+              <Input label="Phone Number" type="tel" placeholder="(555) 123-4567" value={shipping.phone}
+                onChange={(e) => setShipping((s) => ({ ...s, phone: e.target.value }))} />
               <Input label="Street Address" placeholder="123 Main St" value={shipping.street1}
                 onChange={(e) => setShipping((s) => ({ ...s, street1: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">

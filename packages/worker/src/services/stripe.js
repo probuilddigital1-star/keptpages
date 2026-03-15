@@ -273,7 +273,7 @@ async function handleBookPaymentCompleted(session, supabase, env) {
 
   // Now fulfill the order via Lulu
   try {
-    const { createProject, createOrder } = await import('./lulu.js');
+    const { createProject } = await import('./lulu.js');
 
     const { data: book, error: bookError } = await supabase
       .from('books')
@@ -337,19 +337,17 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     const interiorUrl = await getSignedFileUrl(apiBase, book.interior_pdf_key, env);
     const coverUrl = await getSignedFileUrl(apiBase, book.cover_pdf_key, env);
 
-    // Pass bookTier + addons to Lulu (createProject resolves print options internally)
-    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, bookTier, addons);
-    const order = await createOrder(luluProject.id, shippingAddress, quantity, env);
+    // Pass bookTier + addons + shipping to Lulu (createProject resolves print options internally)
+    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, bookTier, addons, shippingAddress, shippingAddress.email);
 
     await supabase
       .from('books')
       .update({
         status: 'ordered',
         lulu_project_id: luluProject.id,
-        lulu_order_id: order.id,
+        lulu_order_id: luluProject.id,
         shipping_address: shippingAddress,
         quantity,
-        order_cost: order.totalCost,
         updated_at: new Date().toISOString(),
       })
       .eq('id', bookId);

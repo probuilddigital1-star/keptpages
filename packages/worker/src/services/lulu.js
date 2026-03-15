@@ -135,7 +135,7 @@ export function buildPodPackageId(printOptions = {}) {
  * @param {string[]} [addons=[]] - Array of addon IDs
  * @returns {Promise<object>} The created Lulu print job / line item data
  */
-export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, bookTier = 'classic', addons = []) {
+export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, bookTier = 'classic', addons = [], shippingAddress = null, contactEmail = null) {
   const printOptions = resolvePrintOptionsFromTier(bookTier, addons);
   const podPackageId = buildPodPackageId(printOptions);
 
@@ -156,6 +156,24 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, boo
     shipping_level: 'MAIL',
   };
 
+  // Lulu requires shipping_address and contact_email at print job creation
+  if (shippingAddress) {
+    projectData.shipping_address = {
+      name: shippingAddress.name,
+      street1: shippingAddress.street1,
+      street2: shippingAddress.street2 || '',
+      city: shippingAddress.city,
+      state_code: toStateCode(shippingAddress.state),
+      country_code: shippingAddress.country || 'US',
+      postcode: shippingAddress.postalCode,
+      phone_number: shippingAddress.phone || shippingAddress.phoneNumber || '',
+    };
+  }
+
+  if (contactEmail) {
+    projectData.contact_email = contactEmail;
+  }
+
   const result = await luluFetch(env, '/print-jobs/', {
     method: 'POST',
     body: JSON.stringify(projectData),
@@ -170,6 +188,8 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, boo
       status: item.status?.name,
     })) || [],
     podPackageId,
+    totalCost: result.costs?.total_cost_incl_tax || null,
+    currency: result.costs?.currency || null,
     createdAt: result.date_created,
   };
 }
@@ -185,27 +205,9 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, boo
  */
 export async function createOrder(projectId, shippingAddress, quantity, env) {
   // In Lulu's API, the print-job IS the order.
-  // We update the print job with shipping details and contact info.
-  const orderData = {
-    contact_email: shippingAddress.email,
-    shipping_address: {
-      name: shippingAddress.name,
-      street1: shippingAddress.street1,
-      street2: shippingAddress.street2 || '',
-      city: shippingAddress.city,
-      state_code: shippingAddress.state,
-      country_code: shippingAddress.country || 'US',
-      postcode: shippingAddress.postalCode,
-      phone_number: shippingAddress.phone || '',
-    },
-    shipping_level: shippingAddress.shippingLevel || 'MAIL',
-  };
-
-  // Update the print job's line item quantity
-  const result = await luluFetch(env, `/print-jobs/${projectId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(orderData),
-  });
+  // Shipping details are now set at createProject() time (POST),
+  // so this just fetches the current print job state for cost/status info.
+  const result = await luluFetch(env, `/print-jobs/${projectId}/`);
 
   return {
     id: result.id,
@@ -215,6 +217,30 @@ export async function createOrder(projectId, shippingAddress, quantity, env) {
     shippingAddress: result.shipping_address,
     createdAt: result.date_created,
   };
+}
+
+// US state name → 2-letter code mapping (Lulu requires 2-letter codes)
+const US_STATE_CODES = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA',
+  'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE', 'district of columbia': 'DC',
+  'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL',
+  'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS', 'kentucky': 'KY', 'louisiana': 'LA',
+  'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN',
+  'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK', 'oregon': 'OR',
+  'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD',
+  'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA',
+  'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
+};
+
+function toStateCode(state) {
+  if (!state) return '';
+  const trimmed = state.trim();
+  // Already a 2-letter code
+  if (trimmed.length === 2) return trimmed.toUpperCase();
+  // Look up full name
+  return US_STATE_CODES[trimmed.toLowerCase()] || trimmed;
 }
 
 /**

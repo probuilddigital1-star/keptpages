@@ -41,8 +41,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 // ── Dynamic import mock for lulu.js (used inside handleBookPaymentCompleted) ──
 vi.mock('../services/lulu.js', () => ({
-  createProject: vi.fn().mockResolvedValue({ id: 'lulu_proj_1' }),
-  createOrder: vi.fn().mockResolvedValue({ id: 'lulu_order_1', totalCost: 2500 }),
+  createProject: vi.fn().mockResolvedValue({ id: 'lulu_proj_1', totalCost: 2500 }),
   resolvePrintOptionsFromTier: vi.fn((tier, addons = []) => {
     const base = { classic: { binding: 'PB' }, premium: { binding: 'CW' }, heirloom: { binding: 'CW' } }[tier] || { binding: 'PB' };
     if (addons.includes('coil')) base.binding = 'CO';
@@ -534,7 +533,7 @@ describe('handleWebhookEvent', () => {
     });
 
     it('triggers book fulfillment when book_id is present', async () => {
-      const { createProject, createOrder } = await import('../services/lulu.js');
+      const { createProject } = await import('../services/lulu.js');
       const { generateCoverPdf } = await import('../services/pdf.js');
 
       // handleBookPaymentCompleted calls .single() twice:
@@ -587,14 +586,13 @@ describe('handleWebhookEvent', () => {
 
       // Lulu fulfillment actually triggered
       expect(createProject).toHaveBeenCalled();
-      expect(createOrder).toHaveBeenCalled();
 
-      // Book status updated to ordered
+      // Book status updated to ordered (project_id and order_id are the same in Lulu's API)
       expect(mockSupabaseChain.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'ordered',
           lulu_project_id: 'lulu_proj_1',
-          lulu_order_id: 'lulu_order_1',
+          lulu_order_id: 'lulu_proj_1',
         }),
       );
     });
