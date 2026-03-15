@@ -64,12 +64,13 @@ async function getOrCreateCustomer(userId, stripe, supabase) {
     .eq('id', userId)
     .single();
 
+  const email = profile?.email || null;
   let customerId = profile?.stripe_customer_id;
 
   if (!customerId) {
     const customer = await stripe.customers.create({
       metadata: { supabase_user_id: userId },
-      email: profile?.email || undefined,
+      email: email || undefined,
     });
     customerId = customer.id;
 
@@ -79,7 +80,7 @@ async function getOrCreateCustomer(userId, stripe, supabase) {
       .eq('id', userId);
   }
 
-  return customerId;
+  return { customerId, email };
 }
 
 /**
@@ -88,7 +89,7 @@ async function getOrCreateCustomer(userId, stripe, supabase) {
 export async function createCheckoutSession(userId, plan, env, metadata = {}) {
   const stripe = getStripe(env);
   const supabase = getSupabase(env);
-  const customerId = await getOrCreateCustomer(userId, stripe, supabase);
+  const { customerId, email } = await getOrCreateCustomer(userId, stripe, supabase);
 
   if (plan !== 'keeper_pass') {
     throw new Error(`Unknown plan: ${plan}. Only 'keeper_pass' is supported.`);
@@ -109,6 +110,7 @@ export async function createCheckoutSession(userId, plan, env, metadata = {}) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: successUrl,
     cancel_url: cancelUrl,
+    ...(email ? { payment_intent_data: { receipt_email: email } } : {}),
     metadata: {
       user_id: userId,
       plan: 'keeper_pass',
@@ -149,7 +151,7 @@ function calculateBookUnitPrice(pageCount, bookTier, addons = []) {
 export async function createBookCheckoutSession(userId, book, shippingAddress, quantity, env, bookTier = 'classic', addons = []) {
   const stripe = getStripe(env);
   const supabase = getSupabase(env);
-  const customerId = await getOrCreateCustomer(userId, stripe, supabase);
+  const { customerId, email } = await getOrCreateCustomer(userId, stripe, supabase);
 
   // Fetch user profile for keeper discount
   const { data: profile } = await supabase
@@ -202,6 +204,7 @@ export async function createBookCheckoutSession(userId, book, shippingAddress, q
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
+    ...(email ? { payment_intent_data: { receipt_email: email } } : {}),
     metadata: {
       user_id: userId,
       book_id: book.id,
@@ -351,6 +354,31 @@ async function handleBookPaymentCompleted(session, supabase, env) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', bookId);
+
+    // Send order confirmation email (fire-and-forget)
+    try {
+      const { sendEmail, buildOrderConfirmationEmail } = await import('./email.js');
+      const TIER_LABELS = {
+        classic: 'Classic (Softcover, B&W)',
+        premium: 'Premium (Hardcover, Full Color)',
+        heirloom: 'Heirloom (Hardcover, Premium Paper)',
+      };
+      const recipientEmail = shippingAddress.email;
+      if (recipientEmail) {
+        const appUrl = env.APP_URL || 'https://app.keptpages.com';
+        const { subject, html } = buildOrderConfirmationEmail({
+          title: book.title,
+          tierLabel: TIER_LABELS[bookTier] || bookTier,
+          quantity,
+          totalCents: session.amount_total,
+          shippingAddress,
+          appUrl,
+        });
+        await sendEmail(recipientEmail, subject, html, env);
+      }
+    } catch (emailErr) {
+      console.error('Order confirmation email failed (non-fatal):', emailErr?.message || emailErr);
+    }
   } catch (err) {
     console.error('Lulu fulfillment failed after payment:', err);
     await supabase

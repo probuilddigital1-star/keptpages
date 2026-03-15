@@ -112,6 +112,83 @@ admin.get('/orders', async (c) => {
 });
 
 /**
+ * GET /admin/orders/:id
+ * Get full details for a single order, including user email and payment info.
+ */
+admin.get('/orders/:id', async (c) => {
+  const bookId = c.req.param('id');
+  const supabase = getSupabase(c.env);
+
+  const { data: book, error: bookError } = await supabase
+    .from('books')
+    .select(`
+      *,
+      profiles:user_id ( id, display_name, tier )
+    `)
+    .eq('id', bookId)
+    .single();
+
+  if (bookError || !book) {
+    return c.json({ error: 'Order not found' }, 404);
+  }
+
+  // Fetch user email from auth
+  let userEmail = null;
+  if (book.profiles?.id) {
+    try {
+      const { data: { user } } = await supabase.auth.admin.getUserById(book.profiles.id);
+      userEmail = user?.email || null;
+    } catch {
+      // Skip email lookup failure
+    }
+  }
+
+  // Fetch payment record
+  let payment = null;
+  if (book.stripe_session_id) {
+    const { data: paymentData } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('stripe_session_id', book.stripe_session_id)
+      .single();
+    payment = paymentData || null;
+  }
+
+  return c.json({
+    id: book.id,
+    title: book.title,
+    subtitle: book.subtitle,
+    author: book.author,
+    status: book.status,
+    paymentStatus: book.payment_status,
+    userName: book.profiles?.display_name || null,
+    userEmail,
+    userTier: book.profiles?.tier || null,
+    luluOrderId: book.lulu_order_id,
+    luluProjectId: book.lulu_project_id,
+    stripeSessionId: book.stripe_session_id,
+    stripePaymentIntentId: book.stripe_payment_intent_id,
+    quantity: book.quantity,
+    priceCents: book.price_cents,
+    shippingAddress: book.shipping_address,
+    printOptions: book.print_options,
+    pageCount: book.page_count,
+    errorMessage: book.error_message,
+    template: book.template,
+    createdAt: book.created_at,
+    updatedAt: book.updated_at,
+    payment: payment ? {
+      id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      paymentType: payment.payment_type,
+      createdAt: payment.created_at,
+    } : null,
+  });
+});
+
+/**
  * POST /admin/orders/:id/mock-status
  * Dev-only endpoint to manually set a book's order status for testing.
  */

@@ -151,6 +151,50 @@ describe('Books routes', () => {
   const app = createApp(booksRoutes, '/books');
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // GET /books/orders - List user's paid orders
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('GET /books/orders', () => {
+    it('returns user orders with payment_status succeeded', async () => {
+      mockFrom('books', {
+        data: [
+          {
+            id: 'b1', title: 'My Book', status: 'ordered', payment_status: 'succeeded',
+            lulu_order_id: 'lulu_1', quantity: 1, shipping_address: { name: 'Jane' },
+            print_options: { bookTier: 'classic' }, page_count: 40,
+            error_message: null, created_at: '2026-03-14T00:00:00Z', updated_at: '2026-03-14T00:00:00Z',
+          },
+        ],
+        error: null,
+      });
+
+      const res = await app.request('/books/orders', {}, ENV);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.orders).toHaveLength(1);
+      expect(json.orders[0].id).toBe('b1');
+      expect(json.orders[0].status).toBe('ordered');
+      expect(json.orders[0].luluOrderId).toBe('lulu_1');
+    });
+
+    it('returns empty array when no orders exist', async () => {
+      mockFrom('books', { data: [], error: null });
+
+      const res = await app.request('/books/orders', {}, ENV);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.orders).toEqual([]);
+    });
+
+    it('returns 500 on database error', async () => {
+      mockFrom('books', { data: null, error: { message: 'db error' } });
+
+      const res = await app.request('/books/orders', {}, ENV);
+      expect(res.status).toBe(500);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // POST /books - Create book
   // ═══════════════════════════════════════════════════════════════════════════
 

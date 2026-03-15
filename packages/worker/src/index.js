@@ -336,4 +336,10 @@ app.onError((err, c) => {
   );
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(event, env, ctx) {
+    const { pollOrderStatuses } = await import('./services/orderPoller.js');
+    ctx.waitUntil(pollOrderStatuses(env));
+  },
+};

@@ -85,6 +85,44 @@ books.post(
 );
 
 /**
+ * GET /books/orders
+ * List user's paid book orders with status tracking.
+ */
+books.get('/orders', async (c) => {
+  const user = c.get('user');
+  const supabase = getSupabase(c.env);
+
+  const { data: orders, error } = await supabase
+    .from('books')
+    .select('id, title, status, payment_status, lulu_order_id, quantity, shipping_address, print_options, page_count, error_message, created_at, updated_at')
+    .eq('user_id', user.id)
+    .eq('payment_status', 'succeeded')
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch user orders:', error);
+    return c.json({ error: 'Failed to fetch orders' }, 500);
+  }
+
+  return c.json({
+    orders: (orders || []).map((book) => ({
+      id: book.id,
+      title: book.title,
+      status: book.status,
+      paymentStatus: book.payment_status,
+      luluOrderId: book.lulu_order_id,
+      quantity: book.quantity,
+      shippingAddress: book.shipping_address,
+      printOptions: book.print_options,
+      pageCount: book.page_count,
+      errorMessage: book.error_message,
+      createdAt: book.created_at,
+      updatedAt: book.updated_at,
+    })),
+  });
+});
+
+/**
  * GET /books/:id
  * Get a book project with its current status.
  */

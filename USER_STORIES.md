@@ -142,8 +142,15 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-LULU-1 | Correct spine width calculation per binding type | DONE | calculateSpineWidth(): PB formula, CW lookup table, CO=0 |
 | US-LULU-2 | Regenerate cover PDF at fulfillment with correct binding | DONE | Webhook regenerates cover with binding-specific spine before Lulu submission |
 | US-LULU-3 | Lulu print spec tests & validation | DONE | Spine width unit tests, cover dimension tests, binding type coverage, sandbox validated |
+| US-ORDER-1 | Stripe receipt emails | DONE | Add receipt_email to checkout sessions so Stripe sends automatic receipts |
+| US-ORDER-2 | Email service (Resend) | DONE | Transactional email service for order confirmation and shipping notifications |
+| US-ORDER-3 | Order confirmation email | DONE | Branded email sent after successful Lulu order creation |
+| US-ORDER-4 | Customer orders page | DONE | /app/orders page listing user's paid book orders with status tracking |
+| US-ORDER-5 | Admin order detail view | DONE | Expandable order cards in admin dashboard showing full order details |
+| US-ORDER-6 | Lulu status cron poller | DONE | Scheduled worker polls Lulu for status updates, triggers shipping emails |
+| US-ORDER-7 | Shipping notification email | DONE | Email with tracking number sent when order ships |
 
-**Completed: 127/131** | **Remaining: 4**
+**Completed: 134/138** | **Remaining: 4**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -192,7 +199,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **MOBILE** — Book Designer Mobile UX | 5 | 5 | 0 |
 | **PRICING** — Pricing Restructure | 12 | 12 | 0 |
 | **LULU** — Lulu Print Spec Fixes | 3 | 3 | 0 |
-| **Total** | **130** | **127** | **3** |
+| **ORDER** — Post-Order Experience | 7 | 7 | 0 |
+| **Total** | **137** | **134** | **3** |
 
 ---
 
@@ -2395,3 +2403,130 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 **Files:** `packages/worker/src/__tests__/pdf.test.js`, `packages/worker/src/__tests__/pdf-cover-fix.test.js`, `packages/worker/src/__tests__/books.test.js`, `packages/worker/src/__tests__/stripe-service.test.js`
 **Dependencies:** US-LULU-1, US-LULU-2
 **Estimate:** M
+
+---
+
+## Epic 14: Post-Order Experience (ORDER)
+
+### US-ORDER-1: Stripe receipt emails — DONE
+**As a** customer
+**I want** to receive a Stripe receipt email after purchasing a book or Keeper Pass
+**So that** I have a payment confirmation in my inbox
+
+**Acceptance Criteria:**
+- [x] `getOrCreateCustomer()` returns `{ customerId, email }` instead of just `customerId`
+- [x] `createCheckoutSession()` includes `payment_intent_data: { receipt_email }` for Keeper Pass
+- [x] `createBookCheckoutSession()` includes `payment_intent_data: { receipt_email }` for book orders
+- [x] Tests verify `payment_intent_data.receipt_email` is passed to Stripe
+
+**Files:** `packages/worker/src/services/stripe.js`, `packages/worker/src/__tests__/stripe-service.test.js`
+**Dependencies:** None
+**Estimate:** S
+
+---
+
+### US-ORDER-2: Email service (Resend) — DONE
+**As a** developer
+**I want** a reusable email service using the Resend API
+**So that** we can send branded transactional emails for order confirmations and shipping notifications
+
+**Acceptance Criteria:**
+- [x] `sendEmail(to, subject, html, env)` calls Resend HTTP API
+- [x] `buildOrderConfirmationEmail(orderData)` returns `{ subject, html }` with branded template
+- [x] `buildShippingNotificationEmail(orderData, trackingInfo)` returns `{ subject, html }`
+- [x] HTML templates use brand colors (walnut, terracotta, cream)
+- [x] Tests cover all email builder functions and sendEmail API call
+
+**Files:** `packages/worker/src/services/email.js`, `packages/worker/src/__tests__/email.test.js`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-ORDER-3: Order confirmation email — DONE
+**As a** customer
+**I want** to receive a branded order confirmation email after my book order is placed
+**So that** I know my order was successful and can track it
+
+**Acceptance Criteria:**
+- [x] Email sent after successful Lulu order creation in `handleBookPaymentCompleted`
+- [x] Fire-and-forget (errors caught silently, don't fail the order)
+- [x] Email includes: book title, tier, quantity, total, shipping address, link to /app/orders
+- [x] Test verifies email service called after successful order
+
+**Files:** `packages/worker/src/services/stripe.js`, `packages/worker/src/__tests__/stripe-service.test.js`
+**Dependencies:** US-ORDER-2
+**Estimate:** S
+
+---
+
+### US-ORDER-4: Customer orders page — DONE
+**As a** customer
+**I want** to view my past book orders and their current status
+**So that** I can track my orders without going to the book designer
+
+**Acceptance Criteria:**
+- [x] `GET /books/orders` returns user's paid book orders sorted by date
+- [x] `/app/orders` page with order cards showing title, status, tracking info
+- [x] StatusStepper component extracted for reuse
+- [x] `ordersStore.js` for state management
+- [x] "Orders" nav item in sidebar and bottom tabs
+- [x] Tests for backend endpoint and frontend page
+
+**Files:** `packages/worker/src/routes/books.js`, `packages/web/src/pages/Orders/index.jsx`, `packages/web/src/stores/ordersStore.js`, `packages/web/src/components/order/StatusStepper.jsx`, `packages/web/src/App.jsx`, `packages/web/src/components/layout/AppLayout.jsx`
+**Dependencies:** None
+**Estimate:** L
+
+---
+
+### US-ORDER-5: Admin order detail view — DONE
+**As an** admin
+**I want** to see full details of any order
+**So that** I can troubleshoot issues and answer customer questions
+
+**Acceptance Criteria:**
+- [x] `GET /admin/orders/:id` returns full book + user email + payment details
+- [x] Expandable order cards in admin dashboard with detail panel
+- [x] Detail shows: shipping address, print config, payment info, Lulu IDs, Stripe IDs, errors
+- [x] `adminStore` updated with `orderDetail` and `fetchOrderDetail(orderId)`
+
+**Files:** `packages/worker/src/routes/admin.js`, `packages/web/src/pages/Admin/Orders.jsx`, `packages/web/src/stores/adminStore.js`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-ORDER-6: Lulu status cron poller — DONE
+**As a** developer
+**I want** a scheduled worker that polls Lulu for order status updates
+**So that** order statuses stay current and shipping notifications can be triggered automatically
+
+**Acceptance Criteria:**
+- [x] `scheduled()` handler added to worker entry point
+- [x] Polls books in `ordered`/`printing` status with `lulu_order_id`
+- [x] Maps Lulu status: PRODUCTION→printing, SHIPPED→shipped, CANCELLED→cancelled
+- [x] Updates DB on status change
+- [x] Sends shipping email on transition to shipped (with idempotency via `email_notifications_sent`)
+- [x] `wrangler.toml` configured with `[triggers] crons = ["*/30 * * * *"]`
+- [x] Migration 018 adds `email_notifications_sent` JSONB column to books
+
+**Files:** `packages/worker/src/index.js`, `packages/worker/src/services/orderPoller.js`, `packages/worker/wrangler.toml`, `supabase/migrations/018_order_notifications.sql`
+**Dependencies:** US-ORDER-2
+**Estimate:** M
+
+---
+
+### US-ORDER-7: Shipping notification email — DONE
+**As a** customer
+**I want** to receive an email when my book ships with tracking information
+**So that** I can track my shipment
+
+**Acceptance Criteria:**
+- [x] Email sent by cron poller when Lulu status transitions to SHIPPED
+- [x] Email includes: book title, tracking number, clickable tracking URL
+- [x] Idempotent — only sends once per order (tracked in `email_notifications_sent`)
+- [x] Uses `buildShippingNotificationEmail` from email service
+
+**Files:** `packages/worker/src/services/orderPoller.js`, `packages/worker/src/services/email.js`
+**Dependencies:** US-ORDER-2, US-ORDER-6
+**Estimate:** S

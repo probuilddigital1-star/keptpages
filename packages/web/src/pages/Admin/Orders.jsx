@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
-import { formatCurrency } from '@/utils/formatters';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Orders' },
@@ -68,9 +68,101 @@ function MockStatusControl({ orderId }) {
   );
 }
 
+function OrderDetailPanel({ detail, loading }) {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!detail) return null;
+
+  const addr = detail.shippingAddress || {};
+  const opts = detail.printOptions || {};
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border-light grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 font-ui text-xs">
+      {/* User */}
+      <div>
+        <p className="text-walnut-muted mb-0.5">Customer</p>
+        <p className="text-walnut">{detail.userName || 'Unknown'} ({detail.userEmail || 'no email'})</p>
+        <p className="text-walnut-muted">Tier: {detail.userTier || 'unknown'}</p>
+      </div>
+
+      {/* Shipping */}
+      <div>
+        <p className="text-walnut-muted mb-0.5">Shipping Address</p>
+        {addr.name ? (
+          <p className="text-walnut">
+            {addr.name}<br />
+            {addr.street1}{addr.street2 ? `, ${addr.street2}` : ''}<br />
+            {addr.city}, {addr.state} {addr.postalCode}
+          </p>
+        ) : (
+          <p className="text-walnut-muted">Not available</p>
+        )}
+      </div>
+
+      {/* Print config */}
+      <div>
+        <p className="text-walnut-muted mb-0.5">Print Config</p>
+        <p className="text-walnut capitalize">
+          Tier: {opts.bookTier || 'classic'}
+          {opts.addons?.length > 0 && ` + ${opts.addons.join(', ')}`}
+        </p>
+        <p className="text-walnut">{detail.pageCount || 0} pages, Qty: {detail.quantity || 1}</p>
+      </div>
+
+      {/* Payment */}
+      <div>
+        <p className="text-walnut-muted mb-0.5">Payment</p>
+        {detail.payment ? (
+          <p className="text-walnut">
+            {formatCurrency(detail.payment.amount)} {detail.payment.currency?.toUpperCase()} — {detail.payment.status}
+          </p>
+        ) : (
+          <p className="text-walnut-muted">No payment record</p>
+        )}
+      </div>
+
+      {/* IDs */}
+      <div>
+        <p className="text-walnut-muted mb-0.5">Lulu IDs</p>
+        <p className="text-walnut font-mono text-[10px] break-all">
+          Order: {detail.luluOrderId || 'N/A'}<br />
+          Project: {detail.luluProjectId || 'N/A'}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-walnut-muted mb-0.5">Stripe IDs</p>
+        <p className="text-walnut font-mono text-[10px] break-all">
+          Session: {detail.stripeSessionId || 'N/A'}<br />
+          PI: {detail.stripePaymentIntentId || 'N/A'}
+        </p>
+      </div>
+
+      {/* Error */}
+      {detail.errorMessage && (
+        <div className="sm:col-span-2">
+          <p className="text-walnut-muted mb-0.5">Error</p>
+          <p className="text-red-600">{detail.errorMessage}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const { orders, total, page, limit, loading, filters, setFilters, fetchOrders } = useAdminStore();
+  const fetchOrderDetail = useAdminStore((s) => s.fetchOrderDetail);
+  const orderDetail = useAdminStore((s) => s.orderDetail);
+  const detailLoading = useAdminStore((s) => s.detailLoading);
+  const clearOrderDetail = useAdminStore((s) => s.clearOrderDetail);
   const isDev = import.meta.env.PROD !== true;
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     fetchOrders().catch(() => toast('Failed to load orders', 'error'));
@@ -88,6 +180,16 @@ export default function AdminOrders() {
   const handleNext = useCallback(() => {
     if (page * limit < total) fetchOrders({ page: page + 1 }).catch(() => {});
   }, [page, limit, total, fetchOrders]);
+
+  const toggleDetail = useCallback((orderId) => {
+    if (expandedId === orderId) {
+      setExpandedId(null);
+      clearOrderDetail();
+    } else {
+      setExpandedId(orderId);
+      fetchOrderDetail(orderId).catch(() => toast('Failed to load order detail', 'error'));
+    }
+  }, [expandedId, fetchOrderDetail, clearOrderDetail]);
 
   const totalPages = Math.ceil(total / limit) || 1;
 
@@ -150,13 +252,31 @@ export default function AdminOrders() {
                     {order.quantity && <span>Qty: {order.quantity}</span>}
                     {order.orderCost && <span>{formatCurrency(order.orderCost)}</span>}
                     {order.pageCount && <span>{order.pageCount} pages</span>}
-                    <span>{new Date(order.updatedAt || order.createdAt).toLocaleDateString()}</span>
+                    <span>{formatDate(order.updatedAt || order.createdAt)}</span>
                   </div>
                 </div>
 
-                {/* Dev mock controls */}
-                {isDev && <MockStatusControl orderId={order.id} />}
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => toggleDetail(order.id)}
+                    className="text-[10px] px-2 py-0.5"
+                  >
+                    {expandedId === order.id ? 'Hide' : 'Details'}
+                  </Button>
+                  {isDev && <MockStatusControl orderId={order.id} />}
+                </div>
               </div>
+
+              {/* Expandable detail */}
+              {expandedId === order.id && (
+                <OrderDetailPanel
+                  detail={orderDetail}
+                  loading={detailLoading}
+                />
+              )}
             </Card>
           ))}
         </div>

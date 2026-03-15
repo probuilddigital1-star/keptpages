@@ -8,6 +8,8 @@ export const useAdminStore = create((set, get) => ({
   limit: 20,
   loading: false,
   filters: { status: '' },
+  orderDetail: null,
+  detailLoading: false,
 
   setFilters: (filters) => set({ filters: { ...get().filters, ...filters } }),
 
@@ -36,6 +38,20 @@ export const useAdminStore = create((set, get) => ({
       throw error;
     }
   },
+
+  fetchOrderDetail: async (orderId) => {
+    set({ detailLoading: true });
+    try {
+      const result = await api.get(`/admin/orders/${orderId}`);
+      set({ orderDetail: result, detailLoading: false });
+      return result;
+    } catch (error) {
+      set({ detailLoading: false });
+      throw error;
+    }
+  },
+
+  clearOrderDetail: () => set({ orderDetail: null }),
 
   mockStatus: async (bookId, status, trackingId, trackingUrl) => {
     const body = { status };

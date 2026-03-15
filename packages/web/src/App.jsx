@@ -24,6 +24,7 @@ const SettingsPage = lazy(() => import('@/pages/Settings'));
 const SharedCollection = lazy(() => import('@/pages/Shared'));
 const CheckoutSuccess = lazy(() => import('@/pages/CheckoutSuccess'));
 const CheckoutCancel = lazy(() => import('@/pages/CheckoutCancel'));
+const Orders = lazy(() => import('@/pages/Orders'));
 const AdminOrders = lazy(() => import('@/pages/Admin/Orders'));
 const AuthCallback = lazy(() => import('@/pages/Auth/Callback'));
 const ArticleListing = lazy(() => import('@/pages/Articles'));
@@ -91,6 +92,7 @@ export default function App() {
               <Route path="/app/collection/:id" element={<CollectionPage />} />
               <Route path="/app/book/:id" element={<BookPage />} />
               <Route path="/app/settings" element={<SettingsPage />} />
+              <Route path="/app/orders" element={<Orders />} />
             </Route>
           </Route>
 

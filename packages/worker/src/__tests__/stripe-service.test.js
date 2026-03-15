@@ -55,6 +55,15 @@ vi.mock('../services/pdf.js', () => ({
   calculateSpineWidth: vi.fn().mockReturnValue(0.25),
 }));
 
+// ── Dynamic import mock for email.js (used for order confirmation) ──
+vi.mock('../services/email.js', () => ({
+  sendEmail: vi.fn().mockResolvedValue({ id: 'email_123' }),
+  buildOrderConfirmationEmail: vi.fn(() => ({
+    subject: 'Order Confirmed: Test Book',
+    html: '<p>Confirmation</p>',
+  })),
+}));
+
 // ── Import the module under test AFTER mocks are set up ────────────────────────
 import {
   createCheckoutSession,
@@ -142,6 +151,20 @@ describe('createCheckoutSession', () => {
 
     expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({ mode: 'payment' }),
+    );
+  });
+
+  it('includes receipt_email in payment_intent_data', async () => {
+    resetChain({
+      single: { data: { stripe_customer_id: 'cus_1', email: 'receipt@test.com' } },
+    });
+
+    await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
+
+    expect(mockStripeInstance.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payment_intent_data: { receipt_email: 'receipt@test.com' },
+      }),
     );
   });
 
@@ -346,6 +369,13 @@ describe('createBookCheckoutSession', () => {
 
     const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
     expect(arg.line_items[0].quantity).toBe(5);
+  });
+
+  it('includes receipt_email in payment_intent_data for book orders', async () => {
+    await createBookCheckoutSession('user_1', makeBook(), shippingAddress, 1, baseEnv);
+
+    const arg = mockStripeInstance.checkout.sessions.create.mock.calls[0][0];
+    expect(arg.payment_intent_data).toEqual({ receipt_email: 'a@b.com' });
   });
 
   it('applies 15% multi-copy discount for 3+ copies', async () => {
@@ -653,6 +683,60 @@ describe('handleWebhookEvent', () => {
         'u1/books/b1/cover.pdf',
         expect.anything(),
         expect.objectContaining({ httpMetadata: { contentType: 'application/pdf' } }),
+      );
+    });
+
+    it('sends order confirmation email after successful Lulu order', async () => {
+      const { sendEmail, buildOrderConfirmationEmail } = await import('../services/email.js');
+
+      mockSupabaseChain.single
+        .mockResolvedValueOnce({ data: { tier: 'free', first_book_purchased_at: null } })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'book_42',
+            interior_pdf_key: 'interior.pdf',
+            cover_pdf_key: 'cover.pdf',
+            title: 'Email Test Book',
+            page_count: 40,
+            cover_design: { title: 'Email Test Book', colorScheme: 'default', layout: 'centered' },
+          },
+        });
+
+      const event = {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            mode: 'payment',
+            id: 'cs_email_1',
+            payment_intent: 'pi_email_1',
+            amount_total: 3900,
+            currency: 'usd',
+            metadata: {
+              user_id: 'user_1',
+              book_id: 'book_42',
+              quantity: '1',
+              shipping_address: JSON.stringify({ name: 'Jane', street1: '1 Main', email: 'jane@test.com' }),
+              book_tier: 'classic',
+              addons: JSON.stringify([]),
+            },
+          },
+        },
+      };
+
+      await handleWebhookEvent(event, baseEnv);
+
+      expect(buildOrderConfirmationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Email Test Book',
+          quantity: 1,
+          totalCents: 3900,
+        }),
+      );
+      expect(sendEmail).toHaveBeenCalledWith(
+        'jane@test.com',
+        'Order Confirmed: Test Book',
+        '<p>Confirmation</p>',
+        baseEnv,
       );
     });
 
