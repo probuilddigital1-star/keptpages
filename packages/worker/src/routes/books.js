@@ -571,6 +571,19 @@ books.post('/:id/generate', async (c) => {
       pageCount = result.pageCount;
     }
 
+    // Lulu requires minimum 24 pages for all binding types
+    const LULU_MIN_PAGES = 24;
+    if (pageCount < LULU_MIN_PAGES) {
+      const padDoc = await PDFDocument.load(interiorPdf);
+      const [width, height] = padDoc.getPages()[0]?.getSize() || [612, 792];
+      while (padDoc.getPageCount() < LULU_MIN_PAGES) {
+        padDoc.addPage([width, height]);
+      }
+      interiorPdf = await padDoc.save();
+      pageCount = padDoc.getPageCount();
+      console.log(`[generate] Padded interior PDF to ${pageCount} pages (Lulu minimum)`);
+    }
+
     // Generate cover PDF
     const coverPdf = await generateCoverPdf({
       title: blueprint?.coverDesign?.title || book.title,

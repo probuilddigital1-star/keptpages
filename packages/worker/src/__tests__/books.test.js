@@ -76,10 +76,14 @@ vi.mock('../services/stripe.js', () => ({
 vi.mock('pdf-lib', () => {
   const mockPdfDoc = {
     save: vi.fn(() => Promise.resolve(new Uint8Array([37, 80, 68, 70]))),
+    getPages: vi.fn(() => [{ getSize: () => [612, 792] }]),
+    getPageCount: vi.fn(() => 24),
+    addPage: vi.fn(),
   };
   return {
     PDFDocument: {
       create: vi.fn(() => Promise.resolve(mockPdfDoc)),
+      load: vi.fn(() => Promise.resolve(mockPdfDoc)),
     },
   };
 });
