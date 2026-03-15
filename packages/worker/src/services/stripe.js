@@ -349,7 +349,9 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     const coverUrl = await getSignedFileUrl(apiBase, book.cover_pdf_key, env);
 
     // Pass bookTier + addons + shipping to Lulu (createProject resolves print options internally)
-    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, bookTier, addons, shippingAddress, shippingAddress.email);
+    // Use business email for Lulu contact (not customer email — Lulu sends printing cost receipts to this)
+    const luluContactEmail = env.LULU_CONTACT_EMAIL || 'orders@keptpages.com';
+    const luluProject = await createProject(interiorUrl, coverUrl, book.title, env, bookTier, addons, shippingAddress, luluContactEmail);
 
     await supabase
       .from('books')
