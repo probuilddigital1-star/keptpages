@@ -41,6 +41,10 @@ vi.mock('../services/email.js', () => ({
     subject: 'Your book has shipped',
     html: '<p>Shipped!</p>',
   })),
+  buildOrderFailureEmail: vi.fn(() => ({
+    subject: 'Issue with your order',
+    html: '<p>Failed!</p>',
+  })),
 }));
 
 import { pollOrderStatuses } from '../services/orderPoller.js';

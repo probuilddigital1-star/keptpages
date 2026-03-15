@@ -2,7 +2,7 @@
  * Tests for the email service (services/email.js).
  */
 
-import { sendEmail, buildOrderConfirmationEmail, buildShippingNotificationEmail } from '../services/email.js';
+import { sendEmail, buildOrderConfirmationEmail, buildShippingNotificationEmail, buildOrderFailureEmail } from '../services/email.js';
 
 // ── sendEmail ─────────────────────────────────────────────────────────────────
 
@@ -149,5 +149,30 @@ describe('buildShippingNotificationEmail', () => {
     const { html } = buildShippingNotificationEmail({ title: 'My Book' }, {});
 
     expect(html).toContain('Not yet available');
+  });
+});
+
+// ── buildOrderFailureEmail ────────────────────────────────────────────────
+
+describe('buildOrderFailureEmail', () => {
+  it('returns subject and html with error details', () => {
+    const { subject, html } = buildOrderFailureEmail({
+      title: 'Family Recipes',
+      errorMessage: 'Address validation failed',
+      appUrl: 'https://app.keptpages.com',
+    });
+
+    expect(subject).toBe('Issue with your order: Family Recipes');
+    expect(html).toContain('Family Recipes');
+    expect(html).toContain('Address validation failed');
+    expect(html).toContain('/app/orders');
+    expect(html).toContain('will not be charged again');
+  });
+
+  it('handles missing fields gracefully', () => {
+    const { subject, html } = buildOrderFailureEmail({});
+
+    expect(subject).toContain('KeptPages Book');
+    expect(html).toContain('unable to fulfill');
   });
 });

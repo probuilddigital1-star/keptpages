@@ -737,6 +737,14 @@ books.post(
       );
     }
 
+    // Lulu requires minimum 24 pages for all binding types
+    if (book.page_count < 24) {
+      return c.json(
+        { error: `Your book has ${book.page_count} pages, but the minimum for printing is 24 pages. Please add more content and regenerate.` },
+        400
+      );
+    }
+
     if (!book.interior_pdf_key || !book.cover_pdf_key) {
       return c.json({ error: 'Book PDFs have not been generated yet' }, 400);
     }

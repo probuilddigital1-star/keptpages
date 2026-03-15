@@ -141,3 +141,34 @@ Great news — <strong>${title || 'your book'}</strong> has shipped and is heade
 
   return { subject, html: emailWrapper(content) };
 }
+
+/**
+ * Build an order failure notification email.
+ * @param {object} orderData - { title, errorMessage, appUrl }
+ * @returns {{ subject: string, html: string }}
+ */
+export function buildOrderFailureEmail(orderData) {
+  const { title, errorMessage, appUrl } = orderData;
+
+  const subject = `Issue with your order: ${title || 'KeptPages Book'}`;
+
+  const content = `
+<h2 style="margin:0 0 16px;font-size:20px;color:${WALNUT};">There was an issue with your order</h2>
+<p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.5;">
+We're sorry — there was a problem processing your book <strong>${title || 'Untitled Book'}</strong> with our printing partner. Your payment has been received and you will not be charged again.
+</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;margin-bottom:24px;">
+<tr><td style="padding:16px;">
+<p style="margin:0 0 4px;font-size:14px;color:#991B1B;font-weight:600;">What happened</p>
+<p style="margin:0;font-size:13px;color:#7F1D1D;">${errorMessage || 'The printing service was unable to fulfill your order. Our team has been notified.'}</p>
+</td></tr>
+</table>
+<p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.5;">
+Our team is looking into this and will reach out if we need any additional information. If you have questions, reply to this email.
+</p>
+<table cellpadding="0" cellspacing="0"><tr><td style="background:${TERRACOTTA};border-radius:6px;padding:12px 24px;">
+<a href="${appUrl || 'https://app.keptpages.com'}/app/orders" style="color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">View Your Orders</a>
+</td></tr></table>`;
+
+  return { subject, html: emailWrapper(content) };
+}

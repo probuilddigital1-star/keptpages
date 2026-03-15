@@ -6,7 +6,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { getOrderStatus } from './lulu.js';
-import { sendEmail, buildShippingNotificationEmail } from './email.js';
+import { sendEmail, buildShippingNotificationEmail, buildOrderFailureEmail } from './email.js';
 
 // Map Lulu status names to our local status values
 const LULU_STATUS_MAP = {
@@ -89,6 +89,11 @@ export async function pollOrderStatuses(env) {
       if (newStatus === 'shipped') {
         await sendShippingEmailIfNeeded(book, orderStatus, supabase, env);
       }
+
+      // Send failure notification email (idempotent)
+      if (newStatus === 'error') {
+        await sendFailureEmailIfNeeded(book, orderStatus, supabase, env);
+      }
     } catch (err) {
       console.error(`[orderPoller] Error polling book ${book.id}:`, err?.message || err);
       errors++;
@@ -151,5 +156,47 @@ async function sendShippingEmailIfNeeded(book, orderStatus, supabase, env) {
       .eq('id', book.id);
   } catch (emailErr) {
     console.error(`[orderPoller] Shipping email failed for book ${book.id}:`, emailErr?.message || emailErr);
+  }
+}
+
+/**
+ * Send an order failure notification email if not already sent.
+ */
+async function sendFailureEmailIfNeeded(book, orderStatus, supabase, env) {
+  const notifications = book.email_notifications_sent || {};
+  if (notifications.failure) return;
+
+  // Find recipient email
+  let toEmail = book.shipping_address?.email;
+  if (!toEmail && book.user_id) {
+    try {
+      const { data: { user } } = await supabase.auth.admin.getUserById(book.user_id);
+      toEmail = user?.email || null;
+    } catch {
+      // Skip
+    }
+  }
+  if (!toEmail) return;
+
+  try {
+    const appUrl = env.APP_URL || 'https://app.keptpages.com';
+    const { subject, html } = buildOrderFailureEmail({
+      title: book.title,
+      errorMessage: orderStatus.statusMessage || 'Our printing partner was unable to process your order. Our team has been notified.',
+      appUrl,
+    });
+    await sendEmail(toEmail, subject, html, env);
+
+    await supabase
+      .from('books')
+      .update({
+        email_notifications_sent: {
+          ...notifications,
+          failure: new Date().toISOString(),
+        },
+      })
+      .eq('id', book.id);
+  } catch (emailErr) {
+    console.error(`[orderPoller] Failure email failed for book ${book.id}:`, emailErr?.message || emailErr);
   }
 }

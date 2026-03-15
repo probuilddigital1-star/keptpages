@@ -391,14 +391,33 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     }
   } catch (err) {
     console.error('Lulu fulfillment failed after payment:', err);
+    const errorMsg = `Payment succeeded but Lulu order failed: ${err.message}`;
     await supabase
       .from('books')
       .update({
         status: 'error',
-        error_message: `Payment succeeded but Lulu order failed: ${err.message}`,
+        error_message: errorMsg,
         updated_at: new Date().toISOString(),
       })
       .eq('id', bookId);
+
+    // Notify customer of failure (fire-and-forget)
+    try {
+      const { sendEmail, buildOrderFailureEmail } = await import('./email.js');
+      const recipientEmail = shippingAddress?.email;
+      if (recipientEmail) {
+        const appUrl = env.APP_URL || 'https://app.keptpages.com';
+        const { data: bookData } = await supabase.from('books').select('title').eq('id', bookId).single();
+        const { subject, html } = buildOrderFailureEmail({
+          title: bookData?.title || 'Your Book',
+          errorMessage: 'Our printing partner was unable to process your order. Our team has been notified and will resolve this shortly.',
+          appUrl,
+        });
+        await sendEmail(recipientEmail, subject, html, env);
+      }
+    } catch (emailErr) {
+      console.error('Order failure email failed (non-fatal):', emailErr?.message || emailErr);
+    }
   }
 }
 
