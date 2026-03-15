@@ -832,7 +832,7 @@ describe('Books routes', () => {
 
     const readyBook = {
       id: 'b1', title: 'Book', status: 'ready',
-      interior_pdf_key: 'k1', cover_pdf_key: 'k2', page_count: 24,
+      interior_pdf_key: 'k1', cover_pdf_key: 'k2', page_count: 40,
     };
 
     it('creates checkout session successfully', async () => {
@@ -1166,7 +1166,7 @@ describe('bookTier + addons validation (via order route)', () => {
   };
   const readyBook = {
     id: 'b1', title: 'Book', status: 'ready',
-    interior_pdf_key: 'k1', cover_pdf_key: 'k2',
+    interior_pdf_key: 'k1', cover_pdf_key: 'k2', page_count: 40,
   };
 
   function createApp(routes, basePath = '/') {

@@ -571,8 +571,8 @@ books.post('/:id/generate', async (c) => {
       pageCount = result.pageCount;
     }
 
-    // Lulu requires minimum 24 pages for all binding types
-    const LULU_MIN_PAGES = 24;
+    // Lulu requires minimum pages (32 for PB, 24 for CW — pad to 32 to cover all bindings)
+    const LULU_MIN_PAGES = 32;
     if (pageCount < LULU_MIN_PAGES) {
       const padDoc = await PDFDocument.load(interiorPdf);
       const [width, height] = padDoc.getPages()[0]?.getSize() || [612, 792];
@@ -737,10 +737,19 @@ books.post(
       );
     }
 
-    // Lulu requires minimum 24 pages for all binding types
-    if (book.page_count < 24) {
+    // Lulu page count limits vary by binding type
+    const PAGE_LIMITS = { PB: { min: 32, max: 800 }, CW: { min: 24, max: 800 }, CO: { min: 2, max: 470 } };
+    const binding = addons.includes('coil') ? 'CO' : (bookTier === 'classic' ? 'PB' : 'CW');
+    const limits = PAGE_LIMITS[binding];
+    if (book.page_count < limits.min) {
       return c.json(
-        { error: `Your book has ${book.page_count} pages, but the minimum for printing is 24 pages. Please add more content and regenerate.` },
+        { error: `Your book has ${book.page_count} pages, but the minimum for ${binding === 'PB' ? 'softcover' : binding === 'CW' ? 'hardcover' : 'coil'} printing is ${limits.min} pages. Please add more content and regenerate.` },
+        400
+      );
+    }
+    if (book.page_count > limits.max) {
+      return c.json(
+        { error: `Your book has ${book.page_count} pages, but the maximum for ${binding === 'PB' ? 'softcover' : binding === 'CW' ? 'hardcover' : 'coil'} printing is ${limits.max} pages. Please split into multiple volumes.` },
         400
       );
     }
