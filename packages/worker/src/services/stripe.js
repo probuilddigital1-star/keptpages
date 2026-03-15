@@ -60,11 +60,19 @@ function getSupabase(env) {
 async function getOrCreateCustomer(userId, stripe, supabase) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('stripe_customer_id, email')
+    .select('stripe_customer_id')
     .eq('id', userId)
     .single();
 
-  const email = profile?.email || null;
+  // Email lives in auth.users, not profiles
+  let email = null;
+  try {
+    const { data: { user } } = await supabase.auth.admin.getUserById(userId);
+    email = user?.email || null;
+  } catch {
+    // Skip email lookup failure
+  }
+
   let customerId = profile?.stripe_customer_id;
 
   if (!customerId) {

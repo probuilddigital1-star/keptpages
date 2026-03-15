@@ -35,8 +35,16 @@ for (const key of Object.keys(mockSupabaseChain)) {
   mockSupabaseChain[key].mockReturnValue(mockSupabaseChain);
 }
 
+// Auth admin mock for email lookup
+const mockAuthAdmin = {
+  getUserById: vi.fn().mockResolvedValue({ data: { user: { email: 'a@b.com' } } }),
+};
+
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabaseChain),
+  createClient: vi.fn(() => ({
+    ...mockSupabaseChain,
+    auth: { admin: mockAuthAdmin },
+  })),
 }));
 
 // ── Dynamic import mock for lulu.js (used inside handleBookPaymentCompleted) ──
@@ -116,13 +124,13 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════════════
 describe('createCheckoutSession', () => {
   it('creates a new Stripe customer when none exists and saves customer ID', async () => {
-    resetChain({ single: { data: { stripe_customer_id: null, email: 'test@example.com' } } });
+    resetChain({ single: { data: { stripe_customer_id: null } } });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
 
     expect(mockStripeInstance.customers.create).toHaveBeenCalledWith({
       metadata: { supabase_user_id: 'user_1' },
-      email: 'test@example.com',
+      email: 'a@b.com',
     });
 
     // Should update profile with new customer id
@@ -131,7 +139,7 @@ describe('createCheckoutSession', () => {
 
   it('uses existing customer ID when available', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_existing', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_existing' } },
     });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
@@ -144,7 +152,7 @@ describe('createCheckoutSession', () => {
 
   it('creates a payment-mode session for keeper_pass', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
@@ -156,8 +164,9 @@ describe('createCheckoutSession', () => {
 
   it('includes receipt_email in payment_intent_data', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'receipt@test.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
+    mockAuthAdmin.getUserById.mockResolvedValueOnce({ data: { user: { email: 'receipt@test.com' } } });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
 
@@ -170,7 +179,7 @@ describe('createCheckoutSession', () => {
 
   it('includes keeper_pass plan in metadata', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
@@ -184,7 +193,7 @@ describe('createCheckoutSession', () => {
 
   it('uses the STRIPE_PRICE_KEEPER_PASS price ID', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     await createCheckoutSession('user_1', 'keeper_pass', baseEnv);
@@ -198,7 +207,7 @@ describe('createCheckoutSession', () => {
 
   it('throws when STRIPE_PRICE_KEEPER_PASS is not configured', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     const envWithoutPrice = { ...baseEnv, STRIPE_PRICE_KEEPER_PASS: undefined };
@@ -210,7 +219,7 @@ describe('createCheckoutSession', () => {
 
   it('throws for an unknown plan', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     await expect(createCheckoutSession('user_1', 'keeper_monthly', baseEnv)).rejects.toThrow(
@@ -220,7 +229,7 @@ describe('createCheckoutSession', () => {
 
   it('throws for subscription plans that no longer exist', async () => {
     resetChain({
-      single: { data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } },
+      single: { data: { stripe_customer_id: 'cus_1' } },
     });
 
     await expect(createCheckoutSession('user_1', 'keeper_yearly', baseEnv)).rejects.toThrow(
@@ -247,7 +256,7 @@ describe('createBookCheckoutSession', () => {
     // Second .single() = profile for keeper discount lookup
     resetChain();
     mockSupabaseChain.single
-      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } })
+      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1' } })
       .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
   });
 
@@ -345,14 +354,14 @@ describe('createBookCheckoutSession', () => {
   it('creates a Stripe customer if none exists', async () => {
     resetChain();
     mockSupabaseChain.single
-      .mockResolvedValueOnce({ data: { stripe_customer_id: null, email: 'new@user.com' } })
+      .mockResolvedValueOnce({ data: { stripe_customer_id: null } })
       .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
 
     await createBookCheckoutSession('user_1', makeBook(), shippingAddress, 1, baseEnv);
 
     expect(mockStripeInstance.customers.create).toHaveBeenCalledWith({
       metadata: { supabase_user_id: 'user_1' },
-      email: 'new@user.com',
+      email: 'a@b.com',
     });
     expect(mockSupabaseChain.update).toHaveBeenCalledWith({ stripe_customer_id: 'cus_new_123' });
   });
@@ -409,7 +418,7 @@ describe('calculateBookUnitPrice (via createBookCheckoutSession)', () => {
     vi.clearAllMocks();
     resetChain();
     mockSupabaseChain.single
-      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1', email: 'a@b.com' } })
+      .mockResolvedValueOnce({ data: { stripe_customer_id: 'cus_1' } })
       .mockResolvedValueOnce({ data: { tier: 'free', book_discount_percent: null } });
     mockStripeInstance.checkout.sessions.create.mockResolvedValue({
       id: 'cs_t', url: 'https://checkout.stripe.com/s',
