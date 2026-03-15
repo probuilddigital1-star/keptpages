@@ -19,6 +19,7 @@ const LULU_STATUS_MAP = {
   PRODUCTION: 'printing',
   SHIPPED: 'shipped',
   CANCELLED: 'cancelled',
+  REJECTED: 'error',
   ERROR: 'error',
 };
 
@@ -63,6 +64,11 @@ export async function pollOrderStatuses(env) {
         status: newStatus,
         updated_at: new Date().toISOString(),
       };
+
+      // Store error message from Lulu when rejected/errored
+      if (newStatus === 'error' && orderStatus.statusMessage) {
+        updatePayload.error_message = `Lulu: ${orderStatus.statusMessage}`;
+      }
 
       // Store tracking info from Lulu when shipped
       if (newStatus === 'shipped' && orderStatus.lineItems?.length > 0) {
