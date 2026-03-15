@@ -575,7 +575,8 @@ books.post('/:id/generate', async (c) => {
     const LULU_MIN_PAGES = 32;
     if (pageCount < LULU_MIN_PAGES) {
       const padDoc = await PDFDocument.load(interiorPdf);
-      const [width, height] = padDoc.getPages()[0]?.getSize() || [612, 792];
+      const firstPage = padDoc.getPages()[0];
+      const { width, height } = firstPage ? firstPage.getSize() : { width: 612, height: 792 };
       while (padDoc.getPageCount() < LULU_MIN_PAGES) {
         padDoc.addPage([width, height]);
       }
