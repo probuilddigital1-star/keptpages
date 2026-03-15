@@ -730,7 +730,7 @@ books.post(
 
     // Validate shipping address
     const addr = body.shippingAddress;
-    const requiredAddressFields = ['name', 'street1', 'city', 'state', 'postalCode', 'email'];
+    const requiredAddressFields = ['name', 'street1', 'city', 'state', 'postalCode', 'email', 'phone'];
     const missingFields = requiredAddressFields.filter((f) => !addr[f]);
     if (missingFields.length > 0) {
       return c.json(

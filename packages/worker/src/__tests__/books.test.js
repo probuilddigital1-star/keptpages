@@ -823,7 +823,7 @@ describe('Books routes', () => {
   describe('POST /books/:id/order', () => {
     const validAddr = {
       name: 'Jane', street1: '123 Main', city: 'Town',
-      state: 'OH', postalCode: '44123', email: 'j@e.com',
+      state: 'OH', postalCode: '44123', email: 'j@e.com', phone: '555-123-4567',
     };
 
     const readyBook = {
@@ -1158,7 +1158,7 @@ describe('bookTier + addons validation (via order route)', () => {
   const app = createApp(booksRoutes, '/books');
   const validAddr = {
     name: 'Jane', street1: '123 Main', city: 'Town',
-    state: 'OH', postalCode: '44123', email: 'j@e.com',
+    state: 'OH', postalCode: '44123', email: 'j@e.com', phone: '555-123-4567',
   };
   const readyBook = {
     id: 'b1', title: 'Book', status: 'ready',

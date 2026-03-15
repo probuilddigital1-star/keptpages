@@ -166,7 +166,7 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, boo
       state_code: toStateCode(shippingAddress.state),
       country_code: shippingAddress.country || 'US',
       postcode: shippingAddress.postalCode,
-      phone_number: shippingAddress.phone || shippingAddress.phoneNumber || '',
+      phone_number: shippingAddress.phone || shippingAddress.phoneNumber || '0000000000',
     };
   }
 
