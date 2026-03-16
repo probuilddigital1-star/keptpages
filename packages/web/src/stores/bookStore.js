@@ -233,9 +233,34 @@ export const useBookStore = create(
       loading: false,
       saveStatus: 'saved', // 'saved' | 'saving' | 'unsaved'
       documents: [],
+      drafts: [],
 
       // Blueprint slice
       ...blueprintSlice(set, get),
+
+      // Draft actions
+      fetchDrafts: async (collectionId) => {
+        try {
+          const params = collectionId ? `?collectionId=${collectionId}` : '';
+          const result = await api.get(`/books/drafts${params}`);
+          set({ drafts: result.drafts || [] });
+          return result.drafts || [];
+        } catch {
+          set({ drafts: [] });
+          return [];
+        }
+      },
+
+      fetchLatestDraft: async () => {
+        try {
+          const result = await api.get('/books/drafts');
+          const drafts = result.drafts || [];
+          set({ drafts });
+          return drafts[0] || null;
+        } catch {
+          return null;
+        }
+      },
 
       // Existing actions
       createBook: async (collectionId, title, extra = {}) => {

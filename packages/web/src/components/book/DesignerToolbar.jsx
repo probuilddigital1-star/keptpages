@@ -13,7 +13,7 @@ const TABS = [
   { id: 'order', label: 'Order', iconPath: 'M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6' },
 ];
 
-export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus, bookId }) {
+export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus, bookId, collectionId, collectionName, onBack }) {
   const generatingPdf = useBookStore((s) => s.generatingPdf);
   const generatePdf = useBookStore((s) => s.generatePdf);
   const { undo, redo, pastStates, futureStates } = useBookStore.temporal.getState();
@@ -49,6 +49,21 @@ export default function DesignerToolbar({ mode, onModeChange, onSave, saveStatus
 
   return (
     <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 bg-white border-b border-border-light shrink-0">
+      {/* Back button */}
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1 p-1.5 sm:pr-2.5 rounded-md text-walnut-secondary hover:text-walnut hover:bg-cream-alt transition-colors shrink-0 mr-0.5 sm:mr-1"
+        aria-label="Back to collection"
+        title={collectionName ? `Back to ${collectionName}` : 'Back to collection'}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        {collectionName && (
+          <span className="hidden sm:inline font-ui text-xs truncate max-w-[120px]">{collectionName}</span>
+        )}
+      </button>
+
       {/* Mode tabs — icon-only on mobile, label on sm+ */}
       <div className="flex items-center gap-0.5 sm:gap-1">
         {TABS.map((tab) => (

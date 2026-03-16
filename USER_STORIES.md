@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-12
+Last Updated: 2026-03-16
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -149,8 +149,22 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-ORDER-5 | Admin order detail view | DONE | Expandable order cards in admin dashboard showing full order details |
 | US-ORDER-6 | Lulu status cron poller | DONE | Scheduled worker polls Lulu for status updates, triggers shipping emails |
 | US-ORDER-7 | Shipping notification email | DONE | Email with tracking number sent when order ships |
+| US-SHORT-1 | Supplementary cookbook page types | TODO | Notes, conversion chart, recipe template page types in book designer |
+| US-SHORT-2 | Binding-aware tier selection | TODO | Disable ineligible tiers in OrderPanel based on page count |
+| US-SHORT-3 | Coil binding recommendation | TODO | "Best for Kitchen Use" badge on coil for short books |
+| US-SHORT-4 | Content-aware nudge banner | TODO | Dismissible enrichment suggestion in BookDesigner |
+| US-SHORT-5 | Remove blank page padding | TODO | Delete silent padding, honest page counts |
+| US-DRAFT-1 | Designer toolbar back button | DONE | Back arrow + collection name, save-then-navigate |
+| US-DRAFT-2 | Smart draft-aware book button | DONE | BookDraftButton on Collection page (absorbs CTA-2 + CTA-4) |
+| US-DRAFT-3 | Dashboard draft card | DONE | "Your cookbook is waiting" card above collections |
+| US-CTA-1 | Raise free scan limit to 40 | TODO | Free tier: 25 → 40 scans/month |
+| US-CTA-3 | Dashboard book promo banner | TODO | Dismissible banner promoting book creation |
+| US-CTA-5 | Keeper Pass sidebar CTA | TODO | Desktop sidebar Keeper Pass promotion |
+| US-CTA-6 | Enhanced empty orders page | TODO | Rich empty state with CTAs |
+| US-CTA-7 | Post-scan milestone toast | TODO | Toast when collection reaches 5+ docs |
+| US-CTA-8 | Keeper Pass visibility enhancements | DONE | Scan bar + OrderPanel Keeper Pass callouts (OrderPanel piece) |
 
-**Completed: 134/138** | **Remaining: 4**
+**Completed: 137/151** | **Remaining: 14**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -200,7 +214,10 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **PRICING** — Pricing Restructure | 12 | 12 | 0 |
 | **LULU** — Lulu Print Spec Fixes | 3 | 3 | 0 |
 | **ORDER** — Post-Order Experience | 7 | 7 | 0 |
-| **Total** | **137** | **134** | **3** |
+| **SHORT** — Short Book Solution | 5 | 0 | 5 |
+| **DRAFT** — Book Draft Persistence | 3 | 3 | 0 |
+| **CTA** — Conversion Flow UX | 6 | 0 | 6 |
+| **Total** | **151** | **137** | **14** |
 
 ---
 
@@ -2529,4 +2546,288 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Files:** `packages/worker/src/services/orderPoller.js`, `packages/worker/src/services/email.js`
 **Dependencies:** US-ORDER-2, US-ORDER-6
+**Estimate:** S
+
+---
+
+## Epic 15: Short Book Solution (SHORT)
+
+### US-SHORT-1: Supplementary cookbook page types
+**As a** book designer user
+**I want** to add cookbook-specific pages like notes, conversion charts, and recipe templates to my book
+**So that** my book feels complete and professional without empty filler pages
+
+**Acceptance Criteria:**
+- [ ] 3 new entries in `PAGE_KINDS`: `notes`, `conversion-chart`, `recipe-template`
+- [ ] `getDefaultElements('notes')` returns title text "My Notes" + ~20 horizontal ruled line elements (decorative, shapeType: 'line')
+- [ ] `getDefaultElements('conversion-chart')` returns title text "Kitchen Conversions" + structured text elements with measurement tables (cups/ml, F/C, tbsp/tsp, weight)
+- [ ] `getDefaultElements('recipe-template')` returns title text "Add Your Own Recipe" + labeled field placeholders (Title, Serves, Prep Time, Ingredients, Instructions) with underline decoratives
+- [ ] New page types appear in AddPagePanel grid alongside existing types
+- [ ] Pages render correctly on PageCanvas (existing element renderers handle them)
+- [ ] Pages render correctly in generated PDF via `renderBlueprintBook()` (no pdf.js changes needed — uses generic element renderer)
+- [ ] Tests verify new PAGE_KINDS entries and getDefaultElements() outputs
+
+**Files:** `packages/web/src/components/book/constants.js`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-SHORT-2: Binding-aware tier selection in OrderPanel
+**As a** customer ordering a book
+**I want** to see which book tiers are available for my book's page count
+**So that** I don't fill out a shipping form only to get an error at the end
+
+**Acceptance Criteria:**
+- [ ] `BINDING_PAGE_LIMITS` constant exported from `plans.js`: `{ PB: { min: 32, label: 'Softcover' }, CW: { min: 24, label: 'Hardcover' }, CO: { min: 2, label: 'Coil' } }`
+- [ ] OrderPanel computes effective binding per tier using `resolvePrintOptions(tierId, addons)` and checks against `BINDING_PAGE_LIMITS`
+- [ ] Ineligible tier cards render disabled: reduced opacity, no pointer events, muted border
+- [ ] Inline message on disabled tiers: "Requires X pages (you have Y)"
+- [ ] Below the inline message: "Add coil binding (+$8) to unlock — lays flat for kitchen use"
+- [ ] When coil add-on is toggled on, all tiers become eligible (CO min = 2) and disabled styling disappears
+- [ ] If the currently selected tier becomes ineligible, auto-select the first eligible tier
+- [ ] Backend validation at books.js:741-756 remains unchanged as safety net
+- [ ] Tests for disabled tiers, coil unlock, and auto-reselect behavior
+
+**Files:** `packages/web/src/config/plans.js`, `packages/web/src/components/book/OrderPanel.jsx`
+**Dependencies:** None
+**Estimate:** M
+
+---
+
+### US-SHORT-3: Coil binding recommendation for short books
+**As a** customer with a short recipe book
+**I want** coil binding to be prominently recommended
+**So that** I understand it's actually the best option for kitchen use, not just a workaround
+
+**Acceptance Criteria:**
+- [ ] When `pageCount < 24`, coil add-on in OrderPanel shows a "Best for Kitchen Use" badge (terracotta accent, contextual — only appears when relevant)
+- [ ] Badge disappears when book has 24+ pages (coil is still available, just not specially promoted)
+- [ ] Coil description already reads "Lays flat when open — great for kitchen use" (unchanged)
+- [ ] Tests verify badge visibility based on page count threshold
+
+**Files:** `packages/web/src/components/book/OrderPanel.jsx`
+**Dependencies:** US-SHORT-2
+**Estimate:** S
+
+---
+
+### US-SHORT-4: Content-aware nudge banner in BookDesigner
+**As a** book designer user with a short book
+**I want** a gentle suggestion to add enrichment pages or scan more recipes
+**So that** I discover ways to make my book better without hitting a surprise at checkout
+
+**Acceptance Criteria:**
+- [ ] Dismissible banner appears in BookDesigner when in 'pages' mode and `blueprint.pages.length + frontMatterCount < 24`
+- [ ] Banner text: "Your book has X pages. Add notes or a conversion chart to enrich your cookbook, or scan more recipes."
+- [ ] Quick-add buttons: "+ Notes Page", "+ Conversion Chart", "+ Recipe Template" — each calls `addPage(kind)` from bookStore
+- [ ] "Scan More Recipes" links to `/app/collections/:collectionId`
+- [ ] Banner is dismissible via X button (state in component useState, resets per session)
+- [ ] Banner does NOT mention binding restrictions or page minimums — enrichment framing only
+- [ ] Tests verify banner visibility, dismiss behavior, and quick-add functionality
+
+**Files:** `packages/web/src/components/book/BookDesigner.jsx`
+**Dependencies:** US-SHORT-1
+**Estimate:** M
+
+---
+
+### US-SHORT-5: Remove blank page padding
+**As a** developer
+**I want** to remove the silent blank page padding from PDF generation
+**So that** the page count shown to users is honest and reflects their actual content
+
+**Acceptance Criteria:**
+- [ ] Padding block at books.js:574-586 (`LULU_MIN_PAGES` / `padDoc.addPage()` loop) is deleted
+- [ ] `pageCount` stored in DB reflects actual content pages (no inflation)
+- [ ] Binding-aware validation at books.js:741-756 remains unchanged (returns 400 if under minimum)
+- [ ] Cover generation at books.js:598 uses actual pageCount (verify no hardcoded assumptions from padding)
+- [ ] Existing generated PDFs in R2 are unaffected (only new generations change)
+- [ ] Tests updated: remove padding expectations, verify validation still rejects under-minimum orders
+
+**Files:** `packages/worker/src/routes/books.js`
+**Dependencies:** US-SHORT-2 (frontend must guide users before this safety net is the only check)
+**Estimate:** S
+
+---
+
+## Epic 16: Book Draft Persistence (DRAFT)
+
+### US-DRAFT-1: Designer toolbar back button ✅ DONE
+**As a** user designing a book
+**I want** a clear way to exit the designer back to my collection
+**So that** I'm not trapped in the designer with only browser-back as an exit
+
+**Acceptance Criteria:**
+- [x] Back arrow + collection name added as leftmost element in DesignerToolbar
+- [x] On click: saves blueprint if dirty, then navigates to `/app/collection/{collectionId}`
+- [x] Collection name shown on desktop (sm+), icon-only on mobile
+- [x] Props threaded through BookDesigner → DesignerToolbar (collectionId, collectionName, onBack)
+- [x] Tests added: back button rendering, click handler, collection name display
+
+**Files:** `packages/web/src/components/book/DesignerToolbar.jsx`, `packages/web/src/components/book/BookDesigner.jsx`
+**Estimate:** S
+
+---
+
+### US-DRAFT-2: Smart draft-aware book button on Collection page ✅ DONE
+**As a** user returning to a collection where I previously started a book
+**I want** to resume my existing draft instead of accidentally creating a new one
+**So that** my previous design work is not orphaned
+
+*Absorbs CTA-2 (unlock book creation for all tiers) and CTA-4 (enhanced collection page book CTA)*
+
+**Acceptance Criteria:**
+- [x] New API: `GET /books/drafts?collectionId={id}` returns unpaid draft books
+- [x] bookStore: `fetchDrafts(collectionId)` action and `drafts` state
+- [x] BookDraftButton component replaces keeper-gated "Create Book" button
+- [x] No draft: "Create Book" (primary at 5+ docs, disabled at 0-4 docs)
+- [x] Draft exists: "Continue Your Cookbook" card with title, page count, relative time
+- [x] "Continue Designing" navigates to `/app/book/{collectionId}?bookId={draftId}`
+- [x] "or start a new book" link creates fresh book
+- [x] Book creation visible to ALL authenticated tiers (free, book_purchaser, keeper)
+- [x] Non-keeper users with 5+ docs see "Keeper Pass members save 15%" note
+- [x] Mini cover color swatch from draft's colorScheme
+- [x] Tests: 11 tests for BookDraftButton + 5 tests for API route
+
+**Files:** `packages/web/src/components/book/BookDraftButton.jsx` (new), `packages/web/src/pages/Collection/index.jsx`, `packages/worker/src/routes/books.js`, `packages/web/src/stores/bookStore.js`
+**Estimate:** M
+
+---
+
+### US-DRAFT-3: Dashboard "pick up where you left off" card ✅ DONE
+**As a** returning user who started designing a cookbook
+**I want** to see my in-progress book immediately on the Dashboard
+**So that** I can resume without remembering which collection I was working on
+
+**Acceptance Criteria:**
+- [x] BookDraftCard component shows above collection grid when any draft exists
+- [x] Shows most recent draft only (not a list)
+- [x] Mini cover preview using colorScheme colors
+- [x] Heading: "Your cookbook is waiting"
+- [x] Details: book title, page count, relative last-edited time
+- [x] "Continue Designing" CTA navigates to book designer
+- [x] Hidden when no drafts (zero clutter for new users)
+- [x] Dashboard fetches drafts on mount via `fetchLatestDraft()`
+- [x] Tests: 8 tests for BookDraftCard + 3 dashboard integration tests
+
+**Files:** `packages/web/src/components/book/BookDraftCard.jsx` (new), `packages/web/src/pages/Dashboard/index.jsx`
+**Estimate:** M
+
+---
+
+## Epic 17: Conversion Flow UX (CTA)
+
+### US-CTA-1: Raise free scan limit to 40/month
+**As a** free user
+**I want** enough scans to build a complete book
+**So that** I can experience the full value of KeptPages before purchasing
+
+**Acceptance Criteria:**
+- [ ] `PLANS.FREE.limits.scans` changed from 25 to 40
+- [ ] `TIER_LIMITS.free.scans` changed from 25 to 40
+- [ ] `PLANS.FREE.features` updated: "40 scans per month"
+- [ ] Landing page pricing section updated: "40 scans" in free tier message
+- [ ] Backend `publicScan.js` error message updated: "40 scans/month"
+- [ ] Scan page at-limit banner and signup modal updated: "40 scans/month"
+- [ ] Scan page limit messaging uses dynamic value from store
+- [ ] Tests updated for new limit (plans.test.js, Dashboard, Scan, Pricing, Settings tests)
+
+**Files:** `packages/web/src/config/plans.js`, `packages/web/src/components/landing/Pricing.jsx`, `packages/web/src/pages/Scan/index.jsx`, `packages/worker/src/routes/publicScan.js`
+**Estimate:** S
+
+---
+
+### ~~US-CTA-2: Unlock book creation for all authenticated users~~ (Absorbed into US-DRAFT-2)
+
+---
+
+### US-CTA-3: Dashboard book promo banner
+**As a** user with recipe collections
+**I want** to see a suggestion to turn my recipes into a book
+**So that** I discover the book ordering feature naturally
+
+**Acceptance Criteria:**
+- [ ] Dismissible banner on Dashboard when any collection has 5+ documents
+- [ ] Does NOT appear for users who already have a book order (any status)
+- [ ] Shows collection name and document count of the largest eligible collection
+- [ ] Copy: "Your recipes are ready for a cookbook" + description
+- [ ] CTA: "Create Your First Book" navigates to `/app/book/new?collectionId={largest}`
+- [ ] Pricing note: "Starting at $39"
+- [ ] Dismissible via X (session state, useState)
+- [ ] Cream-alt card with terracotta accent, matching design system
+
+**Files:** `packages/web/src/pages/Dashboard/index.jsx`
+**Estimate:** M
+
+---
+
+### ~~US-CTA-4: Enhanced collection page book CTA~~ (Absorbed into US-DRAFT-2)
+
+---
+
+### US-CTA-5: Keeper Pass sidebar CTA (desktop)
+**As a** free or book_purchaser user
+**I want** to see Keeper Pass promoted in app navigation
+**So that** I'm aware of the upgrade option during normal use
+
+**Acceptance Criteria:**
+- [ ] Card in desktop sidebar, above user section (bottom of nav)
+- [ ] Shows only for `free` and `book_purchaser` tiers
+- [ ] Copy: "Keeper Pass · $59" + "Unlimited scans & 15% off books" + "Learn More"
+- [ ] Links to `/app/settings#subscription`
+- [ ] Cream-alt background, terracotta accent, tasteful not aggressive
+- [ ] Hidden for keeper users
+
+**Files:** `packages/web/src/components/layout/AppLayout.jsx`
+**Estimate:** S
+
+---
+
+### US-CTA-6: Enhanced empty orders page
+**As a** user with no book orders
+**I want** a helpful empty state guiding me to create a book
+**So that** the Orders page isn't a dead end
+
+**Acceptance Criteria:**
+- [ ] Replace bare "No orders yet" with rich empty state
+- [ ] Book icon + "Your first cookbook is waiting" heading
+- [ ] Description about turning collections into printed books
+- [ ] Two CTAs: "Browse Collections" navigates to `/app` and "Start Scanning" navigates to `/app/scan`
+
+**Files:** `packages/web/src/pages/Orders/index.jsx`
+**Estimate:** S
+
+---
+
+### US-CTA-7: Post-scan milestone toast
+**As a** user who just added a recipe to a collection
+**I want** to know when my collection is big enough for a book
+**So that** I discover book creation at the right moment
+
+**Acceptance Criteria:**
+- [ ] After saving scan to collection, if collection reaches 5+ documents: show toast
+- [ ] Toast: "This collection has X recipes — enough for a beautiful cookbook!"
+- [ ] Toast action button: "Create Book" navigates to book designer for that collection
+- [ ] Once per collection per session (sessionStorage key)
+- [ ] Does not show if user already has a book for this collection
+
+**Files:** `packages/web/src/pages/Scan/index.jsx`
+**Estimate:** S
+
+---
+
+### US-CTA-8: Keeper Pass visibility in scan bar and OrderPanel ✅ DONE (OrderPanel piece)
+**As a** non-keeper user
+**I want** to see Keeper Pass benefits at key decision points
+**So that** I can make an informed choice about upgrading
+
+**Acceptance Criteria:**
+- [ ] Dashboard scan usage bar: always show subtle "Get unlimited scans with Keeper Pass" link (not just at 80%)
+- [x] OrderPanel order summary: "Save 15% with Keeper Pass — $59 one-time" for non-keeper users
+- [x] "Learn more" links to `/app/settings#subscription`
+- [x] Hidden for keeper users
+- [x] Tests: 2 new tests (show/hide based on tier)
+
+**Files:** `packages/web/src/pages/Dashboard/index.jsx`, `packages/web/src/components/book/OrderPanel.jsx`
 **Estimate:** S

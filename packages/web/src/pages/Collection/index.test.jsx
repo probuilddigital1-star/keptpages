@@ -49,6 +49,15 @@ vi.mock('@/components/ui/Toast', () => ({
   toast: vi.fn(),
 }));
 
+vi.mock('@/components/book/BookDraftButton', () => ({
+  __esModule: true,
+  default: ({ collectionId, documentCount }) => (
+    <div data-testid="book-draft-button">
+      BookDraftButton col={collectionId} docs={documentCount}
+    </div>
+  ),
+}));
+
 vi.mock('@/components/collection/DocumentPickerModal', () => ({
   DocumentPickerModal: ({ open }) => open ? <div data-testid="doc-picker">picker</div> : null,
 }));
@@ -143,18 +152,24 @@ describe('CollectionPage', () => {
     expect(screen.getByText('Delete')).toBeInTheDocument();
   });
 
-  it('shows Create Book button for keeper tier', () => {
-    mockSubscriptionStore.tier = 'keeper';
-    mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test' }];
-    renderCollection();
-    expect(screen.getByText('Create Book')).toBeInTheDocument();
-  });
-
-  it('does not show Create Book button for free tier', () => {
+  it('renders BookDraftButton for all tiers', () => {
     mockSubscriptionStore.tier = 'free';
     mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test' }];
     renderCollection();
-    expect(screen.queryByText('Create Book')).not.toBeInTheDocument();
+    expect(screen.getByTestId('book-draft-button')).toBeInTheDocument();
+  });
+
+  it('passes collectionId and documentCount to BookDraftButton', () => {
+    mockCollectionsStore.collections = [{ id: 'col-1', name: 'Test' }];
+    mockDocumentsStore.documents = {
+      'col-1': [
+        { id: 'doc-1', title: 'R1', type: 'recipe' },
+        { id: 'doc-2', title: 'R2', type: 'recipe' },
+      ],
+    };
+    renderCollection();
+    expect(screen.getByText(/col=col-1/)).toBeInTheDocument();
+    expect(screen.getByText(/docs=2/)).toBeInTheDocument();
   });
 
   it('opens document picker when Add Document is clicked', () => {

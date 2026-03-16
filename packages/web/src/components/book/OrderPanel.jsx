@@ -357,6 +357,31 @@ export default function OrderPanel({ bookId }) {
               </div>
             </div>
 
+            {/* Keeper Pass callout for non-keeper users */}
+            {tier !== 'keeper' && (
+              <div className="bg-terracotta-light rounded-md px-3 py-2 border border-terracotta/15 mb-3">
+                <div className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-terracotta shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <div>
+                    <p className="font-ui text-xs font-medium text-walnut">Save 15% with Keeper Pass</p>
+                    <p className="font-ui text-[10px] text-walnut-muted">
+                      $59 one-time ·{' '}
+                      <button
+                        onClick={() => navigate('/app/settings#subscription')}
+                        className="underline hover:text-terracotta transition-colors"
+                      >
+                        Learn more
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Button className="w-full" size="lg" loading={loading} disabled={!canOrder} onClick={handleOrder}>
               Order Book
             </Button>

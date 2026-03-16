@@ -85,6 +85,49 @@ books.post(
 );
 
 /**
+ * GET /books/drafts
+ * List user's unpaid book drafts. Optional ?collectionId filter.
+ * Returns books where status IN ('draft','ready','generating') AND payment_status != 'succeeded'.
+ */
+books.get('/drafts', async (c) => {
+  const user = c.get('user');
+  const collectionId = c.req.query('collectionId');
+  const supabase = getSupabase(c.env);
+
+  let query = supabase
+    .from('books')
+    .select('id, title, collection_id, status, page_count, customization, updated_at, created_at')
+    .eq('user_id', user.id)
+    .in('status', ['draft', 'ready', 'generating'])
+    .neq('payment_status', 'succeeded')
+    .order('updated_at', { ascending: false });
+
+  if (collectionId) {
+    query = query.eq('collection_id', collectionId);
+  }
+
+  const { data: drafts, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch drafts:', error);
+    return c.json({ error: 'Failed to fetch drafts' }, 500);
+  }
+
+  return c.json({
+    drafts: (drafts || []).map((book) => ({
+      id: book.id,
+      title: book.title,
+      collectionId: book.collection_id,
+      status: book.status,
+      pageCount: book.page_count,
+      colorScheme: book.customization?.coverDesign?.colorScheme || null,
+      updatedAt: book.updated_at,
+      createdAt: book.created_at,
+    })),
+  });
+});
+
+/**
  * GET /books/orders
  * List user's paid book orders with status tracking.
  */

@@ -259,6 +259,23 @@ describe('OrderPanel', () => {
 
     expect(screen.getAllByText('$39.00').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('shows Keeper Pass callout for non-keeper users', () => {
+    useSubscriptionStore.setState({ ...baseSubState, tier: 'free' });
+    renderWithRouter(<OrderPanel bookId="book-1" />);
+    expect(screen.getByText('Save 15% with Keeper Pass')).toBeInTheDocument();
+    expect(screen.getByText('Learn more')).toBeInTheDocument();
+  });
+
+  it('hides Keeper Pass callout for keeper users', () => {
+    useSubscriptionStore.setState({
+      ...baseSubState,
+      tier: 'keeper',
+      bookDiscount: () => 0.15,
+    });
+    renderWithRouter(<OrderPanel bookId="book-1" />);
+    expect(screen.queryByText('Save 15% with Keeper Pass')).not.toBeInTheDocument();
+  });
 });
 
 describe('calculateBookPrice with tiers', () => {

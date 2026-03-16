@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBookStore } from '@/stores/bookStore';
+import { useCollectionsStore } from '@/stores/collectionsStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import DesignerToolbar from './DesignerToolbar';
@@ -11,10 +13,15 @@ import { createPage } from './constants';
 const MODES = ['pages', 'settings', 'cover', 'order'];
 
 export default function BookDesigner({ collectionId, bookId }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState('cover');
   const [initializing, setInitializing] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const autoSaveRef = useRef(null);
+
+  const collections = useCollectionsStore((s) => s.collections);
+  const collection = collections.find((c) => c.id === collectionId);
+  const collectionName = collection?.name || '';
 
   const book = useBookStore((s) => s.book);
   const blueprint = useBookStore((s) => s.blueprint);
@@ -139,6 +146,18 @@ export default function BookDesigner({ collectionId, bookId }) {
     }
   }, [book, blueprint, coverDesign, collectionId, createBook, saveBlueprint]);
 
+  const handleBack = useCallback(async () => {
+    // Save before leaving if dirty
+    if (dirty && book?.id) {
+      try {
+        await saveBlueprint(book.id);
+      } catch {
+        // Continue navigation even if save fails
+      }
+    }
+    navigate(`/app/collection/${collectionId}`);
+  }, [dirty, book?.id, saveBlueprint, navigate, collectionId]);
+
   const selectedElementId = useBookStore((s) => s.selectedElementId);
   const setSelectedPage = useBookStore((s) => s.setSelectedPage);
   const deleteElement = useBookStore((s) => s.deleteElement);
@@ -169,6 +188,9 @@ export default function BookDesigner({ collectionId, bookId }) {
         onSave={handleSave}
         saveStatus={saveStatus}
         bookId={book?.id}
+        collectionId={collectionId}
+        collectionName={collectionName}
+        onBack={handleBack}
       />
 
       {/* Mobile page navigation strip (US-MOBILE-2) */}

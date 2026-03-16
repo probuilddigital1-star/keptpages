@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCollectionsStore } from '@/stores/collectionsStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
+import { useBookStore } from '@/stores/bookStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
 import CollectionCard from '@/components/collection/CollectionCard';
+import BookDraftCard from '@/components/book/BookDraftCard';
 
 function SkeletonCard() {
   return (
@@ -40,6 +42,11 @@ export default function Dashboard() {
   const limits = useSubscriptionStore((s) => s.limits);
   const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
 
+  // Book drafts
+  const drafts = useBookStore((s) => s.drafts);
+  const fetchLatestDraft = useBookStore((s) => s.fetchLatestDraft);
+  const latestDraft = drafts[0] || null;
+
   // Local state for create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -49,7 +56,8 @@ export default function Dashboard() {
   useEffect(() => {
     fetchCollections().catch(() => {});
     fetchSubscription().catch(() => {});
-  }, [fetchCollections, fetchSubscription]);
+    fetchLatestDraft().catch(() => {});
+  }, [fetchCollections, fetchSubscription, fetchLatestDraft]);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -134,6 +142,9 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* Book draft card — "pick up where you left off" */}
+      {latestDraft && <BookDraftCard draft={latestDraft} />}
 
       {/* Loading skeleton */}
       {collectionsLoading && collections.length === 0 && (

@@ -13,6 +13,8 @@ function createQueryBuilder(result = { data: null, error: null }) {
     update: vi.fn(function () { return this; }),
     delete: vi.fn(function () { return this; }),
     eq: vi.fn(function () { return this; }),
+    neq: vi.fn(function () { return this; }),
+    in: vi.fn(function () { return this; }),
     is: vi.fn(function () { return this; }),
     order: vi.fn(function () { return this; }),
     limit: vi.fn(function () { return this; }),
@@ -153,6 +155,77 @@ beforeEach(() => {
 
 describe('Books routes', () => {
   const app = createApp(booksRoutes, '/books');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GET /books/drafts - List user's unpaid draft books
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe('GET /books/drafts', () => {
+    it('returns user drafts', async () => {
+      mockFrom('books', {
+        data: [
+          {
+            id: 'b1', title: 'My Draft', collection_id: 'col-1', status: 'draft',
+            page_count: 12, customization: { coverDesign: { colorScheme: 'forest' } },
+            updated_at: '2026-03-14T00:00:00Z', created_at: '2026-03-13T00:00:00Z',
+          },
+        ],
+        error: null,
+      });
+
+      const res = await app.request('/books/drafts', {}, ENV);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.drafts).toHaveLength(1);
+      expect(json.drafts[0].id).toBe('b1');
+      expect(json.drafts[0].title).toBe('My Draft');
+      expect(json.drafts[0].collectionId).toBe('col-1');
+      expect(json.drafts[0].colorScheme).toBe('forest');
+      expect(json.drafts[0].pageCount).toBe(12);
+    });
+
+    it('filters by collectionId when provided', async () => {
+      mockFrom('books', { data: [], error: null });
+
+      const res = await app.request('/books/drafts?collectionId=col-2', {}, ENV);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.drafts).toEqual([]);
+    });
+
+    it('returns empty array when no drafts', async () => {
+      mockFrom('books', { data: [], error: null });
+
+      const res = await app.request('/books/drafts', {}, ENV);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.drafts).toEqual([]);
+    });
+
+    it('returns 500 on database error', async () => {
+      mockFrom('books', { data: null, error: { message: 'db error' } });
+
+      const res = await app.request('/books/drafts', {}, ENV);
+      expect(res.status).toBe(500);
+    });
+
+    it('extracts colorScheme from customization', async () => {
+      mockFrom('books', {
+        data: [
+          {
+            id: 'b2', title: 'Book', collection_id: 'col-1', status: 'ready',
+            page_count: 28, customization: null,
+            updated_at: '2026-03-14T00:00:00Z', created_at: '2026-03-13T00:00:00Z',
+          },
+        ],
+        error: null,
+      });
+
+      const res = await app.request('/books/drafts', {}, ENV);
+      const json = await res.json();
+      expect(json.drafts[0].colorScheme).toBeNull();
+    });
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GET /books/orders - List user's paid orders

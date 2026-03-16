@@ -170,4 +170,54 @@ describe('DesignerToolbar', () => {
     expect(screen.getByTitle(/undo/i)).toBeInTheDocument();
     expect(screen.getByTitle(/redo/i)).toBeInTheDocument();
   });
+
+  it('renders back button with aria-label', () => {
+    render(
+      <DesignerToolbar
+        mode="cover"
+        onModeChange={vi.fn()}
+        onSave={vi.fn()}
+        saveStatus="saved"
+        bookId="book-1"
+        collectionId="col-1"
+        collectionName="Grandma's Recipes"
+        onBack={vi.fn()}
+      />
+    );
+    expect(screen.getByLabelText('Back to collection')).toBeInTheDocument();
+  });
+
+  it('shows collection name in back button on desktop', () => {
+    render(
+      <DesignerToolbar
+        mode="cover"
+        onModeChange={vi.fn()}
+        onSave={vi.fn()}
+        saveStatus="saved"
+        bookId="book-1"
+        collectionId="col-1"
+        collectionName="Grandma's Recipes"
+        onBack={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Grandma's Recipes")).toBeInTheDocument();
+  });
+
+  it('calls onBack when back button is clicked', async () => {
+    const onBack = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <DesignerToolbar
+        mode="cover"
+        onModeChange={vi.fn()}
+        onSave={vi.fn()}
+        saveStatus="saved"
+        bookId="book-1"
+        onBack={onBack}
+      />
+    );
+
+    await user.click(screen.getByLabelText('Back to collection'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
 });

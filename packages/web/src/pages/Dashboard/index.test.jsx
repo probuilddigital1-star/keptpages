@@ -19,12 +19,17 @@ vi.mock('@/stores/subscriptionStore', () => ({
   useSubscriptionStore: vi.fn(),
 }));
 
+vi.mock('@/stores/bookStore', () => ({
+  useBookStore: vi.fn(),
+}));
+
 vi.mock('@/components/ui/Toast', () => ({
   toast: vi.fn(),
 }));
 
 import { useCollectionsStore } from '@/stores/collectionsStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
+import { useBookStore } from '@/stores/bookStore';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -38,6 +43,14 @@ vi.mock('@/components/collection/CollectionCard', () => ({
     <div data-testid={`collection-card-${collection.id}`}>{collection.name}</div>
   ),
 }));
+
+// Mock BookDraftCard
+vi.mock('@/components/book/BookDraftCard', () => ({
+  default: ({ draft }) =>
+    draft ? <div data-testid="book-draft-card">{draft.title}</div> : null,
+}));
+
+const mockFetchLatestDraft = vi.fn().mockResolvedValue(null);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,6 +83,16 @@ function setupSubscriptionStore(overrides = {}) {
   useSubscriptionStore.mockImplementation((selector) => selector(merged));
 }
 
+function setupBookStore(overrides = {}) {
+  const defaults = {
+    drafts: [],
+    fetchLatestDraft: mockFetchLatestDraft,
+  };
+
+  const merged = { ...defaults, ...overrides };
+  useBookStore.mockImplementation((selector) => selector(merged));
+}
+
 function renderDashboard() {
   return renderWithRouter(<Dashboard />);
 }
@@ -83,6 +106,7 @@ describe('Dashboard page', () => {
     vi.clearAllMocks();
     setupCollectionsStore();
     setupSubscriptionStore();
+    setupBookStore();
   });
 
   it('renders page title "Your Collections"', () => {
@@ -198,5 +222,27 @@ describe('Dashboard page', () => {
 
     expect(screen.getByRole('dialog', { name: /new collection/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/collection name/i)).toBeInTheDocument();
+  });
+
+  it('calls fetchLatestDraft on mount', () => {
+    renderDashboard();
+    expect(mockFetchLatestDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows book draft card when a draft exists', () => {
+    setupBookStore({
+      drafts: [{ id: 'draft-1', title: 'My Cookbook', collectionId: 'col-1' }],
+    });
+
+    renderDashboard();
+    expect(screen.getByTestId('book-draft-card')).toBeInTheDocument();
+    expect(screen.getByText('My Cookbook')).toBeInTheDocument();
+  });
+
+  it('does not show book draft card when no drafts', () => {
+    setupBookStore({ drafts: [] });
+
+    renderDashboard();
+    expect(screen.queryByTestId('book-draft-card')).not.toBeInTheDocument();
   });
 });

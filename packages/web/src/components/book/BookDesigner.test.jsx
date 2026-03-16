@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import BookDesigner from './BookDesigner';
 import { useBookStore } from '@/stores/bookStore';
@@ -16,13 +17,25 @@ vi.mock('@/components/ui/Toast', () => ({
   toast: vi.fn(),
 }));
 
+vi.mock('@/stores/collectionsStore', () => ({
+  useCollectionsStore: (selector) => selector({ collections: [{ id: 'col-1', name: 'Test Collection' }] }),
+}));
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 // Mock the sub-components to isolate BookDesigner logic
 vi.mock('./DesignerToolbar', () => ({
-  default: ({ mode, onSave, saveStatus, bookId }) => (
+  default: ({ mode, onSave, saveStatus, bookId, collectionName, onBack }) => (
     <div data-testid="toolbar">
       <span data-testid="toolbar-mode">{mode}</span>
       <span data-testid="toolbar-save-status">{saveStatus}</span>
+      <span data-testid="toolbar-collection-name">{collectionName}</span>
       <button onClick={onSave}>Save</button>
+      <button onClick={onBack}>Back</button>
     </div>
   ),
 }));
@@ -190,5 +203,66 @@ describe('BookDesigner', () => {
     await waitFor(() => {
       expect(initBlueprint).toHaveBeenCalled();
     });
+  });
+
+  it('passes collection name to toolbar', async () => {
+    renderWithRouter(<BookDesigner collectionId="col-1" bookId="book-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toolbar-collection-name')).toHaveTextContent('Test Collection');
+    });
+  });
+
+  it('navigates to collection when back is clicked (not dirty)', async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<BookDesigner collectionId="col-1" bookId="book-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Back'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/app/collection/col-1');
+  });
+
+  it('saves blueprint before navigating when dirty', async () => {
+    const saveBlueprint = vi.fn().mockResolvedValue(undefined);
+    useBookStore.setState({
+      dirty: true,
+      saveBlueprint,
+    });
+
+    const user = userEvent.setup();
+    renderWithRouter(<BookDesigner collectionId="col-1" bookId="book-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Back'));
+
+    expect(saveBlueprint).toHaveBeenCalledWith('book-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/app/collection/col-1');
+  });
+
+  it('still navigates if save fails', async () => {
+    const saveBlueprint = vi.fn().mockRejectedValue(new Error('Save failed'));
+    useBookStore.setState({
+      dirty: true,
+      saveBlueprint,
+    });
+
+    const user = userEvent.setup();
+    renderWithRouter(<BookDesigner collectionId="col-1" bookId="book-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toolbar')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Back'));
+
+    expect(saveBlueprint).toHaveBeenCalledWith('book-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/app/collection/col-1');
   });
 });

@@ -293,6 +293,81 @@ describe('bookStore', () => {
     });
   });
 
+  describe('fetchDrafts', () => {
+    it('calls api.get with collectionId and sets drafts', async () => {
+      const mockDrafts = [
+        { id: 'd1', title: 'Draft 1', collectionId: 'col-1' },
+        { id: 'd2', title: 'Draft 2', collectionId: 'col-1' },
+      ];
+      api.get.mockResolvedValue({ drafts: mockDrafts });
+
+      const result = await useBookStore.getState().fetchDrafts('col-1');
+
+      expect(api.get).toHaveBeenCalledWith('/books/drafts?collectionId=col-1');
+      expect(result).toEqual(mockDrafts);
+      expect(useBookStore.getState().drafts).toEqual(mockDrafts);
+    });
+
+    it('calls api.get without collectionId when none provided', async () => {
+      api.get.mockResolvedValue({ drafts: [] });
+
+      await useBookStore.getState().fetchDrafts();
+
+      expect(api.get).toHaveBeenCalledWith('/books/drafts');
+    });
+
+    it('sets drafts to empty array on error', async () => {
+      useBookStore.setState({ drafts: [{ id: 'old' }] });
+      api.get.mockRejectedValue(new Error('Network error'));
+
+      const result = await useBookStore.getState().fetchDrafts('col-1');
+
+      expect(result).toEqual([]);
+      expect(useBookStore.getState().drafts).toEqual([]);
+    });
+
+    it('handles missing drafts in response', async () => {
+      api.get.mockResolvedValue({});
+
+      const result = await useBookStore.getState().fetchDrafts();
+
+      expect(result).toEqual([]);
+      expect(useBookStore.getState().drafts).toEqual([]);
+    });
+  });
+
+  describe('fetchLatestDraft', () => {
+    it('returns the first draft (most recent)', async () => {
+      const mockDrafts = [
+        { id: 'd1', title: 'Latest', updatedAt: '2026-03-16T12:00:00Z' },
+        { id: 'd2', title: 'Older', updatedAt: '2026-03-15T12:00:00Z' },
+      ];
+      api.get.mockResolvedValue({ drafts: mockDrafts });
+
+      const result = await useBookStore.getState().fetchLatestDraft();
+
+      expect(api.get).toHaveBeenCalledWith('/books/drafts');
+      expect(result).toEqual(mockDrafts[0]);
+      expect(useBookStore.getState().drafts).toEqual(mockDrafts);
+    });
+
+    it('returns null when no drafts exist', async () => {
+      api.get.mockResolvedValue({ drafts: [] });
+
+      const result = await useBookStore.getState().fetchLatestDraft();
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null on error', async () => {
+      api.get.mockRejectedValue(new Error('Network error'));
+
+      const result = await useBookStore.getState().fetchLatestDraft();
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('checkStatus', () => {
     it('updates book status when id matches', async () => {
       useBookStore.setState({
