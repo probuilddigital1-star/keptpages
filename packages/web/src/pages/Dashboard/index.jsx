@@ -47,6 +47,9 @@ export default function Dashboard() {
   const fetchLatestDraft = useBookStore((s) => s.fetchLatestDraft);
   const latestDraft = drafts[0] || null;
 
+  // Book promo state
+  const [promoDismissed, setPromoDismissed] = useState(false);
+
   // Local state for create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -145,6 +148,38 @@ export default function Dashboard() {
 
       {/* Book draft card — "pick up where you left off" */}
       {latestDraft && <BookDraftCard draft={latestDraft} />}
+
+      {/* Book promo banner — show when no draft and a collection has 5+ docs */}
+      {!latestDraft && !promoDismissed && (() => {
+        const eligible = collections.find((c) => c.documentCount >= 5);
+        if (!eligible) return null;
+        return (
+          <div className="bg-cream-alt border border-terracotta/15 rounded-lg p-5 mb-6 relative">
+            <button
+              onClick={() => setPromoDismissed(true)}
+              className="absolute top-3 right-3 text-walnut-muted hover:text-walnut transition-colors"
+              title="Dismiss"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <h3 className="font-display text-base font-semibold text-walnut mb-1">
+              Your pages are ready for a book
+            </h3>
+            <p className="font-body text-sm text-walnut-secondary mb-3">
+              &ldquo;{eligible.name}&rdquo; has {eligible.documentCount} documents — enough to create a beautiful printed book.
+            </p>
+            <div className="flex items-center gap-3">
+              <Button size="sm" onClick={() => navigate(`/app/book/${eligible.id}`)}>
+                Create Your First Book
+              </Button>
+              <span className="font-ui text-xs text-walnut-muted">Starting at $39</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Loading skeleton */}
       {collectionsLoading && collections.length === 0 && (

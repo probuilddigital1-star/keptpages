@@ -65,6 +65,7 @@ function SidebarNav() {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const isAdmin = useSubscriptionStore((s) => s.isAdmin);
+  const tier = useSubscriptionStore((s) => s.tier);
 
   const handleLogout = async () => {
     await logout();
@@ -117,6 +118,26 @@ function SidebarNav() {
           </NavLink>
         )}
       </nav>
+
+      {/* Keeper Pass CTA — only for free and book_purchaser tiers */}
+      {(tier === 'free' || tier === 'book_purchaser') && (
+        <div className="mx-3 mb-3">
+          <NavLink
+            to="/app/settings#subscription"
+            className="block bg-cream-alt border border-terracotta/15 rounded-lg px-3 py-3 hover:border-terracotta/30 transition-colors"
+          >
+            <p className="font-display text-xs font-semibold text-walnut">
+              Keeper Pass <span className="text-terracotta">$59</span>
+            </p>
+            <p className="font-ui text-[10px] text-walnut-muted mt-0.5 leading-relaxed">
+              Unlimited scans &amp; 15% off books
+            </p>
+            <span className="font-ui text-[10px] text-terracotta font-medium mt-1 inline-block">
+              Learn More &rarr;
+            </span>
+          </NavLink>
+        </div>
+      )}
 
       {/* User section */}
       <div className="px-4 py-4 border-t border-border-light">

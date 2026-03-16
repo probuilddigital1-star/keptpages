@@ -45,7 +45,9 @@ describe('OrdersPage', () => {
 
   it('shows empty state when no orders', () => {
     renderPage({ orders: [] });
-    expect(screen.getByText(/No orders yet/)).toBeInTheDocument();
+    expect(screen.getByText(/Your first book is waiting/)).toBeInTheDocument();
+    expect(screen.getByText(/Browse Collections/)).toBeInTheDocument();
+    expect(screen.getByText(/Start Scanning/)).toBeInTheDocument();
   });
 
   it('shows loading spinner', () => {

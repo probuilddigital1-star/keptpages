@@ -5,8 +5,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatusStepper } from '@/components/order/StatusStepper';
 import { formatDate } from '@/utils/formatters';
 import { toast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 export default function OrdersPage() {
+  const navigate = useNavigate();
   const { orders, loading, fetchOrders } = useOrdersStore();
 
   useEffect(() => {
@@ -22,11 +25,29 @@ export default function OrdersPage() {
           <Spinner size="lg" />
         </div>
       ) : orders.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="font-ui text-sm text-walnut-muted">
-            No orders yet. Once you purchase a printed book, it will appear here.
+        <div className="text-center py-16 px-4">
+          <div className="mx-auto w-20 h-20 bg-cream-alt rounded-full flex items-center justify-center mb-5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 text-terracotta/60">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+          </div>
+          <h2 className="font-display text-xl font-semibold text-walnut mb-2">
+            Your first book is waiting
+          </h2>
+          <p className="font-body text-sm text-walnut-secondary max-w-sm mx-auto mb-6">
+            Turn your collections into beautiful printed books — hardcover, softcover, or coil-bound, shipped to your door.
           </p>
-        </Card>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button onClick={() => navigate('/app')}>
+              Browse Collections
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/app/scan')}>
+              Start Scanning
+            </Button>
+          </div>
+          <p className="font-ui text-xs text-walnut-muted mt-4">Starting at $39</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {orders.map((order) => (
