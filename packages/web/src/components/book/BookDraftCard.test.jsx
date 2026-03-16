@@ -40,9 +40,9 @@ describe('BookDraftCard', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('shows "Your cookbook is waiting" heading', () => {
+  it('shows "Your book is waiting" heading', () => {
     renderCard();
-    expect(screen.getByText('Your cookbook is waiting')).toBeInTheDocument();
+    expect(screen.getByText('Your book is waiting')).toBeInTheDocument();
   });
 
   it('shows draft title and page count', () => {

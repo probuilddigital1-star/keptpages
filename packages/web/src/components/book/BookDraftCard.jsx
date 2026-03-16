@@ -42,7 +42,7 @@ export default function BookDraftCard({ draft }) {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <h3 className="font-display text-lg font-semibold text-walnut mb-0.5">
-            Your cookbook is waiting
+            Your book is waiting
           </h3>
           <p className="font-body text-sm text-walnut-secondary mb-3">
             {draft.title ? `"${draft.title}"` : 'Untitled Book'}

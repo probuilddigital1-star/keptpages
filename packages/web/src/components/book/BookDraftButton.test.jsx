@@ -54,7 +54,7 @@ describe('BookDraftButton', () => {
 
   it('shows disabled button for free users with <5 docs', () => {
     renderButton({ documentCount: 3 });
-    expect(screen.getByText('Add more recipes to create a book')).toBeInTheDocument();
+    expect(screen.getByText('Add more documents to create a book')).toBeInTheDocument();
   });
 
   it('shows Keeper Pass savings note for non-keeper users with 5+ docs', () => {
@@ -78,7 +78,7 @@ describe('BookDraftButton', () => {
     }];
 
     renderButton();
-    expect(screen.getByText('Continue Your Cookbook')).toBeInTheDocument();
+    expect(screen.getByText('Continue Your Book')).toBeInTheDocument();
     expect(screen.getByText(/12 pages/)).toBeInTheDocument();
     expect(screen.getByText('Continue Designing')).toBeInTheDocument();
     expect(screen.getByText('or start a new book')).toBeInTheDocument();

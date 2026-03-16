@@ -52,7 +52,7 @@ export default function BookDraftButton({ collectionId, documentCount = 0 }) {
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
               </svg>
               <span className="font-display text-sm font-semibold text-walnut truncate">
-                Continue Your Cookbook
+                Continue Your Book
               </span>
             </div>
             <p className="font-ui text-xs text-walnut-muted mb-2.5">
@@ -86,13 +86,13 @@ export default function BookDraftButton({ collectionId, documentCount = 0 }) {
         variant={hasEnoughDocs ? 'primary' : 'light'}
         onClick={() => navigate(`/app/book/${collectionId}`)}
         disabled={!hasEnoughDocs}
-        title={!hasEnoughDocs ? 'Add more recipes first' : undefined}
+        title={!hasEnoughDocs ? 'Add more documents first' : undefined}
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
-        {hasEnoughDocs ? 'Create Book' : 'Add more recipes to create a book'}
+        {hasEnoughDocs ? 'Create Book' : 'Add more documents to create a book'}
       </Button>
       {tier !== 'keeper' && hasEnoughDocs && (
         <span className="font-ui text-[10px] text-walnut-muted">
