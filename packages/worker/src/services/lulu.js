@@ -166,7 +166,7 @@ export async function createProject(interiorPdfUrl, coverPdfUrl, title, env, boo
       state_code: toStateCode(shippingAddress.state),
       country_code: shippingAddress.country || 'US',
       postcode: shippingAddress.postalCode,
-      phone_number: shippingAddress.phone || shippingAddress.phoneNumber || '0000000000',
+      phone_number: normalizePhone(shippingAddress.phone || shippingAddress.phoneNumber || '0000000000'),
     };
   }
 
@@ -233,6 +233,22 @@ const US_STATE_CODES = {
   'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA',
   'washington': 'WA', 'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY',
 };
+
+/**
+ * Normalize a phone number to E.164-ish format for Lulu.
+ * Strips non-digits, prepends +1 for US numbers if missing.
+ */
+function normalizePhone(phone) {
+  if (!phone) return '+10000000000';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 0) return '+10000000000';
+  // Already has country code (11+ digits starting with 1, or 10+ for international)
+  if (digits.length >= 11) return `+${digits}`;
+  // 10-digit US number — add +1
+  if (digits.length === 10) return `+1${digits}`;
+  // Short number (7 digits etc.) — assume US, pad with +1
+  return `+1${digits}`;
+}
 
 function toStateCode(state) {
   if (!state) return '';
