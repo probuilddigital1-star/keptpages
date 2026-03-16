@@ -157,14 +157,14 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-DRAFT-1 | Designer toolbar back button | DONE | Back arrow + collection name, save-then-navigate |
 | US-DRAFT-2 | Smart draft-aware book button | DONE | BookDraftButton on Collection page (absorbs CTA-2 + CTA-4) |
 | US-DRAFT-3 | Dashboard draft card | DONE | "Your cookbook is waiting" card above collections |
-| US-CTA-1 | Raise free scan limit to 40 | TODO | Free tier: 25 → 40 scans/month |
+| US-CTA-1 | Raise free scan limit to 40 | DONE | Free tier: 25 → 40 in plans.js, landing page, scan page, dashboard, backend |
 | US-CTA-3 | Dashboard book promo banner | TODO | Dismissible banner promoting book creation |
 | US-CTA-5 | Keeper Pass sidebar CTA | TODO | Desktop sidebar Keeper Pass promotion |
 | US-CTA-6 | Enhanced empty orders page | TODO | Rich empty state with CTAs |
-| US-CTA-7 | Post-scan milestone toast | TODO | Toast when collection reaches 5+ docs |
+| US-CTA-7 | Post-scan milestone toast | DONE | Toast at 5 docs: "enough to create a book!" |
 | US-CTA-8 | Keeper Pass visibility enhancements | DONE | Scan bar + OrderPanel Keeper Pass callouts (OrderPanel piece) |
 
-**Completed: 137/151** | **Remaining: 14**
+**Completed: 139/151** | **Remaining: 12**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
