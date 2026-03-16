@@ -336,8 +336,8 @@ async function handleBookPaymentCompleted(session, supabase, env) {
     }
 
     // Regenerate cover with binding-specific spine width
-    const isBlueprint = book.customization?.pages?.length > 0;
-    const coverPdf = await generateCoverPdf(coverData, book.page_count, isBlueprint ? env : null, bindingType);
+    // Always pass env so fonts are loaded from KV and embedded (Lulu rejects unembedded StandardFonts)
+    const coverPdf = await generateCoverPdf(coverData, book.page_count, env, bindingType);
 
     // Overwrite cover PDF in R2 with binding-correct version
     await env.PROCESSED.put(book.cover_pdf_key, coverPdf, {

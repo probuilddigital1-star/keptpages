@@ -683,7 +683,7 @@ describe('handleWebhookEvent', () => {
       expect(generateCoverPdf).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'My Book', colorScheme: 'midnight' }),
         60,
-        null,  // non-blueprint book
+        baseEnv,  // always pass env for font embedding
         'CW',
       );
 
@@ -792,7 +792,7 @@ describe('handleWebhookEvent', () => {
       expect(generateCoverPdf).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Coil Book' }),
         40,
-        null,
+        baseEnv,
         'CO',
       );
     });

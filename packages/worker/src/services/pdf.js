@@ -887,12 +887,14 @@ export async function generateCoverPdf(coverData, pageCount, env, bindingType = 
 
   const coverPage = pdfDoc.addPage([coverWidth, coverHeight]);
 
-  // Load custom fonts for the cover if a font family and env are provided
+  // Load fonts from KV — Lulu rejects PDFs with unembedded StandardFonts
+  // Default to 'fraunces' if no font family specified (ensures fonts are always embedded)
   let fontBold, fontItalic, fontRegular;
-  if (coverData.fontFamily && env) {
+  const coverFontFamily = coverData.fontFamily || 'fraunces';
+  if (env) {
     try {
-      const coverFontMap = await loadAllFonts(pdfDoc, [coverData.fontFamily], env);
-      const customFonts = coverFontMap[coverData.fontFamily];
+      const coverFontMap = await loadAllFonts(pdfDoc, [coverFontFamily], env);
+      const customFonts = coverFontMap[coverFontFamily];
       if (customFonts) {
         fontBold = customFonts.bold || customFonts.regular;
         fontItalic = customFonts.italic || customFonts.regular;
@@ -902,7 +904,7 @@ export async function generateCoverPdf(coverData, pageCount, env, bindingType = 
       console.error('Cover font loading failed, using standard fonts:', err?.message || err);
     }
   }
-  // Fall back to standard fonts
+  // Fall back to standard fonts (only when env/KV unavailable, e.g. tests)
   if (!fontBold) fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   if (!fontItalic) fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
   if (!fontRegular) fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
