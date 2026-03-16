@@ -238,6 +238,11 @@ export default function ScanPage() {
         try {
           await addToCollection(collectionId, result.id);
           toast('Scan saved and added to collection!');
+          // Milestone toast: nudge book creation when collection reaches 5+ docs
+          const docCount = (useDocumentsStore.getState().documents[collectionId] || []).length;
+          if (docCount === 5) {
+            setTimeout(() => toast('You have 5 documents — enough to create a book!', 'success'), 1500);
+          }
         } catch {
           toast('Scan saved but could not add to collection automatically', 'error');
         }
@@ -328,7 +333,7 @@ export default function ScanPage() {
               </p>
               <p className="font-ui text-xs text-walnut-secondary mt-1">
                 {isAnonymous
-                  ? 'Create a free account for 25 scans/month.'
+                  ? 'Create a free account for 40 scans/month.'
                   : 'Get Keeper Pass for unlimited scans and collections.'}
               </p>
             </div>
@@ -826,13 +831,13 @@ export default function ScanPage() {
       >
         <div className="flex flex-col gap-4">
           <p className="font-body text-walnut-secondary">
-            Create a free account to get 25 scans/month and save your recipes permanently.
+            Create a free account to get 40 scans/month and save your recipes permanently.
           </p>
 
           <ul className="flex flex-col gap-2">
             {[
               'Save and edit your scans',
-              '25 scans per month',
+              '40 scans per month',
               'Organize into collections',
               'Order beautiful printed books',
             ].map((feature) => (

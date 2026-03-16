@@ -30,7 +30,7 @@ export default function FinalCTA({ onCtaClick }) {
             </svg>
           </button>
           <p className="font-ui text-xs text-cream/30 mt-3 text-center">
-            No credit card required &middot; 25 free scans
+            No credit card required &middot; 40 free scans
           </p>
         </div>
       </div>

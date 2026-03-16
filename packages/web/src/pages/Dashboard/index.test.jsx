@@ -162,13 +162,13 @@ describe('Dashboard page', () => {
     setupSubscriptionStore({
       tier: 'free',
       usage: { scans: 10, collections: 1 },
-      limits: { scans: 25, collections: 1 },
+      limits: { scans: 40, collections: 1 },
     });
 
     renderDashboard();
 
     expect(screen.getByText('Scan Usage')).toBeInTheDocument();
-    expect(screen.getByText('10 of 25 scans used')).toBeInTheDocument();
+    expect(screen.getByText('10 of 40 scans used')).toBeInTheDocument();
   });
 
   it('does not show scan usage bar for keeper tier users', () => {
@@ -186,8 +186,8 @@ describe('Dashboard page', () => {
   it('shows upgrade warning when scans usage is 80% or more', () => {
     setupSubscriptionStore({
       tier: 'free',
-      usage: { scans: 21, collections: 1 },
-      limits: { scans: 25, collections: 1 },
+      usage: { scans: 33, collections: 1 },
+      limits: { scans: 40, collections: 1 },
     });
 
     renderDashboard();

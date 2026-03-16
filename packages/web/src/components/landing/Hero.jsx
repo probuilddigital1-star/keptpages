@@ -61,7 +61,7 @@ export default function Hero({ onCtaClick, onLoginClick }) {
             </svg>
           </button>
           <p className="font-ui text-[13px] text-walnut-muted mt-3.5 tracking-[0.2px]">
-            No credit card required <span className="mx-1.5 opacity-40">&middot;</span> 25 free scans
+            No credit card required <span className="mx-1.5 opacity-40">&middot;</span> 40 free scans
           </p>
           <p className="font-ui text-[13px] text-walnut-muted mt-2 tracking-[0.2px]">
             Already have an account?{' '}

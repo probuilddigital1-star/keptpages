@@ -44,7 +44,7 @@ vi.mock('@/config/plans', () => ({
       id: 'free',
       name: 'Free',
       price: 0,
-      features: ['25 scans per month', '2 collections'],
+      features: ['40 scans per month', '2 collections'],
     },
     BOOK_PURCHASER: {
       id: 'book_purchaser',

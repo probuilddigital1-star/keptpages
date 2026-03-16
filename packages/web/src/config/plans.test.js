@@ -18,8 +18,8 @@ describe('PLANS', () => {
       expect(PLANS.FREE.price).toBe(0);
     });
 
-    it('has 25 scan limit', () => {
-      expect(PLANS.FREE.limits.scans).toBe(25);
+    it('has 40 scan limit', () => {
+      expect(PLANS.FREE.limits.scans).toBe(40);
     });
 
     it('has 2 collection limit', () => {
@@ -29,7 +29,7 @@ describe('PLANS', () => {
     it('has expected features list', () => {
       expect(PLANS.FREE.features).toEqual(
         expect.arrayContaining([
-          '25 scans per month',
+          '40 scans per month',
           '2 collections',
           'AI text extraction',
         ])
@@ -88,8 +88,8 @@ describe('PLANS', () => {
 });
 
 describe('TIER_LIMITS', () => {
-  it('free tier has 25 scans and 2 collections', () => {
-    expect(TIER_LIMITS.free.scans).toBe(25);
+  it('free tier has 40 scans and 2 collections', () => {
+    expect(TIER_LIMITS.free.scans).toBe(40);
     expect(TIER_LIMITS.free.collections).toBe(2);
   });
 

@@ -177,7 +177,7 @@ export default function Pricing({ onCtaClick }) {
 
         {/* Free tier message */}
         <p className="font-body text-sm text-walnut-muted text-center mb-6 reveal delay-400">
-          Start free — 25 scans, no credit card required
+          Start free — 40 scans, no credit card required
         </p>
 
         {/* CTA */}

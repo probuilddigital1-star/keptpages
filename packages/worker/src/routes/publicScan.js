@@ -32,7 +32,7 @@ publicScan.post('/', async (c) => {
     if (count >= MAX_ANON_SCANS) {
       return c.json({
         error: 'Anonymous scan limit reached',
-        message: `You've used all ${MAX_ANON_SCANS} free scans. Create a free account for 25 scans/month.`,
+        message: `You've used all ${MAX_ANON_SCANS} free scans. Create a free account for 40 scans/month.`,
         limit: MAX_ANON_SCANS,
         used: count,
       }, 429);

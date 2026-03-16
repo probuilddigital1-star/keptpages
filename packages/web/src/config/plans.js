@@ -15,9 +15,9 @@ export const PLANS = {
     id: 'free',
     name: 'Free',
     price: 0,
-    limits: { scans: 25, collections: 2 },
+    limits: { scans: 40, collections: 2 },
     features: [
-      '25 scans per month',
+      '40 scans per month',
       '2 collections',
       'AI text extraction',
       'No credit card required',
@@ -57,7 +57,7 @@ PLANS.KEEPER = PLANS.KEEPER_PASS;
 
 export const TIER_LIMITS = {
   no_account:     { scans: 5, collections: 1, pdfExport: false, sharing: false },
-  free:           { scans: 25, collections: 2, pdfExport: false, sharing: 'view_only' },
+  free:           { scans: 40, collections: 2, pdfExport: false, sharing: 'view_only' },
   book_purchaser: { scans: Infinity, collections: 3, pdfExport: 'per_book', sharing: 'view_only' },
   keeper:         { scans: Infinity, collections: Infinity, pdfExport: true, sharing: true },
 };

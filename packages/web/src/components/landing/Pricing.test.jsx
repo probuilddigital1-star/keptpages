@@ -69,7 +69,7 @@ describe('Pricing', () => {
   it('renders free tier messaging', () => {
     render(<Pricing onCtaClick={vi.fn()} />);
     expect(screen.getByText(/start free/i)).toBeInTheDocument();
-    expect(screen.getByText(/25 scans/i)).toBeInTheDocument();
+    expect(screen.getByText(/40 scans/i)).toBeInTheDocument();
     expect(screen.getByText(/no credit card/i)).toBeInTheDocument();
   });
 

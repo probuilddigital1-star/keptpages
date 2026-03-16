@@ -36,7 +36,7 @@ const mockDocumentsStore = {
 const mockSubscriptionStore = {
   tier: 'free',
   usage: { scans: 5 },
-  limits: { scans: 25 },
+  limits: { scans: 40 },
   canScan: vi.fn(() => true),
   purchaseKeeperPass: vi.fn(),
   loading: false,
@@ -110,7 +110,7 @@ describe('ScanPage', () => {
     vi.clearAllMocks();
     mockSubscriptionStore.tier = 'free';
     mockSubscriptionStore.usage = { scans: 5 };
-    mockSubscriptionStore.limits = { scans: 25 };
+    mockSubscriptionStore.limits = { scans: 40 };
     mockSubscriptionStore.canScan.mockReturnValue(true);
   });
 
@@ -130,7 +130,7 @@ describe('ScanPage', () => {
 
   it('shows scan counter for free tier', () => {
     renderScan();
-    expect(screen.getByText('5 of 25 scans used')).toBeInTheDocument();
+    expect(screen.getByText('5 of 40 scans used')).toBeInTheDocument();
   });
 
   it('shows Take Photo and Upload Photo options', () => {

@@ -36,7 +36,7 @@ describe('Hero', () => {
   it('renders the "no credit card" note', () => {
     render(<Hero onCtaClick={vi.fn()} />);
     expect(screen.getByText(/no credit card required/i)).toBeInTheDocument();
-    expect(screen.getByText(/25 free scans/i)).toBeInTheDocument();
+    expect(screen.getByText(/40 free scans/i)).toBeInTheDocument();
   });
 
   it('CTA button calls onCtaClick when clicked', async () => {
