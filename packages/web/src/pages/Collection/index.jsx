@@ -14,6 +14,7 @@ import DocumentCard from '@/components/collection/DocumentCard';
 import { DocumentPickerModal } from '@/components/collection/DocumentPickerModal';
 import ExportOptionsModal from '@/components/collection/ExportOptionsModal';
 import BookDraftButton from '@/components/book/BookDraftButton';
+import { shareService } from '@/services/share';
 
 export default function CollectionPage() {
   const { id } = useParams();
@@ -56,6 +57,9 @@ export default function CollectionPage() {
   const [showExportUpsell, setShowExportUpsell] = useState(false);
   const [removeDocId, setRemoveDocId] = useState(null);
   const [removing, setRemoving] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState(null);
+  const [sharingLoading, setSharingLoading] = useState(false);
 
   useEffect(() => {
     if (collections.length === 0) {
@@ -193,6 +197,47 @@ export default function CollectionPage() {
       handleExport();
     }
   }, [tier, canExportPdf, handleExport]);
+
+  const handleShareClick = useCallback(async () => {
+    setSharingLoading(true);
+    try {
+      // Check for existing share link first
+      const existing = await shareService.listLinks(id);
+      if (existing.shares?.length > 0) {
+        setShareLink(existing.shares[0]);
+      } else {
+        const created = await shareService.createLink(id);
+        setShareLink(created);
+      }
+      setShowShareModal(true);
+    } catch {
+      toast('Failed to create share link', 'error');
+    } finally {
+      setSharingLoading(false);
+    }
+  }, [id]);
+
+  const handleCopyShareLink = useCallback(() => {
+    if (shareLink?.url) {
+      navigator.clipboard.writeText(shareLink.url).then(() => {
+        toast('Link copied to clipboard');
+      }).catch(() => {
+        toast('Failed to copy link', 'error');
+      });
+    }
+  }, [shareLink]);
+
+  const handleRevokeShare = useCallback(async () => {
+    if (!shareLink?.id) return;
+    try {
+      await shareService.deleteLink(shareLink.id);
+      setShareLink(null);
+      setShowShareModal(false);
+      toast('Share link revoked');
+    } catch {
+      toast('Failed to revoke share link', 'error');
+    }
+  }, [shareLink]);
 
   // Delete collection with undo window
   const deleteTimerRef = useRef(null);
@@ -448,6 +493,30 @@ export default function CollectionPage() {
           Export PDF
         </Button>
 
+        <Button
+          variant="secondary"
+          onClick={handleShareClick}
+          loading={sharingLoading}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          Share
+        </Button>
+
         <BookDraftButton collectionId={id} documentCount={documents.length} />
 
         <Button
@@ -683,6 +752,54 @@ export default function CollectionPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Share Modal */}
+      <Modal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title="Share Collection"
+        size="sm"
+      >
+        {shareLink ? (
+          <div className="flex flex-col gap-4">
+            <p className="font-body text-sm text-walnut-secondary">
+              Anyone with this link can view your collection.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={shareLink.url}
+                className="flex-1 px-3 py-2 border border-border-light rounded-md bg-cream font-ui text-sm text-walnut select-all"
+                onClick={(e) => e.target.select()}
+              />
+              <Button size="sm" onClick={handleCopyShareLink}>
+                Copy
+              </Button>
+            </div>
+            {shareLink.viewCount > 0 && (
+              <p className="font-ui text-xs text-walnut-muted">
+                Viewed {shareLink.viewCount} {shareLink.viewCount === 1 ? 'time' : 'times'}
+              </p>
+            )}
+            <div className="flex justify-between items-center pt-2 border-t border-border-light">
+              <button
+                onClick={handleRevokeShare}
+                className="font-ui text-xs text-red-400 hover:text-red-500 transition-colors"
+              >
+                Revoke link
+              </button>
+              <Button variant="ghost" size="sm" onClick={() => setShowShareModal(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <Spinner />
+          </div>
+        )}
       </Modal>
 
       {/* Add Section Modal */}
