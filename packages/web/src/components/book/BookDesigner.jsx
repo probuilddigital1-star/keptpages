@@ -12,6 +12,9 @@ import { createPage } from './constants';
 
 const MODES = ['pages', 'settings', 'cover', 'order'];
 
+// Front matter pages count (title page, copyright, TOC)
+const FRONT_MATTER_COUNT = 3;
+
 export default function BookDesigner({ collectionId, bookId }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState('cover');
@@ -162,9 +165,14 @@ export default function BookDesigner({ collectionId, bookId }) {
   const setSelectedPage = useBookStore((s) => s.setSelectedPage);
   const deleteElement = useBookStore((s) => s.deleteElement);
   const setSelectedElement = useBookStore((s) => s.setSelectedElement);
+  const addPage = useBookStore((s) => s.addPage);
+
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
 
   const currentPage = blueprint?.pages?.[selectedPageIndex] || null;
   const pageCount = blueprint?.pages?.length || 0;
+  const totalEstimatedPages = pageCount + FRONT_MATTER_COUNT;
+  const showNudgeBanner = mode === 'pages' && !nudgeDismissed && totalEstimatedPages < 24;
 
   // Find the selected element object (for type checks)
   const selectedElement = currentPage?.elements?.find((el) => el.id === selectedElementId) || null;
@@ -272,6 +280,52 @@ export default function BookDesigner({ collectionId, bookId }) {
 
         {/* Main canvas area */}
         <div className="flex-1 bg-gray-100 overflow-auto p-2 pb-24 md:p-6 md:pb-6">
+          {/* Content-aware nudge banner for short books (US-SHORT-4) */}
+          {showNudgeBanner && (
+            <div className="bg-cream-surface border border-walnut-muted/20 rounded-lg px-4 py-3 mb-3 flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-ui text-xs text-walnut">
+                  Your book has {totalEstimatedPages} pages. Add notes or a conversion chart to enrich your book, or scan more items.
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <button
+                    onClick={() => addPage('notes', pageCount - 1)}
+                    className="font-ui text-[10px] font-medium px-2 py-1 rounded bg-terracotta/10 text-terracotta hover:bg-terracotta/20 transition-colors"
+                  >
+                    + Notes Page
+                  </button>
+                  <button
+                    onClick={() => addPage('conversion-chart', pageCount - 1)}
+                    className="font-ui text-[10px] font-medium px-2 py-1 rounded bg-terracotta/10 text-terracotta hover:bg-terracotta/20 transition-colors"
+                  >
+                    + Conversion Chart
+                  </button>
+                  <button
+                    onClick={() => addPage('recipe-template', pageCount - 1)}
+                    className="font-ui text-[10px] font-medium px-2 py-1 rounded bg-terracotta/10 text-terracotta hover:bg-terracotta/20 transition-colors"
+                  >
+                    + Recipe Template
+                  </button>
+                  <button
+                    onClick={() => navigate(`/app/collection/${collectionId}`)}
+                    className="font-ui text-[10px] font-medium px-2 py-1 rounded bg-sage/10 text-sage hover:bg-sage/20 transition-colors"
+                  >
+                    Scan More
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setNudgeDismissed(true)}
+                className="self-start p-1 text-walnut-muted hover:text-walnut transition-colors shrink-0"
+                aria-label="Dismiss"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {mode === 'order' ? (
             <OrderPanel bookId={book?.id} />
           ) : mode === 'cover' ? (

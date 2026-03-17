@@ -614,19 +614,8 @@ books.post('/:id/generate', async (c) => {
       pageCount = result.pageCount;
     }
 
-    // Lulu requires minimum pages (32 for PB, 24 for CW — pad to 32 to cover all bindings)
-    const LULU_MIN_PAGES = 32;
-    if (pageCount < LULU_MIN_PAGES) {
-      const padDoc = await PDFDocument.load(interiorPdf);
-      const firstPage = padDoc.getPages()[0];
-      const { width, height } = firstPage ? firstPage.getSize() : { width: 612, height: 792 };
-      while (padDoc.getPageCount() < LULU_MIN_PAGES) {
-        padDoc.addPage([width, height]);
-      }
-      interiorPdf = await padDoc.save();
-      pageCount = padDoc.getPageCount();
-      console.log(`[generate] Padded interior PDF to ${pageCount} pages (Lulu minimum)`);
-    }
+    // Page count reflects actual content — binding-aware validation at order time
+    // ensures the book meets Lulu's minimum before submission
 
     // Generate cover PDF
     const coverPdf = await generateCoverPdf({

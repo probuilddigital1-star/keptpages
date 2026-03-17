@@ -44,6 +44,9 @@ describe('Book designer constants', () => {
       expect(ids).toContain('section-divider');
       expect(ids).toContain('dedication');
       expect(ids).toContain('blank');
+      expect(ids).toContain('notes');
+      expect(ids).toContain('conversion-chart');
+      expect(ids).toContain('recipe-template');
     });
 
     it('each kind has label, icon, and description', () => {
@@ -156,6 +159,36 @@ describe('Book designer constants', () => {
       const elements = getDefaultElements('document');
       expect(elements[0].text).toBe('Document Title');
       expect(elements[1].text).toContain('Document content');
+    });
+
+    it('returns title + ruled lines for notes page', () => {
+      const elements = getDefaultElements('notes');
+      expect(elements[0].type).toBe('text');
+      expect(elements[0].text).toBe('My Notes');
+      const lines = elements.filter((e) => e.type === 'decorative');
+      expect(lines.length).toBe(20);
+    });
+
+    it('returns structured text elements for conversion-chart', () => {
+      const elements = getDefaultElements('conversion-chart');
+      const title = elements.find((e) => e.type === 'text' && e.text === 'Kitchen Conversions');
+      expect(title).toBeTruthy();
+      const textElements = elements.filter((e) => e.type === 'text');
+      // Title + 4 conversion sections
+      expect(textElements.length).toBe(5);
+    });
+
+    it('returns labeled fields for recipe-template', () => {
+      const elements = getDefaultElements('recipe-template');
+      const title = elements.find((e) => e.type === 'text' && e.text === 'Add Your Own Recipe');
+      expect(title).toBeTruthy();
+      const ingredientsLabel = elements.find((e) => e.type === 'text' && e.text === 'Ingredients');
+      expect(ingredientsLabel).toBeTruthy();
+      const instructionsLabel = elements.find((e) => e.type === 'text' && e.text === 'Instructions');
+      expect(instructionsLabel).toBeTruthy();
+      // Should have decorative lines for form fields
+      const lines = elements.filter((e) => e.type === 'decorative');
+      expect(lines.length).toBeGreaterThan(10);
     });
   });
 

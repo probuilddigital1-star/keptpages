@@ -26,7 +26,7 @@ vi.mock('@/services/stripe', () => ({
 const initialState = {
   tier: 'free',
   usage: { scans: 0, collections: 0 },
-  limits: { scans: 25, collections: 2 },
+  limits: { scans: 40, collections: 2 },
   subscription: null,
   isAdmin: false,
   loading: false,
@@ -46,7 +46,7 @@ describe('subscriptionStore', () => {
       const state = useSubscriptionStore.getState();
       expect(state.tier).toBe('free');
       expect(state.usage).toEqual({ scans: 0, collections: 0 });
-      expect(state.limits).toEqual({ scans: 25, collections: 2 });
+      expect(state.limits).toEqual({ scans: 40, collections: 2 });
       expect(state.subscription).toBeNull();
       expect(state.isAdmin).toBe(false);
       expect(state.loading).toBe(false);
@@ -71,7 +71,7 @@ describe('subscriptionStore', () => {
       expect(state.tier).toBe('free');
       expect(state.subscription).toBeNull();
       expect(state.usage).toEqual({ scans: 5, collections: 1 });
-      expect(state.limits).toEqual({ scans: 25, collections: 2 });
+      expect(state.limits).toEqual({ scans: 40, collections: 2 });
       expect(state.loading).toBe(false);
     });
 
@@ -127,7 +127,7 @@ describe('subscriptionStore', () => {
 
       await useSubscriptionStore.getState().fetchSubscription();
 
-      expect(useSubscriptionStore.getState().limits).toEqual({ scans: 25, collections: 2 });
+      expect(useSubscriptionStore.getState().limits).toEqual({ scans: 40, collections: 2 });
     });
 
     it('falls back to free tier when profile.tier is missing', async () => {
@@ -140,7 +140,7 @@ describe('subscriptionStore', () => {
 
       const state = useSubscriptionStore.getState();
       expect(state.tier).toBe('free');
-      expect(state.limits).toEqual({ scans: 25, collections: 2 });
+      expect(state.limits).toEqual({ scans: 40, collections: 2 });
     });
 
     it('sets isAdmin from profile', async () => {
@@ -185,7 +185,7 @@ describe('subscriptionStore', () => {
     it('returns true when scans are under the limit', () => {
       useSubscriptionStore.setState({
         usage: { scans: 10, collections: 0 },
-        limits: { scans: 25, collections: 2 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canScan()).toBe(true);
@@ -193,8 +193,8 @@ describe('subscriptionStore', () => {
 
     it('returns false when scans are at the limit', () => {
       useSubscriptionStore.setState({
-        usage: { scans: 25, collections: 0 },
-        limits: { scans: 25, collections: 2 },
+        usage: { scans: 40, collections: 0 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canScan()).toBe(false);
@@ -202,8 +202,8 @@ describe('subscriptionStore', () => {
 
     it('returns false when scans exceed the limit', () => {
       useSubscriptionStore.setState({
-        usage: { scans: 30, collections: 0 },
-        limits: { scans: 25, collections: 2 },
+        usage: { scans: 50, collections: 0 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canScan()).toBe(false);
@@ -223,7 +223,7 @@ describe('subscriptionStore', () => {
     it('returns true when collections are under the limit', () => {
       useSubscriptionStore.setState({
         usage: { scans: 0, collections: 0 },
-        limits: { scans: 25, collections: 2 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canCreateCollection()).toBe(true);
@@ -232,7 +232,7 @@ describe('subscriptionStore', () => {
     it('returns false when collections are at the limit', () => {
       useSubscriptionStore.setState({
         usage: { scans: 0, collections: 2 },
-        limits: { scans: 25, collections: 2 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canCreateCollection()).toBe(false);
@@ -241,7 +241,7 @@ describe('subscriptionStore', () => {
     it('returns false when collections exceed the limit', () => {
       useSubscriptionStore.setState({
         usage: { scans: 0, collections: 10 },
-        limits: { scans: 25, collections: 2 },
+        limits: { scans: 40, collections: 2 },
       });
 
       expect(useSubscriptionStore.getState().canCreateCollection()).toBe(false);

@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import OrderPanel from './OrderPanel';
 import { useBookStore } from '@/stores/bookStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
-import { BOOK_TIERS, BOOK_ADDONS, BOOK_PRICING, calculateBookPrice } from '@/config/plans';
+import { BOOK_TIERS, BOOK_ADDONS, BOOK_PRICING, BINDING_PAGE_LIMITS, calculateBookPrice } from '@/config/plans';
 
 // Mock the api module
 vi.mock('@/services/api', () => ({
@@ -27,7 +27,8 @@ function renderWithRouter(ui) {
 }
 
 const baseBookState = {
-  book: { id: 'book-1', status: 'draft', pageCount: 30 },
+  book: { id: 'book-1', status: 'draft', pageCount: 40 },
+  blueprint: { pages: Array(40).fill({ id: 'p', kind: 'document', elements: [] }) },
   generatingPdf: false,
   generatePdf: vi.fn(),
   orderBook: vi.fn(),
@@ -53,7 +54,7 @@ describe('OrderPanel', () => {
 
     useBookStore.setState({
       ...baseBookState,
-      book: { id: 'book-1', status: 'ordered', pageCount: 30 },
+      book: { id: 'book-1', status: 'ordered', pageCount: 40 },
     });
 
     expect(() => {
@@ -198,6 +199,7 @@ describe('OrderPanel', () => {
     useBookStore.setState({
       ...baseBookState,
       book: { id: 'book-1', status: 'ready', pageCount: 80 },
+      blueprint: { pages: Array(80).fill({ id: 'p', kind: 'document', elements: [] }) },
     });
 
     renderWithRouter(<OrderPanel bookId="book-1" />);
@@ -207,7 +209,7 @@ describe('OrderPanel', () => {
   it('renders the Regenerate PDF button when book status is ready', () => {
     useBookStore.setState({
       ...baseBookState,
-      book: { id: 'book-1', status: 'ready', pageCount: 30 },
+      book: { id: 'book-1', status: 'ready', pageCount: 40 },
     });
 
     renderWithRouter(<OrderPanel bookId="book-1" />);
@@ -217,7 +219,7 @@ describe('OrderPanel', () => {
   it('renders Download Preview button when status is ready', () => {
     useBookStore.setState({
       ...baseBookState,
-      book: { id: 'book-1', status: 'ready', pageCount: 30 },
+      book: { id: 'book-1', status: 'ready', pageCount: 40 },
     });
 
     renderWithRouter(<OrderPanel bookId="book-1" />);
@@ -227,7 +229,7 @@ describe('OrderPanel', () => {
   it('renders OrderStatusPanel when book has a post-order status', () => {
     useBookStore.setState({
       ...baseBookState,
-      book: { id: 'book-1', status: 'shipped', pageCount: 30 },
+      book: { id: 'book-1', status: 'shipped', pageCount: 40 },
     });
 
     renderWithRouter(<OrderPanel bookId="book-1" />);
@@ -275,6 +277,60 @@ describe('OrderPanel', () => {
     });
     renderWithRouter(<OrderPanel bookId="book-1" />);
     expect(screen.queryByText('Save 15% with Keeper Pass')).not.toBeInTheDocument();
+  });
+
+  describe('binding-aware tier selection (US-SHORT-2)', () => {
+    it('disables Classic tier when page count is below 32', () => {
+      useBookStore.setState({
+        ...baseBookState,
+        book: { id: 'book-1', status: 'draft', pageCount: 20 },
+        blueprint: { pages: Array(20).fill({ id: 'p', kind: 'document', elements: [] }) },
+      });
+      renderWithRouter(<OrderPanel bookId="book-1" />);
+      expect(screen.getByText(/Requires 32 pages \(you have 20\)/)).toBeInTheDocument();
+    });
+
+    it('shows coil unlock suggestion on disabled tiers', () => {
+      useBookStore.setState({
+        ...baseBookState,
+        book: { id: 'book-1', status: 'draft', pageCount: 20 },
+        blueprint: { pages: Array(20).fill({ id: 'p', kind: 'document', elements: [] }) },
+      });
+      renderWithRouter(<OrderPanel bookId="book-1" />);
+      expect(screen.getAllByText(/Add coil binding/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not disable tiers when page count meets minimum', () => {
+      useBookStore.setState({
+        ...baseBookState,
+        book: { id: 'book-1', status: 'draft', pageCount: 40 },
+        blueprint: { pages: Array(40).fill({ id: 'p', kind: 'document', elements: [] }) },
+      });
+      renderWithRouter(<OrderPanel bookId="book-1" />);
+      expect(screen.queryByText(/Requires.*pages/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('coil binding recommendation (US-SHORT-3)', () => {
+    it('shows "Best for Kitchen Use" badge when page count < 24', () => {
+      useBookStore.setState({
+        ...baseBookState,
+        book: { id: 'book-1', status: 'draft', pageCount: 15 },
+        blueprint: { pages: Array(15).fill({ id: 'p', kind: 'document', elements: [] }) },
+      });
+      renderWithRouter(<OrderPanel bookId="book-1" />);
+      expect(screen.getByText('Best for Kitchen Use')).toBeInTheDocument();
+    });
+
+    it('hides badge when page count >= 24', () => {
+      useBookStore.setState({
+        ...baseBookState,
+        book: { id: 'book-1', status: 'draft', pageCount: 30 },
+        blueprint: { pages: Array(30).fill({ id: 'p', kind: 'document', elements: [] }) },
+      });
+      renderWithRouter(<OrderPanel bookId="book-1" />);
+      expect(screen.queryByText('Best for Kitchen Use')).not.toBeInTheDocument();
+    });
   });
 });
 

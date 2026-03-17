@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBookStore } from '@/stores/bookStore';
 import { useSubscriptionStore } from '@/stores/subscriptionStore';
@@ -11,7 +11,9 @@ import {
   BOOK_TIERS,
   BOOK_ADDONS,
   BOOK_PRICING,
+  BINDING_PAGE_LIMITS,
   calculateBookPrice,
+  resolvePrintOptions,
 } from '@/config/plans';
 import { formatCurrency } from '@/utils/formatters';
 import api from '@/services/api';
@@ -97,6 +99,34 @@ export default function OrderPanel({ bookId }) {
     }
   }, [bookId, shipping, quantity, bookTier, addons, orderBook, navigate]);
 
+  // Compute which tiers are eligible based on page count + binding
+  const blueprintPageCount = useBookStore((s) => s.blueprint?.pages?.length || 0);
+  const effectivePageCount = book?.pageCount || blueprintPageCount || 0;
+
+  const tierEligibility = useMemo(() => {
+    const result = {};
+    for (const [tierId, config] of Object.entries(BOOK_TIERS)) {
+      const opts = resolvePrintOptions(tierId, addons);
+      const limit = BINDING_PAGE_LIMITS[opts.binding];
+      const eligible = !limit || effectivePageCount >= limit.min;
+      result[tierId] = {
+        eligible,
+        binding: opts.binding,
+        minPages: limit?.min || 0,
+        bindingLabel: limit?.label || '',
+      };
+    }
+    return result;
+  }, [effectivePageCount, addons]);
+
+  // Auto-select first eligible tier when current becomes ineligible
+  useEffect(() => {
+    if (tierEligibility[bookTier] && !tierEligibility[bookTier].eligible) {
+      const firstEligible = Object.keys(BOOK_TIERS).find((t) => tierEligibility[t]?.eligible);
+      if (firstEligible) handleTierChange(firstEligible);
+    }
+  }, [tierEligibility, bookTier, handleTierChange]);
+
   // Show order status view for post-order books (after all hooks)
   const isPostOrder = POST_ORDER_STATUSES.includes(book?.status);
   if (isPostOrder) return <OrderStatusPanel bookId={bookId} />;
@@ -158,39 +188,58 @@ export default function OrderPanel({ bookId }) {
           <Card className="p-5">
             <h3 className="font-ui text-sm font-semibold text-walnut mb-4">Choose Your Book</h3>
             <div className="space-y-2.5">
-              {Object.entries(BOOK_TIERS).map(([tierId, config]) => (
-                <label
-                  key={tierId}
-                  className={`relative flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                    bookTier === tierId
-                      ? 'border-terracotta bg-terracotta/5 shadow-sm'
-                      : 'border-border hover:border-walnut-muted'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="bookTier"
-                    value={tierId}
-                    checked={bookTier === tierId}
-                    onChange={() => handleTierChange(tierId)}
-                    className="accent-terracotta mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-ui text-sm font-semibold text-walnut">{config.label}</span>
-                      {config.featured && (
-                        <span className="font-ui text-[10px] font-semibold bg-terracotta text-white px-1.5 py-0.5 rounded-full">
-                          Most Popular
-                        </span>
+              {Object.entries(BOOK_TIERS).map(([tierId, config]) => {
+                const elig = tierEligibility[tierId];
+                const disabled = elig && !elig.eligible;
+                return (
+                  <label
+                    key={tierId}
+                    className={`relative flex items-start gap-3 p-3 rounded-lg border-2 transition-all ${
+                      disabled
+                        ? 'border-border opacity-50 cursor-not-allowed'
+                        : bookTier === tierId
+                          ? 'border-terracotta bg-terracotta/5 shadow-sm cursor-pointer'
+                          : 'border-border hover:border-walnut-muted cursor-pointer'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="bookTier"
+                      value={tierId}
+                      checked={bookTier === tierId}
+                      onChange={() => !disabled && handleTierChange(tierId)}
+                      disabled={disabled}
+                      className="accent-terracotta mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-ui text-sm font-semibold text-walnut">{config.label}</span>
+                        {config.featured && !disabled && (
+                          <span className="font-ui text-[10px] font-semibold bg-terracotta text-white px-1.5 py-0.5 rounded-full">
+                            Most Popular
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-ui text-xs text-walnut-muted mt-0.5">{config.description}</p>
+                      {disabled && (
+                        <div className="mt-1.5">
+                          <p className="font-ui text-[10px] text-red-600">
+                            Requires {elig.minPages} pages (you have {effectivePageCount})
+                          </p>
+                          {!addons.includes('coil') && (
+                            <p className="font-ui text-[10px] text-sage mt-0.5">
+                              Add coil binding (+$8) to unlock — lays flat for kitchen use
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <p className="font-ui text-xs text-walnut-muted mt-0.5">{config.description}</p>
-                  </div>
-                  <span className="font-ui text-sm font-semibold text-walnut whitespace-nowrap">
-                    {formatCurrency(config.price)}
-                  </span>
-                </label>
-              ))}
+                    <span className="font-ui text-sm font-semibold text-walnut whitespace-nowrap">
+                      {formatCurrency(config.price)}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
 
             {/* Add-Ons */}
@@ -203,6 +252,7 @@ export default function OrderPanel({ bookId }) {
                   if (!available) return null;
 
                   const isActive = addons.includes(addonId);
+                  const showCoilBadge = addonId === 'coil' && effectivePageCount < 24;
                   return (
                     <label
                       key={addonId}
@@ -229,7 +279,14 @@ export default function OrderPanel({ bookId }) {
                         />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <span className="font-ui text-xs text-walnut">{addon.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-ui text-xs text-walnut">{addon.label}</span>
+                          {showCoilBadge && (
+                            <span className="font-ui text-[9px] font-semibold bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                              Best for Kitchen Use
+                            </span>
+                          )}
+                        </div>
                         <p className="font-ui text-[10px] text-walnut-muted">{addon.description}</p>
                       </div>
                       <span className="font-ui text-[10px] text-walnut-secondary whitespace-nowrap">

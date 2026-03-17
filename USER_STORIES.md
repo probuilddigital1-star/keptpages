@@ -149,11 +149,11 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-ORDER-5 | Admin order detail view | DONE | Expandable order cards in admin dashboard showing full order details |
 | US-ORDER-6 | Lulu status cron poller | DONE | Scheduled worker polls Lulu for status updates, triggers shipping emails |
 | US-ORDER-7 | Shipping notification email | DONE | Email with tracking number sent when order ships |
-| US-SHORT-1 | Supplementary cookbook page types | TODO | Notes, conversion chart, recipe template page types in book designer |
-| US-SHORT-2 | Binding-aware tier selection | TODO | Disable ineligible tiers in OrderPanel based on page count |
-| US-SHORT-3 | Coil binding recommendation | TODO | "Best for Kitchen Use" badge on coil for short books |
-| US-SHORT-4 | Content-aware nudge banner | TODO | Dismissible enrichment suggestion in BookDesigner |
-| US-SHORT-5 | Remove blank page padding | TODO | Delete silent padding, honest page counts |
+| US-SHORT-1 | Supplementary cookbook page types | DONE | Notes, conversion chart, recipe template page types in book designer |
+| US-SHORT-2 | Binding-aware tier selection | DONE | Disable ineligible tiers in OrderPanel based on page count, coil unlock |
+| US-SHORT-3 | Coil binding recommendation | DONE | "Best for Kitchen Use" badge on coil for short books (<24 pages) |
+| US-SHORT-4 | Content-aware nudge banner | DONE | Dismissible enrichment suggestion in BookDesigner with quick-add buttons |
+| US-SHORT-5 | Remove blank page padding | DONE | Delete silent padding, honest page counts, binding-aware validation at order |
 | US-DRAFT-1 | Designer toolbar back button | DONE | Back arrow + collection name, save-then-navigate |
 | US-DRAFT-2 | Smart draft-aware book button | DONE | BookDraftButton on Collection page (absorbs CTA-2 + CTA-4) |
 | US-DRAFT-3 | Dashboard draft card | DONE | "Your cookbook is waiting" card above collections |
@@ -164,7 +164,7 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-CTA-7 | Post-scan milestone toast | DONE | Toast at 5 docs: "enough to create a book!" |
 | US-CTA-8 | Keeper Pass visibility enhancements | DONE | Scan bar + OrderPanel Keeper Pass callouts (OrderPanel piece) |
 
-**Completed: 142/151** | **Remaining: 9**
+**Completed: 147/151** | **Remaining: 4**
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -2552,20 +2552,20 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ## Epic 15: Short Book Solution (SHORT)
 
-### US-SHORT-1: Supplementary cookbook page types
+### US-SHORT-1: Supplementary cookbook page types ✅ DONE
 **As a** book designer user
 **I want** to add cookbook-specific pages like notes, conversion charts, and recipe templates to my book
 **So that** my book feels complete and professional without empty filler pages
 
 **Acceptance Criteria:**
-- [ ] 3 new entries in `PAGE_KINDS`: `notes`, `conversion-chart`, `recipe-template`
-- [ ] `getDefaultElements('notes')` returns title text "My Notes" + ~20 horizontal ruled line elements (decorative, shapeType: 'line')
-- [ ] `getDefaultElements('conversion-chart')` returns title text "Kitchen Conversions" + structured text elements with measurement tables (cups/ml, F/C, tbsp/tsp, weight)
-- [ ] `getDefaultElements('recipe-template')` returns title text "Add Your Own Recipe" + labeled field placeholders (Title, Serves, Prep Time, Ingredients, Instructions) with underline decoratives
-- [ ] New page types appear in AddPagePanel grid alongside existing types
-- [ ] Pages render correctly on PageCanvas (existing element renderers handle them)
-- [ ] Pages render correctly in generated PDF via `renderBlueprintBook()` (no pdf.js changes needed — uses generic element renderer)
-- [ ] Tests verify new PAGE_KINDS entries and getDefaultElements() outputs
+- [x] 3 new entries in `PAGE_KINDS`: `notes`, `conversion-chart`, `recipe-template`
+- [x] `getDefaultElements('notes')` returns title text "My Notes" + ~20 horizontal ruled line elements (decorative, shapeType: 'line')
+- [x] `getDefaultElements('conversion-chart')` returns title text "Kitchen Conversions" + structured text elements with measurement tables (cups/ml, F/C, tbsp/tsp, weight)
+- [x] `getDefaultElements('recipe-template')` returns title text "Add Your Own Recipe" + labeled field placeholders (Title, Serves, Prep Time, Ingredients, Instructions) with underline decoratives
+- [x] New page types appear in AddPagePanel grid alongside existing types
+- [x] Pages render correctly on PageCanvas (existing element renderers handle them)
+- [x] Pages render correctly in generated PDF via `renderBlueprintBook()` (no pdf.js changes needed — uses generic element renderer)
+- [x] Tests verify new PAGE_KINDS entries and getDefaultElements() outputs
 
 **Files:** `packages/web/src/components/book/constants.js`
 **Dependencies:** None
@@ -2573,21 +2573,21 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-SHORT-2: Binding-aware tier selection in OrderPanel
+### US-SHORT-2: Binding-aware tier selection in OrderPanel ✅ DONE
 **As a** customer ordering a book
 **I want** to see which book tiers are available for my book's page count
 **So that** I don't fill out a shipping form only to get an error at the end
 
 **Acceptance Criteria:**
-- [ ] `BINDING_PAGE_LIMITS` constant exported from `plans.js`: `{ PB: { min: 32, label: 'Softcover' }, CW: { min: 24, label: 'Hardcover' }, CO: { min: 2, label: 'Coil' } }`
-- [ ] OrderPanel computes effective binding per tier using `resolvePrintOptions(tierId, addons)` and checks against `BINDING_PAGE_LIMITS`
-- [ ] Ineligible tier cards render disabled: reduced opacity, no pointer events, muted border
-- [ ] Inline message on disabled tiers: "Requires X pages (you have Y)"
-- [ ] Below the inline message: "Add coil binding (+$8) to unlock — lays flat for kitchen use"
-- [ ] When coil add-on is toggled on, all tiers become eligible (CO min = 2) and disabled styling disappears
-- [ ] If the currently selected tier becomes ineligible, auto-select the first eligible tier
-- [ ] Backend validation at books.js:741-756 remains unchanged as safety net
-- [ ] Tests for disabled tiers, coil unlock, and auto-reselect behavior
+- [x] `BINDING_PAGE_LIMITS` constant exported from `plans.js`: `{ PB: { min: 32, label: 'Softcover' }, CW: { min: 24, label: 'Hardcover' }, CO: { min: 2, label: 'Coil' } }`
+- [x] OrderPanel computes effective binding per tier using `resolvePrintOptions(tierId, addons)` and checks against `BINDING_PAGE_LIMITS`
+- [x] Ineligible tier cards render disabled: reduced opacity, no pointer events, muted border
+- [x] Inline message on disabled tiers: "Requires X pages (you have Y)"
+- [x] Below the inline message: "Add coil binding (+$8) to unlock — lays flat for kitchen use"
+- [x] When coil add-on is toggled on, all tiers become eligible (CO min = 2) and disabled styling disappears
+- [x] If the currently selected tier becomes ineligible, auto-select the first eligible tier
+- [x] Backend validation at books.js:741-756 remains unchanged as safety net
+- [x] Tests for disabled tiers, coil unlock, and auto-reselect behavior
 
 **Files:** `packages/web/src/config/plans.js`, `packages/web/src/components/book/OrderPanel.jsx`
 **Dependencies:** None
@@ -2595,16 +2595,16 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-SHORT-3: Coil binding recommendation for short books
+### US-SHORT-3: Coil binding recommendation for short books ✅ DONE
 **As a** customer with a short recipe book
 **I want** coil binding to be prominently recommended
 **So that** I understand it's actually the best option for kitchen use, not just a workaround
 
 **Acceptance Criteria:**
-- [ ] When `pageCount < 24`, coil add-on in OrderPanel shows a "Best for Kitchen Use" badge (terracotta accent, contextual — only appears when relevant)
-- [ ] Badge disappears when book has 24+ pages (coil is still available, just not specially promoted)
-- [ ] Coil description already reads "Lays flat when open — great for kitchen use" (unchanged)
-- [ ] Tests verify badge visibility based on page count threshold
+- [x] When `pageCount < 24`, coil add-on in OrderPanel shows a "Best for Kitchen Use" badge (terracotta accent, contextual — only appears when relevant)
+- [x] Badge disappears when book has 24+ pages (coil is still available, just not specially promoted)
+- [x] Coil description already reads "Lays flat when open — great for kitchen use" (unchanged)
+- [x] Tests verify badge visibility based on page count threshold
 
 **Files:** `packages/web/src/components/book/OrderPanel.jsx`
 **Dependencies:** US-SHORT-2
@@ -2612,19 +2612,19 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-SHORT-4: Content-aware nudge banner in BookDesigner
+### US-SHORT-4: Content-aware nudge banner in BookDesigner ✅ DONE
 **As a** book designer user with a short book
 **I want** a gentle suggestion to add enrichment pages or scan more recipes
 **So that** I discover ways to make my book better without hitting a surprise at checkout
 
 **Acceptance Criteria:**
-- [ ] Dismissible banner appears in BookDesigner when in 'pages' mode and `blueprint.pages.length + frontMatterCount < 24`
-- [ ] Banner text: "Your book has X pages. Add notes or a conversion chart to enrich your cookbook, or scan more recipes."
-- [ ] Quick-add buttons: "+ Notes Page", "+ Conversion Chart", "+ Recipe Template" — each calls `addPage(kind)` from bookStore
-- [ ] "Scan More Recipes" links to `/app/collections/:collectionId`
-- [ ] Banner is dismissible via X button (state in component useState, resets per session)
-- [ ] Banner does NOT mention binding restrictions or page minimums — enrichment framing only
-- [ ] Tests verify banner visibility, dismiss behavior, and quick-add functionality
+- [x] Dismissible banner appears in BookDesigner when in 'pages' mode and `blueprint.pages.length + frontMatterCount < 24`
+- [x] Banner text: "Your book has X pages. Add notes or a conversion chart to enrich your cookbook, or scan more recipes."
+- [x] Quick-add buttons: "+ Notes Page", "+ Conversion Chart", "+ Recipe Template" — each calls `addPage(kind)` from bookStore
+- [x] "Scan More Recipes" links to `/app/collections/:collectionId`
+- [x] Banner is dismissible via X button (state in component useState, resets per session)
+- [x] Banner does NOT mention binding restrictions or page minimums — enrichment framing only
+- [x] Tests verify banner visibility, dismiss behavior, and quick-add functionality
 
 **Files:** `packages/web/src/components/book/BookDesigner.jsx`
 **Dependencies:** US-SHORT-1
@@ -2632,18 +2632,18 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 ---
 
-### US-SHORT-5: Remove blank page padding
+### US-SHORT-5: Remove blank page padding ✅ DONE
 **As a** developer
 **I want** to remove the silent blank page padding from PDF generation
 **So that** the page count shown to users is honest and reflects their actual content
 
 **Acceptance Criteria:**
-- [ ] Padding block at books.js:574-586 (`LULU_MIN_PAGES` / `padDoc.addPage()` loop) is deleted
-- [ ] `pageCount` stored in DB reflects actual content pages (no inflation)
-- [ ] Binding-aware validation at books.js:741-756 remains unchanged (returns 400 if under minimum)
-- [ ] Cover generation at books.js:598 uses actual pageCount (verify no hardcoded assumptions from padding)
-- [ ] Existing generated PDFs in R2 are unaffected (only new generations change)
-- [ ] Tests updated: remove padding expectations, verify validation still rejects under-minimum orders
+- [x] Padding block at books.js:574-586 (`LULU_MIN_PAGES` / `padDoc.addPage()` loop) is deleted
+- [x] `pageCount` stored in DB reflects actual content pages (no inflation)
+- [x] Binding-aware validation at books.js:741-756 remains unchanged (returns 400 if under minimum)
+- [x] Cover generation at books.js:598 uses actual pageCount (verify no hardcoded assumptions from padding)
+- [x] Existing generated PDFs in R2 are unaffected (only new generations change)
+- [x] Tests updated: remove padding expectations, verify validation still rejects under-minimum orders
 
 **Files:** `packages/worker/src/routes/books.js`
 **Dependencies:** US-SHORT-2 (frontend must guide users before this safety net is the only check)

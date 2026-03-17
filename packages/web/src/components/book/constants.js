@@ -15,6 +15,9 @@ export const PAGE_KINDS = [
   { id: 'section-divider', label: 'Section Divider', icon: 'minus', description: 'Chapter or section separator' },
   { id: 'dedication', label: 'Dedication', icon: 'heart', description: 'Dedication or memorial page' },
   { id: 'blank', label: 'Blank', icon: 'square', description: 'Empty page — add anything' },
+  { id: 'notes', label: 'Notes', icon: 'edit-3', description: 'Lined notes page for personal additions' },
+  { id: 'conversion-chart', label: 'Conversions', icon: 'list', description: 'Kitchen measurement conversion chart' },
+  { id: 'recipe-template', label: 'Recipe Template', icon: 'clipboard', description: 'Blank recipe form to fill in by hand' },
 ];
 
 export const TEMPLATES = [
@@ -184,6 +187,120 @@ export function getDefaultElements(kind, document) {
           id: id(), type: 'decorative', x: 0.4, y: 0.75, width: 0.2, height: 0.02,
           shapeType: 'line', stroke: '#c2891f', strokeWidth: 1,
         },
+      ];
+
+    case 'notes': {
+      const lines = [];
+      for (let i = 0; i < 20; i++) {
+        lines.push({
+          id: id(), type: 'decorative', x: 0.1, y: 0.16 + i * 0.04, width: 0.8, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        });
+      }
+      return [
+        {
+          id: id(), type: 'text', x: 0.1, y: 0.06, width: 0.8, height: 0.06,
+          text: 'My Notes', fontSize: 28, fontWeight: 'bold',
+          alignment: 'center', color: '#2C1810',
+        },
+        ...lines,
+      ];
+    }
+
+    case 'conversion-chart':
+      return [
+        {
+          id: id(), type: 'text', x: 0.1, y: 0.05, width: 0.8, height: 0.06,
+          text: 'Kitchen Conversions', fontSize: 28, fontWeight: 'bold',
+          alignment: 'center', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.3, y: 0.12, width: 0.4, height: 0.001,
+          shapeType: 'line', stroke: '#c2891f', strokeWidth: 2,
+        },
+        {
+          id: id(), type: 'text', x: 0.08, y: 0.15, width: 0.4, height: 0.35,
+          text: 'Volume\n\n1 cup = 240 ml\n¾ cup = 180 ml\n½ cup = 120 ml\n⅓ cup = 80 ml\n¼ cup = 60 ml\n1 tbsp = 15 ml\n1 tsp = 5 ml',
+          fontSize: 12, alignment: 'left', color: '#3a2a1a',
+        },
+        {
+          id: id(), type: 'text', x: 0.52, y: 0.15, width: 0.4, height: 0.35,
+          text: 'Weight\n\n1 oz = 28 g\n4 oz = 113 g\n8 oz = 227 g\n1 lb = 454 g\n\n1 stick butter = ½ cup\n1 stick butter = 113 g',
+          fontSize: 12, alignment: 'left', color: '#3a2a1a',
+        },
+        {
+          id: id(), type: 'text', x: 0.08, y: 0.52, width: 0.4, height: 0.35,
+          text: 'Temperature\n\n250°F = 120°C\n300°F = 150°C\n325°F = 165°C\n350°F = 175°C\n375°F = 190°C\n400°F = 205°C\n425°F = 220°C\n450°F = 230°C',
+          fontSize: 12, alignment: 'left', color: '#3a2a1a',
+        },
+        {
+          id: id(), type: 'text', x: 0.52, y: 0.52, width: 0.4, height: 0.35,
+          text: 'Useful Equivalents\n\n3 tsp = 1 tbsp\n4 tbsp = ¼ cup\n16 tbsp = 1 cup\n2 cups = 1 pint\n4 cups = 1 quart\n4 quarts = 1 gallon\n1 pinch ≈ ⅛ tsp',
+          fontSize: 12, alignment: 'left', color: '#3a2a1a',
+        },
+      ];
+
+    case 'recipe-template':
+      return [
+        {
+          id: id(), type: 'text', x: 0.1, y: 0.05, width: 0.8, height: 0.06,
+          text: 'Add Your Own Recipe', fontSize: 28, fontWeight: 'bold',
+          alignment: 'center', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.3, y: 0.12, width: 0.4, height: 0.001,
+          shapeType: 'line', stroke: '#c2891f', strokeWidth: 2,
+        },
+        {
+          id: id(), type: 'text', x: 0.08, y: 0.15, width: 0.2, height: 0.03,
+          text: 'Recipe Title:', fontSize: 12, fontWeight: 'bold', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.3, y: 0.175, width: 0.62, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        },
+        {
+          id: id(), type: 'text', x: 0.08, y: 0.21, width: 0.25, height: 0.03,
+          text: 'Serves:', fontSize: 11, fontWeight: 'bold', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.25, y: 0.235, width: 0.2, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        },
+        {
+          id: id(), type: 'text', x: 0.52, y: 0.21, width: 0.25, height: 0.03,
+          text: 'Prep Time:', fontSize: 11, fontWeight: 'bold', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.72, y: 0.235, width: 0.2, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        },
+        {
+          id: id(), type: 'text', x: 0.08, y: 0.28, width: 0.35, height: 0.04,
+          text: 'Ingredients', fontSize: 16, fontWeight: 'bold', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.08, y: 0.32, width: 0.35, height: 0.001,
+          shapeType: 'line', stroke: '#c2891f', strokeWidth: 1,
+        },
+        // 10 ingredient lines
+        ...Array.from({ length: 10 }, (_, i) => ({
+          id: id(), type: 'decorative', x: 0.08, y: 0.34 + i * 0.03, width: 0.35, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        })),
+        {
+          id: id(), type: 'text', x: 0.52, y: 0.28, width: 0.4, height: 0.04,
+          text: 'Instructions', fontSize: 16, fontWeight: 'bold', color: '#2C1810',
+        },
+        {
+          id: id(), type: 'decorative', x: 0.52, y: 0.32, width: 0.4, height: 0.001,
+          shapeType: 'line', stroke: '#c2891f', strokeWidth: 1,
+        },
+        // 15 instruction lines
+        ...Array.from({ length: 15 }, (_, i) => ({
+          id: id(), type: 'decorative', x: 0.52, y: 0.34 + i * 0.03, width: 0.4, height: 0.001,
+          shapeType: 'line', stroke: '#d4c9b8', strokeWidth: 1,
+        })),
       ];
 
     case 'blank':

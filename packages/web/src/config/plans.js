@@ -121,6 +121,14 @@ export const BOOK_ADDONS = {
   },
 };
 
+// ── Binding Page Limits (Lulu print requirements) ─────────────────────────
+
+export const BINDING_PAGE_LIMITS = {
+  PB: { min: 32, label: 'Softcover' },
+  CW: { min: 24, label: 'Hardcover' },
+  CO: { min: 2, label: 'Coil' },
+};
+
 // ── Book Pricing Constants ──────────────────────────────────────────────────
 
 export const BOOK_PRICING = {
