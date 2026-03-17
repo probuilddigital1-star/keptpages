@@ -26,7 +26,7 @@ export default function OrdersPage() {
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16 px-4">
-          <div className="mx-auto w-20 h-20 bg-cream-alt rounded-full flex items-center justify-center mb-5">
+          <div className="mx-auto w-20 h-20 bg-cream-alt rounded-full flex items-center justify-center mb-5 animate-scale-in">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 text-terracotta/60">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
@@ -35,6 +35,9 @@ export default function OrdersPage() {
           <h2 className="font-display text-xl font-semibold text-walnut mb-2">
             Your first book is waiting
           </h2>
+          <p className="font-handwriting text-xl text-terracotta/60 mb-3">
+            from your kitchen to your bookshelf
+          </p>
           <p className="font-body text-sm text-walnut-secondary max-w-sm mx-auto mb-6">
             Turn your collections into beautiful printed books — hardcover, softcover, or coil-bound, shipped to your door.
           </p>
@@ -50,8 +53,14 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+          {orders.map((order, index) => (
+            <div
+              key={order.id}
+              className="animate-stagger-fade-in"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <OrderCard order={order} />
+            </div>
           ))}
         </div>
       )}

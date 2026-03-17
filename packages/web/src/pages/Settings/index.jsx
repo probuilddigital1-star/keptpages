@@ -21,6 +21,7 @@ export default function Settings() {
   // Subscription state
   const tier = useSubscriptionStore((s) => s.tier);
   const usage = useSubscriptionStore((s) => s.usage);
+  const limits = useSubscriptionStore((s) => s.limits);
   const subLoading = useSubscriptionStore((s) => s.loading);
   const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription);
   const purchaseKeeperPass = useSubscriptionStore((s) => s.purchaseKeeperPass);
@@ -247,7 +248,7 @@ export default function Settings() {
                 {usage.scans || 0}
               </p>
               <p className="font-ui text-xs text-walnut-secondary mt-1">
-                Scans Used
+                {tier === 'keeper' ? 'Scans (unlimited)' : `of ${limits?.scans ?? 40} scans`}
               </p>
             </div>
             <div className="bg-cream-alt rounded-md p-4 text-center">
@@ -255,7 +256,7 @@ export default function Settings() {
                 {usage.collections || 0}
               </p>
               <p className="font-ui text-xs text-walnut-secondary mt-1">
-                Collections Created
+                {tier === 'keeper' ? 'Collections (unlimited)' : `of ${limits?.collections ?? 2} collections`}
               </p>
             </div>
           </div>

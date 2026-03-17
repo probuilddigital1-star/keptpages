@@ -613,7 +613,7 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handleAddSection(index)}
-                      className="font-ui text-xs text-walnut-muted hover:text-terracotta transition-colors px-3 py-1 rounded-pill hover:bg-terracotta-light"
+                      className="font-ui text-xs text-walnut-secondary hover:text-terracotta transition-colors px-3 py-1 rounded-pill hover:bg-terracotta-light"
                     >
                       + Add section divider
                     </button>

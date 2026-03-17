@@ -79,7 +79,7 @@ export default function Signup() {
             </Link>
           </div>
 
-          <Card className="p-8 text-center">
+          <Card className="p-8 text-center animate-scale-in">
             <div className="mb-4">
               <div className="mx-auto w-14 h-14 rounded-full bg-sage-light flex items-center justify-center">
                 <svg
@@ -126,13 +126,16 @@ export default function Signup() {
           <p className="font-body text-walnut-secondary mt-2">
             Create your account to start preserving.
           </p>
+          <p className="font-handwriting text-lg text-terracotta/60 mt-1">
+            your family&apos;s memories, beautifully kept
+          </p>
         </div>
 
-        <Card className="p-8">
+        <Card className="p-8 animate-scale-in">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
             {/* Server error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-600 font-ui">
+              <div className="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-600 font-ui animate-slide-up">
                 {error}
               </div>
             )}
@@ -209,7 +212,7 @@ export default function Signup() {
             {/* Divider */}
             <div className="flex items-center gap-4 my-1">
               <div className="flex-1 h-px bg-border" />
-              <span className="font-ui text-xs text-walnut-muted uppercase tracking-wider">
+              <span className="font-ui text-xs text-walnut-muted uppercase tracking-[3px]">
                 or
               </span>
               <div className="flex-1 h-px bg-border" />

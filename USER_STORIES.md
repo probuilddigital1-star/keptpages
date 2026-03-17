@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-16
+Last Updated: 2026-03-17
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -163,8 +163,15 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-CTA-6 | Enhanced empty orders page | DONE | Book icon, description, Browse Collections + Start Scanning CTAs |
 | US-CTA-7 | Post-scan milestone toast | DONE | Toast at 5 docs: "enough to create a book!" |
 | US-CTA-8 | Keeper Pass visibility enhancements | DONE | Scan bar + OrderPanel Keeper Pass callouts (OrderPanel piece) |
+| US-POLISH-1 | Animation foundation | DONE | staggerFadeIn, scaleIn, gentlePulse keyframes + grain texture in tailwind.config.js |
+| US-POLISH-2 | Dashboard warmth | DONE | Stagger cards, keeper status bar, handwriting empty state, 3 skeletons |
+| US-POLISH-3 | Auth page personality | DONE | Card animate-scale-in, Caveat taglines, error animate-slide-up, tracking-[3px] divider |
+| US-POLISH-4 | Scan flow delight | DONE | Softer at-limit copy, rotating processing messages, Add Page file picker fix |
+| US-POLISH-5 | Settings usage clarity | DONE | Usage stats show "X of Y scans/collections", unlimited for keeper |
+| US-POLISH-6 | Orders & empty states | DONE | Handwriting tagline, icon animate-scale-in, card stagger |
+| US-POLISH-7 | Collection visual hierarchy | DONE | Section divider text-walnut-secondary, BookDraftButton border-l-terracotta accent |
 
-**Completed: 147/151** | **Remaining: 4**
+**Completed: 154/158** | **Remaining: 4** (US-QA-12 + 3 absorbed/cancelled)
 
 ### Prioritized Roadmap (as of 2026-03-11)
 

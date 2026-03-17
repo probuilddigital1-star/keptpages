@@ -181,12 +181,18 @@ export default function Dashboard() {
         );
       })()}
 
+      {/* Keeper tier status bar */}
+      {tier === 'keeper' && (
+        <div className="mb-6 bg-sage-light border border-sage/20 rounded-md px-4 py-3 shadow-sm">
+          <p className="font-ui text-sm text-walnut">
+            <span className="font-semibold">Keeper Pass</span> — Unlimited scans &amp; collections, 15% off every book
+          </p>
+        </div>
+      )}
+
       {/* Loading skeleton */}
       {collectionsLoading && collections.length === 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -195,7 +201,7 @@ export default function Dashboard() {
 
       {/* Error state */}
       {collectionsError && (
-        <div className="bg-red-50 border border-red-200 rounded-md px-4 py-3 mb-6 text-sm text-red-600 font-ui">
+        <div className="bg-red-50 border border-red-200 rounded-md px-4 py-3 mb-6 text-sm text-red-600 font-ui animate-fade-in">
           {collectionsError}
         </div>
       )}
@@ -224,6 +230,9 @@ export default function Dashboard() {
           <h2 className="font-display text-xl font-semibold text-walnut mb-2">
             Start preserving your family&apos;s memories
           </h2>
+          <p className="font-handwriting text-xl text-terracotta/70 mb-3">
+            every recipe tells a story
+          </p>
           <p className="font-body text-walnut-secondary max-w-md mx-auto mb-6">
             Create your first collection to organize and digitize recipes,
             letters, journals, and other family documents.
@@ -237,9 +246,13 @@ export default function Dashboard() {
       {/* Collection grid */}
       {collections.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {collections.map((collection) => (
-            <CollectionCard
+          {collections.map((collection, index) => (
+            <div
               key={collection.id}
+              className="animate-stagger-fade-in"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+            <CollectionCard
               collection={collection}
               onDelete={(collectionId) => {
                 let cancelled = false;
@@ -257,6 +270,7 @@ export default function Dashboard() {
                 }, 5000);
               }}
             />
+            </div>
           ))}
         </div>
       )}

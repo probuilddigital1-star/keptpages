@@ -147,7 +147,7 @@ describe('ScanPage', () => {
   it('shows at-limit banner and upgrade button when scan limit reached', () => {
     mockSubscriptionStore.canScan.mockReturnValue(false);
     renderScan();
-    expect(screen.getByText("You've reached your free scan limit")).toBeInTheDocument();
+    expect(screen.getByText("You've used all your free scans this month")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /get keeper pass/i })).toBeInTheDocument();
   });
 

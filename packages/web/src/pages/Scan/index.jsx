@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useScanStore } from '@/stores/scanStore';
@@ -22,6 +22,13 @@ const STEP_PREVIEW = 'preview'; // Image preprocessor
 const STEP_PAGES = 'pages'; // Multi-page staging
 const STEP_UPLOADING = 'uploading'; // Upload + process
 const STEP_ANON_RESULT = 'anon_result'; // Anonymous scan result
+
+const PROCESSING_MESSAGES = [
+  'Reading your handwriting...',
+  'Identifying ingredients & steps...',
+  'Organizing everything nicely...',
+  'Almost there...',
+];
 
 const DOC_TYPES = [
   { value: 'recipe', label: 'Recipe' },
@@ -95,6 +102,19 @@ export default function ScanPage() {
   const [uploadError, setUploadError] = useState(null);
   const [anonResult, setAnonResult] = useState(null);
   const [anonDocType, setAnonDocType] = useState('recipe');
+  const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
+
+  // Rotate processing messages every 3s
+  useEffect(() => {
+    if (step !== STEP_UPLOADING || !processing) {
+      setProcessingMsgIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setProcessingMsgIndex((i) => (i + 1) % PROCESSING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [step, processing]);
 
   // Anonymous scan counter
   const anonScansUsed = isAnonymous ? getAnonymousScanCount() : 0;
@@ -193,8 +213,8 @@ export default function ScanPage() {
   }
 
   function handleAddAnotherPage() {
-    // Go back to choose mode to capture/upload another page
-    setStep(STEP_CHOOSE);
+    // Open file picker directly for adding pages
+    addPageFileRef.current?.click();
   }
 
   function handleAddPageFileChange(e) {
@@ -329,7 +349,7 @@ export default function ScanPage() {
             </div>
             <div className="flex-1">
               <p className="font-ui text-sm font-medium text-walnut">
-                You&apos;ve reached your free scan limit
+                You&apos;ve used all your free scans this month
               </p>
               <p className="font-ui text-xs text-walnut-secondary mt-1">
                 {isAnonymous
@@ -541,9 +561,7 @@ export default function ScanPage() {
               </h2>
               <p className="font-ui text-sm text-walnut-muted">
                 {processing
-                  ? pages.length > 1
-                    ? `Analyzing ${pages.length} pages and combining content`
-                    : 'Extracting text and identifying content'
+                  ? PROCESSING_MESSAGES[processingMsgIndex]
                   : pages.length > 1
                     ? `Uploading ${pages.length} pages securely`
                     : 'Sending your photo securely'}

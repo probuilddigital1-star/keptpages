@@ -46,7 +46,7 @@ export default function ForgotPassword() {
           </Link>
         </div>
 
-        <Card className="p-8">
+        <Card className="p-8 animate-scale-in">
           {sent ? (
             <div className="text-center">
               <div className="mx-auto w-14 h-14 rounded-full bg-sage-light flex items-center justify-center mb-4">

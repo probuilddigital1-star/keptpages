@@ -91,6 +91,7 @@ function setupSubscriptionStore(overrides = {}) {
   const defaults = {
     tier: 'free',
     usage: { scans: 10, collections: 1 },
+    limits: { scans: 40, collections: 2 },
     subscription: null,
     loading: false,
     fetchSubscription: mockFetchSubscription,
@@ -225,17 +226,18 @@ describe('Settings page', () => {
     expect(deleteBtn).not.toBeDisabled();
   });
 
-  it('shows usage stats', () => {
+  it('shows usage stats with limits context', () => {
     setupSubscriptionStore({
       tier: 'free',
       usage: { scans: 10, collections: 1 },
+      limits: { scans: 40, collections: 2 },
     });
     renderSettings();
 
     expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('Scans Used')).toBeInTheDocument();
+    expect(screen.getByText('of 40 scans')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('Collections Created')).toBeInTheDocument();
+    expect(screen.getByText('of 2 collections')).toBeInTheDocument();
   });
 
   it('calls fetchSubscription on mount', () => {

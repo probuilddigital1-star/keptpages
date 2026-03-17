@@ -41,7 +41,7 @@ export default function BookDraftButton({ collectionId, documentCount = 0 }) {
   // State B — Draft exists: show continue card
   if (latestDraft) {
     return (
-      <div className="bg-cream-alt border border-terracotta/20 rounded-lg p-4 w-full sm:w-auto">
+      <div className="bg-cream-alt border border-terracotta/20 border-l-4 border-l-terracotta rounded-lg p-4 w-full sm:w-auto">
         <div className="flex items-start gap-3">
           {/* Mini cover color swatch */}
           <MiniCoverSwatch colorScheme={latestDraft.colorScheme} />
