@@ -647,6 +647,28 @@ describe('generateCoverPdf', () => {
       expect(coverCW.getPage(0).getWidth()).toBeGreaterThan(coverPB.getPage(0).getWidth());
     });
 
+    it('CW cover uses 0.875" wrap+bleed (Lulu casewrap requirement)', async () => {
+      const coverCW = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 27, null, 'CW')
+      );
+      const page = coverCW.getPage(0);
+      // CW 27 pages: spine = 0.25", wrap = 0.875" per side
+      // Width: 2*612 + 0.25*72 + 2*63 = 1224 + 18 + 126 = 1368pt = 19.0"
+      // Height: 792 + 2*63 = 918pt = 12.75"
+      expect(page.getWidth()).toBeCloseTo(1368, 0);
+      expect(page.getHeight()).toBeCloseTo(918, 0);
+    });
+
+    it('PB cover uses 0.125" bleed (standard softcover)', async () => {
+      const coverPB = await PDFDocument.load(
+        await generateCoverPdf(sampleBook, 60, null, 'PB')
+      );
+      const page = coverPB.getPage(0);
+      // PB 60 pages: spine = (60/444)+0.06 ≈ 0.195", bleed = 0.125" per side
+      // Height: 792 + 2*9 = 810pt = 11.25"
+      expect(page.getHeight()).toBeCloseTo(810, 0);
+    });
+
     it('CO binding produces narrowest cover (no spine)', async () => {
       const coverPB = await PDFDocument.load(
         await generateCoverPdf(sampleBook, 100, null, 'PB')

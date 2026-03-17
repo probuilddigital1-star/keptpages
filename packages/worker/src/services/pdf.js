@@ -880,8 +880,10 @@ export async function generateCoverPdf(coverData, pageCount, env, bindingType = 
   const spineWidthInches = calculateSpineWidth(pageCount, bindingType);
   const spineWidthPt = spineWidthInches * 72;
 
-  // Cover dimensions: back + spine + front, with bleed
-  const coverBleed = 9; // 0.125"
+  // Cover dimensions: back + spine + front, with bleed/wrap
+  // CW (casewrap/hardcover): 0.75" board wrap + 0.125" bleed = 0.875" per side
+  // PB/CO (softcover/coil): 0.125" bleed per side
+  const coverBleed = bindingType === 'CW' ? 63 : 9; // 0.875" or 0.125"
   const coverWidth = (TRIM_WIDTH * 2) + spineWidthPt + (2 * coverBleed);
   const coverHeight = TRIM_HEIGHT + (2 * coverBleed);
 
