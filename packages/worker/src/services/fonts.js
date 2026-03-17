@@ -82,20 +82,19 @@ export async function loadFonts(pdfDoc, fontFamily, env) {
     }
   }
 
-  // Ensure required weights exist with fallbacks
+  // Ensure required weights exist — always use embedded custom fonts, never StandardFonts.
+  // Lulu rejects PDFs with unembedded StandardFont references.
   if (!results.regular) {
+    // No custom regular loaded — fall back to StandardFonts only when KV unavailable (tests)
+    // In production this means KV font data is missing/corrupt
+    console.error(`Font ${family}: regular weight failed to load from KV, using StandardFont fallback`);
     results.regular = await pdfDoc.embedFont(fallbacks.regular);
   }
   if (!results.bold) {
-    results.bold = results.regular; // Degrade gracefully
+    results.bold = results.regular; // Use embedded regular — never StandardFonts
   }
   if (!results.italic) {
-    // Try to use the standard italic, or fall back to regular
-    try {
-      results.italic = await pdfDoc.embedFont(fallbacks.italic || fallbacks.regular);
-    } catch {
-      results.italic = results.regular;
-    }
+    results.italic = results.regular; // Use embedded regular — never StandardFonts
   }
 
   return results;

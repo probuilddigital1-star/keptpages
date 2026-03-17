@@ -614,8 +614,15 @@ books.post('/:id/generate', async (c) => {
       pageCount = result.pageCount;
     }
 
-    // Page count reflects actual content — binding-aware validation at order time
-    // ensures the book meets Lulu's minimum before submission
+    // Lulu requires an even number of interior pages
+    if (pageCount % 2 !== 0) {
+      const padDoc = await PDFDocument.load(interiorPdf);
+      const firstPage = padDoc.getPages()[0];
+      const { width, height } = firstPage ? firstPage.getSize() : { width: 612, height: 792 };
+      padDoc.addPage([width, height]);
+      interiorPdf = await padDoc.save();
+      pageCount = padDoc.getPageCount();
+    }
 
     // Generate cover PDF
     const coverPdf = await generateCoverPdf({

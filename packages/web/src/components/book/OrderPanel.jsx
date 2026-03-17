@@ -151,7 +151,11 @@ export default function OrderPanel({ bookId }) {
 
   const multiCopyDiscount = quantity >= 5 ? 0.20 : quantity >= 3 ? 0.15 : 0;
 
-  const canOrder = shipping.name.trim() && shipping.email.trim() && shipping.phone.trim() &&
+  // Phone must have at least 10 digits (Lulu E.164 requirement)
+  const phoneDigits = shipping.phone.replace(/\D/g, '');
+  const phoneValid = phoneDigits.length >= 10;
+
+  const canOrder = shipping.name.trim() && shipping.email.trim() && phoneValid &&
     shipping.street1.trim() && shipping.city.trim() && shipping.state.trim() &&
     shipping.postalCode.trim() && book?.status === 'ready';
 
@@ -312,8 +316,13 @@ export default function OrderPanel({ bookId }) {
                 onChange={(e) => setShipping((s) => ({ ...s, name: e.target.value }))} />
               <Input label="Email" type="email" placeholder="jane@example.com" value={shipping.email}
                 onChange={(e) => setShipping((s) => ({ ...s, email: e.target.value }))} />
-              <Input label="Phone Number" type="tel" placeholder="(555) 123-4567" value={shipping.phone}
-                onChange={(e) => setShipping((s) => ({ ...s, phone: e.target.value }))} />
+              <div>
+                <Input label="Phone Number" type="tel" placeholder="(555) 123-4567" value={shipping.phone}
+                  onChange={(e) => setShipping((s) => ({ ...s, phone: e.target.value }))} />
+                {shipping.phone.trim() && !phoneValid && (
+                  <p className="font-ui text-[10px] text-red-500 mt-0.5">Enter a full 10-digit phone number</p>
+                )}
+              </div>
               <Input label="Street Address" placeholder="123 Main St" value={shipping.street1}
                 onChange={(e) => setShipping((s) => ({ ...s, street1: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
