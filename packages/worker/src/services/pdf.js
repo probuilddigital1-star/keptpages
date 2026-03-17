@@ -1024,22 +1024,21 @@ export async function generateCoverPdf(coverData, pageCount, env, bindingType = 
 
     // Embed photo first (we need its dimensions for layout calculation)
     let photo = null;
-    let photoDims = null;
+    const COVER_PHOTO_RADIUS = 80; // circular photo radius in points (~1.1 inch)
+    const COVER_PHOTO_BORDER = 4;  // accent border width
     if (coverData.photoBytes && !isPhotoBg) {
       try {
         const embedFn = coverData.photoMimeType === 'image/png' ? 'embedPng' : 'embedJpg';
         photo = await pdfDoc[embedFn](coverData.photoBytes);
-        const maxW = TRIM_WIDTH * 0.45;
-        const maxH = coverHeight * 0.22;
-        photoDims = photo.scaleToFit(maxW, maxH);
       } catch (err) {
         console.error('Cover photo embed failed (centered):', err?.message || err);
       }
     }
 
     // Calculate total block height for vertical centering
+    const photoBlockH = photo ? (COVER_PHOTO_RADIUS * 2 + COVER_PHOTO_BORDER * 2) : 0;
     let blockH = 0;
-    if (photo && photoDims) blockH += photoDims.height + GAP_PHOTO_TITLE;
+    if (photo) blockH += photoBlockH + GAP_PHOTO_TITLE;
     blockH += titleSize; // title
     if (coverData.subtitle) blockH += GAP_TITLE_SUB + subtitleSize;
     blockH += GAP_SUB_DIVIDER + 1; // divider line
@@ -1051,15 +1050,43 @@ export async function generateCoverPdf(coverData, pageCount, env, bindingType = 
     const centerY = (safeTop + safeBottom) / 2;
     let cursorY = centerY + blockH / 2;
 
-    // Photo (above title)
-    if (photo && photoDims) {
-      coverPage.drawImage(photo, {
-        x: frontCenterX - photoDims.width / 2,
-        y: cursorY - photoDims.height,
-        width: photoDims.width,
-        height: photoDims.height,
+    // Photo (above title) — circular with accent border, matching CoverPreview
+    if (photo) {
+      const r = COVER_PHOTO_RADIUS;
+      const photoCX = frontCenterX;
+      const photoCY = cursorY - r - COVER_PHOTO_BORDER;
+      const k = 0.5522847498; // bezier constant for circular arcs
+
+      // Draw accent-color border circle
+      coverPage.drawCircle({
+        x: photoCX, y: photoCY,
+        size: r + COVER_PHOTO_BORDER,
+        color: frontAccentColor,
       });
-      cursorY -= photoDims.height + GAP_PHOTO_TITLE;
+
+      // Clip to inner circle and draw the photo
+      coverPage.pushOperators(
+        pushGraphicsState(),
+        moveTo(photoCX + r, photoCY),
+        appendBezierCurve(photoCX + r, photoCY + r * k, photoCX + r * k, photoCY + r, photoCX, photoCY + r),
+        appendBezierCurve(photoCX - r * k, photoCY + r, photoCX - r, photoCY + r * k, photoCX - r, photoCY),
+        appendBezierCurve(photoCX - r, photoCY - r * k, photoCX - r * k, photoCY - r, photoCX, photoCY - r),
+        appendBezierCurve(photoCX + r * k, photoCY - r, photoCX + r, photoCY - r * k, photoCX + r, photoCY),
+        clip(),
+        endPath(),
+      );
+
+      // Draw image scaled to fill the circle (square crop)
+      const dim = r * 2;
+      coverPage.drawImage(photo, {
+        x: photoCX - r,
+        y: photoCY - r,
+        width: dim,
+        height: dim,
+      });
+
+      coverPage.pushOperators(popGraphicsState());
+      cursorY -= (r * 2 + COVER_PHOTO_BORDER * 2) + GAP_PHOTO_TITLE;
     }
 
     // Title
