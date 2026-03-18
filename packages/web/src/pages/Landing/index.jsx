@@ -48,10 +48,10 @@ export default function Landing() {
       <Helmet>
         <title>KeptPages — Your family's pages, kept beautifully</title>
         <meta name="description" content="Preserve handwritten family recipes, letters, and journals. AI-powered text extraction and beautiful hardcover book printing." />
-        <link rel="canonical" href="https://keptpages.com" />
+        <link rel="canonical" href="https://app.keptpages.com" />
         <meta property="og:title" content="KeptPages — Your family's pages, kept beautifully" />
         <meta property="og:description" content="Preserve handwritten family recipes, letters, and journals. AI-powered text extraction and beautiful hardcover book printing." />
-        <meta property="og:url" content="https://keptpages.com" />
+        <meta property="og:url" content="https://app.keptpages.com" />
       </Helmet>
       <Nav onCtaClick={goToSignup} onLoginClick={goToLogin} />
 

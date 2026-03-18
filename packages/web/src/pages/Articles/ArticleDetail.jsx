@@ -138,7 +138,7 @@ export default function ArticleDetail() {
   const pageTitle = article?.seoTitle || article?.title || 'Article';
   const pageDescription = article?.seoDescription || article?.excerpt || '';
   const ogImage = article?.ogImageUrl || article?.coverImageUrl || '';
-  const canonicalUrl = `https://keptpages.com/between-the-pages/${slug}`;
+  const canonicalUrl = `https://app.keptpages.com/between-the-pages/${slug}`;
   const publishedDate = article?.publishedAt ? new Date(article.publishedAt).toISOString() : '';
 
   const formattedDate = article?.publishedAt
@@ -179,7 +179,7 @@ export default function ArticleDetail() {
               publisher: {
                 '@type': 'Organization',
                 name: 'KeptPages',
-                url: 'https://keptpages.com',
+                url: 'https://app.keptpages.com',
               },
               datePublished: publishedDate,
               mainEntityOfPage: canonicalUrl,

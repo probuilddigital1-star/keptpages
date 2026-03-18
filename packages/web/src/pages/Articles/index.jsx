@@ -125,12 +125,12 @@ export default function ArticleListing() {
       <Helmet>
         <title>Between the Pages | KeptPages</title>
         <meta name="description" content="Guides, stories, and inspiration for preserving old family recipes, letters, and journals. Learn how to digitize and keep what matters most." />
-        <link rel="canonical" href="https://keptpages.com/between-the-pages" />
+        <link rel="canonical" href="https://app.keptpages.com/between-the-pages" />
         <link rel="alternate" type="application/rss+xml" title="Between the Pages - KeptPages" href="/api/articles/rss" />
         <meta property="og:title" content="Between the Pages | KeptPages" />
         <meta property="og:description" content="Guides, stories, and inspiration for preserving what matters most." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://keptpages.com/between-the-pages" />
+        <meta property="og:url" content="https://app.keptpages.com/between-the-pages" />
       </Helmet>
       <Nav
         onCtaClick={() => navigate('/signup')}
