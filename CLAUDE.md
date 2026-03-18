@@ -29,11 +29,12 @@
 - `md:` (768px) — small desktop
 - `lg:` (1024px) — desktop (sidebar appears, bottom tabs hide)
 
-## Current Status (2026-03-14)
+## Current Status (2026-03-18)
 - **127/131 user stories complete** (LULU epic: 3/3 complete)
 - Lulu Print Spec Fixes (LULU): **3/3 DONE** — correct spine width per binding type, cover regeneration at fulfillment
 - All prior epics complete (COVER, MOBILE, BLOG, SCAN, QA-10, PRICING, LULU)
 - All tests passing (1,571 tests: 832 frontend + 739 worker, 91 files)
+- RLS enabled on `public.articles` table (migration 019) — public SELECT for published articles only, writes restricted to service_role
 - Remaining work: Production validation (US-QA-12) — final go/no-go before launch
 
 ## Pricing Model (2026-03-14)
