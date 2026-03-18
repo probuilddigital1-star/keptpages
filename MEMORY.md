@@ -99,3 +99,20 @@ File: `packages/web/src/components/ui/Toast.jsx`
 
 ### Test Status
 All 1,416 tests passing (789 frontend + 627 worker, 88 test files)
+
+---
+
+## RLS Enabled on Articles Table (2026-03-18)
+
+### Issue
+Supabase lint flagged `public.articles` as exposed via PostgREST without Row Level Security enabled.
+
+### Fix
+Migration `019_enable_rls_articles.sql`:
+- `ALTER TABLE articles ENABLE ROW LEVEL SECURITY`
+- SELECT policy allows public reads only for `status = 'published'` articles
+- Draft/archived articles hidden from public queries
+- Write operations (INSERT/UPDATE/DELETE) restricted to `service_role` (Cloudflare Worker)
+
+### Key File
+- `supabase/migrations/019_enable_rls_articles.sql`
