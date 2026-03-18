@@ -19,9 +19,9 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="KeptPages — Your family's pages, kept beautifully" />
     <meta property="og:description" content="Preserve handwritten family recipes, letters, and journals. AI-powered text extraction and beautiful hardcover book printing." />
-    <meta property="og:url" content="https://keptpages.com" />
+    <meta property="og:url" content="https://app.keptpages.com" />
     <meta property="og:site_name" content="KeptPages" />
-    <meta property="og:image" content="https://keptpages.com/icons/icon-512.png" />
+    <meta property="og:image" content="https://app.keptpages.com/icons/icon-512.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
 
@@ -29,10 +29,17 @@
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="KeptPages — Your family's pages, kept beautifully" />
     <meta name="twitter:description" content="Preserve handwritten family recipes, letters, and journals. AI-powered text extraction and beautiful hardcover book printing." />
-    <meta name="twitter:image" content="https://keptpages.com/icons/icon-512.png" />
+    <meta name="twitter:image" content="https://app.keptpages.com/icons/icon-512.png" />
 
     <!-- Canonical -->
-    <link rel="canonical" href="https://keptpages.com" />
+    <link rel="canonical" href="https://app.keptpages.com" />
+
+    <!-- Redirect root/www to app subdomain -->
+    <script>
+      if (location.hostname === 'keptpages.com' || location.hostname === 'www.keptpages.com') {
+        location.replace('https://app.keptpages.com' + location.pathname + location.search + location.hash);
+      }
+    </script>
   </head>
   <body class="bg-cream text-walnut font-body antialiased">
     <div id="root"></div>
