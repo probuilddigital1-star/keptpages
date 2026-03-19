@@ -43,7 +43,7 @@ export default function ScrollCue() {
       aria-label="Scroll to see more"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex-col items-center gap-2 cursor-pointer transition-opacity duration-500 hidden min-[500px]:flex ${
+      className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer transition-opacity duration-500 ${
         visible && !scrolledAway ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
