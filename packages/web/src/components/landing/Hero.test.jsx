@@ -39,6 +39,11 @@ describe('Hero', () => {
     expect(screen.getByText(/40 free scans/i)).toBeInTheDocument();
   });
 
+  it('renders the scroll cue', () => {
+    render(<Hero onCtaClick={vi.fn()} />);
+    expect(screen.getByText('See the magic below')).toBeInTheDocument();
+  });
+
   it('CTA button calls onCtaClick when clicked', async () => {
     const handleClick = vi.fn();
     render(<Hero onCtaClick={handleClick} />);

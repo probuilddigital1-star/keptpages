@@ -27,7 +27,7 @@ export default function TrustBar() {
   ];
 
   return (
-    <div className="py-8 border-t border-b border-border-light bg-cream-warm">
+    <div className="py-8 border-t border-b border-border-light bg-cream-warm" id="trust-bar">
       <div className="mx-auto max-w-container-sm md:max-w-container-md lg:max-w-container-lg px-6">
         <div className="flex justify-center gap-6 flex-wrap">
           {items.map((item) => (

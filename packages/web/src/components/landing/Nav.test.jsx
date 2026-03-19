@@ -68,4 +68,22 @@ describe('Nav', () => {
     const links = screen.getAllByText(/between the pages/i);
     expect(links.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders section anchor links on landing page', () => {
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />, { route: '/' });
+    expect(screen.getByText('How It Works')).toBeInTheDocument();
+    expect(screen.getByText('Pricing')).toBeInTheDocument();
+  });
+
+  it('does not render section anchor links on articles page', () => {
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />, { route: '/between-the-pages/some-article' });
+    expect(screen.queryByText('How It Works')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pricing')).not.toBeInTheDocument();
+  });
+
+  it('anchor links have correct hrefs', () => {
+    renderWithRouter(<Nav onCtaClick={vi.fn()} />, { route: '/' });
+    expect(screen.getByText('How It Works').closest('a')).toHaveAttribute('href', '#how-it-works');
+    expect(screen.getByText('Pricing').closest('a')).toHaveAttribute('href', '#pricing');
+  });
 });

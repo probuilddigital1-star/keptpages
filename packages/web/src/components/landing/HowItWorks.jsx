@@ -24,7 +24,7 @@ export default function HowItWorks() {
   ];
 
   return (
-    <section className="section-padding bg-cream-alt relative">
+    <section className="section-padding bg-cream-alt relative" id="how-it-works">
       {/* Top divider */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 

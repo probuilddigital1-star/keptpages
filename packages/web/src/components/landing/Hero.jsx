@@ -1,3 +1,5 @@
+import ScrollCue from './ScrollCue';
+
 export default function Hero({ onCtaClick, onLoginClick }) {
   const words = [
     { text: 'Every ', highlight: false },
@@ -11,7 +13,7 @@ export default function Hero({ onCtaClick, onLoginClick }) {
   const delays = ['0.3s', '0.38s', '0.46s', '0.58s', '0.66s', '0.74s'];
 
   return (
-    <section className="pt-[80px] sm:pt-[100px] md:pt-[120px] pb-[40px] sm:pb-[50px] md:pb-[60px] min-h-[100svh] flex items-center bg-[radial-gradient(ellipse_at_50%_0%,rgba(198,93,62,0.04)_0%,transparent_60%)]">
+    <section className="relative pt-[80px] sm:pt-[100px] md:pt-[120px] pb-[40px] sm:pb-[50px] md:pb-[60px] min-h-[90svh] flex items-center bg-[radial-gradient(ellipse_at_50%_0%,rgba(198,93,62,0.04)_0%,transparent_60%)]">
       <div className="mx-auto max-w-container-sm md:max-w-container-md lg:max-w-container-lg px-6">
         <div
           className="font-ui text-section-label uppercase tracking-[2.5px] text-terracotta mb-5 opacity-0 animate-[fadeInUp_0.6s_ease_0.2s_forwards]"
@@ -74,6 +76,11 @@ export default function Hero({ onCtaClick, onLoginClick }) {
           </p>
         </div>
       </div>
+
+      {/* Bottom gradient for visual flow into TrustBar */}
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-cream-warm/40 pointer-events-none" />
+
+      <ScrollCue />
     </section>
   );
 }

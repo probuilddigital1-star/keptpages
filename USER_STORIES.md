@@ -170,8 +170,11 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-POLISH-5 | Settings usage clarity | DONE | Usage stats show "X of Y scans/collections", unlimited for keeper |
 | US-POLISH-6 | Orders & empty states | DONE | Handwriting tagline, icon animate-scale-in, card stagger |
 | US-POLISH-7 | Collection visual hierarchy | DONE | Section divider text-walnut-secondary, BookDraftButton border-l-terracotta accent |
+| US-LANDING-1 | Scroll cue component | TODO | Decorative scroll indicator on hero section |
+| US-LANDING-2 | Hero height + gradient | TODO | 90svh peek + bottom gradient transition |
+| US-LANDING-3 | Nav section anchor links | TODO | Desktop-only How It Works + Pricing links with active state |
 
-**Completed: 154/158** | **Remaining: 4** (US-QA-12 + 3 absorbed/cancelled)
+**Completed: 154/161** | **Remaining: 7** (US-QA-12 + 3 absorbed/cancelled + US-LANDING-1→3)
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -224,7 +227,8 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | **SHORT** — Short Book Solution | 5 | 0 | 5 |
 | **DRAFT** — Book Draft Persistence | 3 | 3 | 0 |
 | **CTA** — Conversion Flow UX | 6 | 0 | 6 |
-| **Total** | **151** | **137** | **14** |
+| **LANDING** — Landing Page Discoverability | 3 | 0 | 3 |
+| **Total** | **161** | **154** | **7** |
 
 ---
 
@@ -2838,3 +2842,68 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 
 **Files:** `packages/web/src/pages/Dashboard/index.jsx`, `packages/web/src/components/book/OrderPanel.jsx`
 **Estimate:** S
+
+---
+
+## Epic 19: Landing Page Discoverability (LANDING)
+
+### US-LANDING-1: Scroll cue component
+**As a** new visitor
+**I want** a visual hint that content exists below the hero
+**So that** I discover the product's value proposition without guessing to scroll
+
+**Acceptance Criteria:**
+- [ ] `ScrollCue.jsx` component renders at bottom of hero section
+- [ ] Shows thin decorative terracotta line + small circle with chevron-down + "See the magic below" italic text
+- [ ] Circle style matches TransformSection's AI Magic divider (terracotta-light bg, terracotta-glow border, smaller 28px)
+- [ ] Uses existing `animate-gentle-pulse` animation (no new keyframes)
+- [ ] Appears after hero entrance animations complete (~2s delay via fadeInUp)
+- [ ] Fades out smoothly when user scrolls past ~80px
+- [ ] Clicking scrolls smoothly to TrustBar section (`#trust-bar`)
+- [ ] Accessible: `role="button"`, `aria-label="Scroll to see more"`, keyboard focusable
+- [ ] Hidden on very short viewports (landscape phone) to avoid overlapping hero content
+- [ ] Tests: renders text, accessibility attributes, click handler
+
+**Files:** `packages/web/src/components/landing/ScrollCue.jsx` (create), `packages/web/src/components/landing/ScrollCue.test.jsx` (create), `packages/web/src/components/landing/TrustBar.jsx` (add `id="trust-bar"`)
+**Estimate:** M
+
+---
+
+### US-LANDING-2: Hero height reduction + bottom gradient
+**As a** new visitor
+**I want** to see a peek of content below the hero
+**So that** I have a visual cue that the page continues
+
+**Acceptance Criteria:**
+- [ ] Hero section `min-h-[100svh]` changed to `min-h-[90svh]`
+- [ ] TrustBar top border/content peeks above the fold on standard viewports
+- [ ] Hero section has `relative` positioning for ScrollCue absolute placement
+- [ ] Bottom gradient overlay transitions from transparent to cream-warm/40, creating visual flow into TrustBar
+- [ ] Gradient is `pointer-events-none` (doesn't interfere with clicks)
+- [ ] ScrollCue rendered as last child of Hero section
+- [ ] Existing hero entrance animations unchanged
+- [ ] Hero test updated to verify ScrollCue renders
+
+**Files:** `packages/web/src/components/landing/Hero.jsx`, `packages/web/src/components/landing/Hero.test.jsx`
+**Estimate:** S
+
+---
+
+### US-LANDING-3: Nav section anchor links with active state
+**As a** desktop visitor
+**I want** navigation links to key landing page sections
+**So that** I can jump directly to How It Works or Pricing
+
+**Acceptance Criteria:**
+- [ ] "How It Works" and "Pricing" anchor links added to Nav
+- [ ] Links only visible on `lg:` breakpoint (hidden on mobile/tablet)
+- [ ] Links only render on landing page (`pathname === '/'`), not on article or app pages
+- [ ] Styled identically to existing "Between the Pages" link: `font-ui text-[13px] font-medium text-walnut-secondary hover:text-walnut`
+- [ ] Active section tracking via IntersectionObserver: current section's link shows `text-terracotta`
+- [ ] Smooth scroll to `#how-it-works` and `#pricing` on click
+- [ ] `id="how-it-works"` added to HowItWorks section element
+- [ ] `id="pricing"` verified on Pricing section (should already exist)
+- [ ] Nav tests updated: anchor links render on landing, hidden on article pages
+
+**Files:** `packages/web/src/components/landing/Nav.jsx`, `packages/web/src/components/landing/Nav.test.jsx`, `packages/web/src/components/landing/HowItWorks.jsx`, `packages/web/src/components/landing/Pricing.jsx` (verify id)
+**Estimate:** M

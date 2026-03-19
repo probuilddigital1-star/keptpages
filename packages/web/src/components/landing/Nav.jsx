@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 
+const SECTION_IDS = ['how-it-works', 'pricing'];
+
 export default function Nav({ onCtaClick, onLoginClick }) {
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState(null);
   const location = useLocation();
   const isArticlesPage = location.pathname.startsWith('/between-the-pages');
+  const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
     function handleScroll() {
@@ -14,6 +18,35 @@ export default function Nav({ onCtaClick, onLoginClick }) {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Track active section for anchor link highlighting
+  useEffect(() => {
+    if (!isLandingPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.3, rootMargin: '-80px 0px 0px 0px' },
+    );
+
+    // Delay observation to ensure sections are rendered
+    const timer = setTimeout(() => {
+      SECTION_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [isLandingPage]);
 
   return (
     <nav
@@ -40,6 +73,32 @@ export default function Nav({ onCtaClick, onLoginClick }) {
           >
             Between the Pages
           </Link>
+          {isLandingPage && (
+            <>
+              <a
+                href="#how-it-works"
+                className={clsx(
+                  'hidden lg:inline font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
+                  activeSection === 'how-it-works'
+                    ? 'text-terracotta'
+                    : 'text-walnut-secondary hover:text-walnut'
+                )}
+              >
+                How It Works
+              </a>
+              <a
+                href="#pricing"
+                className={clsx(
+                  'hidden lg:inline font-ui text-[13px] font-medium tracking-[0.3px] no-underline transition-colors duration-200',
+                  activeSection === 'pricing'
+                    ? 'text-terracotta'
+                    : 'text-walnut-secondary hover:text-walnut'
+                )}
+              >
+                Pricing
+              </a>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2.5 sm:gap-4">
           <button
