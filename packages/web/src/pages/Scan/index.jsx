@@ -94,7 +94,6 @@ export default function ScanPage() {
   }, [clearStagedPages]);
 
   const fileInputRef = useRef(null);
-  const addPageFileRef = useRef(null);
   const [step, setStep] = useState(STEP_CHOOSE);
   const [rawFile, setRawFile] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -213,17 +212,8 @@ export default function ScanPage() {
   }
 
   function handleAddAnotherPage() {
-    // Open file picker directly for adding pages
-    addPageFileRef.current?.click();
-  }
-
-  function handleAddPageFileChange(e) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setRawFile(file);
-      setStep(STEP_PREVIEW);
-    }
-    e.target.value = '';
+    // Go back to STEP_CHOOSE so user can pick camera or upload
+    setStep(STEP_CHOOSE);
   }
 
   async function handleProcessPages() {
@@ -518,15 +508,6 @@ export default function ScanPage() {
               </button>
             )}
           </div>
-
-          {/* Hidden file input for adding pages */}
-          <input
-            ref={addPageFileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/heic,image/heif"
-            onChange={handleAddPageFileChange}
-            className="hidden"
-          />
 
           {/* Action buttons */}
           <div className="flex gap-3">
