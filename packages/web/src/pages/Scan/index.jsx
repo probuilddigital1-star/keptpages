@@ -64,6 +64,7 @@ export default function ScanPage() {
   const collectionId = location.state?.collectionId;
   const collectionName = location.state?.collectionName;
   const user = useAuthStore((s) => s.user);
+  const authLoading = useAuthStore((s) => s.loading);
   const isAnonymous = !user;
   const {
     uploadScan,
@@ -316,12 +317,12 @@ export default function ScanPage() {
         </div>
 
         {/* Scan counter */}
-        {isAnonymous && (
+        {!authLoading && isAnonymous && (
           <Badge variant={anonAtLimit ? 'terracotta' : 'default'}>
             {anonScansUsed} of 5 free scans used
           </Badge>
         )}
-        {!isAnonymous && isFree && (
+        {!authLoading && !isAnonymous && isFree && (
           <Badge variant={atLimit ? 'terracotta' : 'default'}>
             {scansUsed} of {scansLimit} scans used
           </Badge>

@@ -7,7 +7,7 @@ export const useSubscriptionStore = create((set, get) => ({
   // State
   tier: 'free',
   usage: { scans: 0, collections: 0 },
-  limits: { scans: 25, collections: 2 },
+  limits: { scans: TIER_LIMITS.free.scans, collections: TIER_LIMITS.free.collections },
   subscription: null,
   isAdmin: false,
   loading: false,
