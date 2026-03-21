@@ -81,8 +81,8 @@ export default function Privacy() {
           {/* Your Rights */}
           <h2 className="font-display text-xl font-semibold text-walnut mt-10 mb-3">6. Your Rights</h2>
           <ul className="list-disc pl-6 space-y-1 font-body text-sm text-walnut-secondary">
-            <li><strong>Access:</strong> you can view all your data within the Service at any time</li>
-            <li><strong>Export:</strong> you can download your scans and transcribed text</li>
+            <li><strong>Access:</strong> you can view all your uploaded images and transcribed text within the Service at any time</li>
+            <li><strong>Export:</strong> you can copy your transcribed text from the app. Formatted PDF export is available depending on your account tier — see our pricing page for details.</li>
             <li><strong>Deletion:</strong> you can delete your account and all associated data from your account settings</li>
             <li><strong>Correction:</strong> you can edit your profile information and transcribed text at any time</li>
           </ul>
