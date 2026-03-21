@@ -81,7 +81,7 @@ export default function ScanPage() {
     getAnonymousScansRemaining,
   } = useScanStore();
   const addToCollection = useDocumentsStore((s) => s.addToCollection);
-  const { tier, usage, limits, canScan, purchaseKeeperPass, loading: upgradeLoading, fetchSubscription, dailyScansUsed, dailyScansLimit, dailyScansRemaining } = useSubscriptionStore();
+  const { tier, usage, limits, canScan, purchaseKeeperPass, loading: upgradeLoading, fetchSubscription, dailyScansLimit, dailyScansRemaining } = useSubscriptionStore();
 
   useEffect(() => {
     if (!isAnonymous) {
@@ -128,7 +128,6 @@ export default function ScanPage() {
   const scansLimit = limits.scans ?? 25;
   const dailyRemaining = dailyScansRemaining();
   const dailyAtLimit = isUnlimitedTier && dailyRemaining <= 0;
-  const dailyApproaching = isUnlimitedTier && dailyRemaining > 0 && dailyRemaining <= 15;
   const atLimit = isAnonymous ? anonAtLimit : !canScan();
 
   // ---- Handlers ----
@@ -339,11 +338,6 @@ export default function ScanPage() {
         {!authLoading && !isAnonymous && isFree && (
           <Badge variant={atLimit ? 'terracotta' : 'default'}>
             {scansUsed} of {scansLimit} scans used
-          </Badge>
-        )}
-        {!authLoading && isUnlimitedTier && (
-          <Badge variant={dailyAtLimit ? 'terracotta' : dailyApproaching ? 'gold' : 'default'}>
-            {dailyScansUsed} of {dailyScansLimit} daily scans
           </Badge>
         )}
       </div>
