@@ -209,6 +209,13 @@ export default function Signup() {
               Create Account
             </Button>
 
+            <p className="font-ui text-xs text-walnut-muted text-center">
+              By creating an account, you agree to our{' '}
+              <Link to="/terms" className="text-terracotta hover:underline">Terms of Service</Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-terracotta hover:underline">Privacy Policy</Link>.
+            </p>
+
             {/* Divider */}
             <div className="flex items-center gap-4 my-1">
               <div className="flex-1 h-px bg-border" />

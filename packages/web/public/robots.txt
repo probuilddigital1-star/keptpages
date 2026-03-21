@@ -5,4 +5,4 @@ Disallow: /auth/
 Disallow: /checkout/
 Disallow: /shared/
 
-Sitemap: https://keptpages.com/sitemap.xml
+Sitemap: https://app.keptpages.com/sitemap.xml
