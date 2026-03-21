@@ -1,7 +1,7 @@
 # KeptPages — User Stories
 
 Generated: 2026-03-01
-Last Updated: 2026-03-17
+Last Updated: 2026-03-21
 Branch: `feature/cta-and-blog`
 Repo: https://github.com/probuilddigital1-star/keptpages
 
@@ -170,11 +170,17 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 | US-POLISH-5 | Settings usage clarity | DONE | Usage stats show "X of Y scans/collections", unlimited for keeper |
 | US-POLISH-6 | Orders & empty states | DONE | Handwriting tagline, icon animate-scale-in, card stagger |
 | US-POLISH-7 | Collection visual hierarchy | DONE | Section divider text-walnut-secondary, BookDraftButton border-l-terracotta accent |
-| US-LANDING-1 | Scroll cue component | TODO | Decorative scroll indicator on hero section |
-| US-LANDING-2 | Hero height + gradient | TODO | 90svh peek + bottom gradient transition |
-| US-LANDING-3 | Nav section anchor links | TODO | Desktop-only How It Works + Pricing links with active state |
+| US-LANDING-1 | Scroll cue component | DONE | Decorative terracotta circle + chevron + "See the magic below", fades on scroll >80px |
+| US-LANDING-2 | Hero height + gradient | DONE | 90svh peek + bottom gradient (transparent → cream-warm/40) |
+| US-LANDING-3 | Nav section anchor links | DONE | Desktop-only How It Works + Pricing links, IntersectionObserver active state |
+| US-ABUSE-1 | DB migration: abuse prevention | DONE | file_hash, abuse_flags, flagged_at, active_session_id columns (migration 020) |
+| US-ABUSE-2 | Daily scan cap (100/day) | DONE | KV-based dailyCap middleware, skips free tier, throttle override support |
+| US-ABUSE-3 | File fingerprinting & dedup | DONE | SHA-256 hash on upload, skip R2+AI for duplicates, covers add-page too |
+| US-ABUSE-4 | Account monitoring & admin flagging | DONE | GET /admin/abuse-report, POST /admin/flag-account (warn/throttle/suspend) |
+| US-ABUSE-5 | Concurrent session enforcement | DONE | KV-based session tracking, logging-only initially, X-Session-Id header |
+| US-ABUSE-6 | Frontend abuse prevention UI | DONE | Daily cap badge/banner, duplicate toast+redirect, session UUID on auth |
 
-**Completed: 154/161** | **Remaining: 7** (US-QA-12 + 3 absorbed/cancelled + US-LANDING-1→3)
+**Completed: 163/167** | **Remaining: 4** (US-QA-12 + 3 absorbed/cancelled)
 
 ### Prioritized Roadmap (as of 2026-03-11)
 
@@ -2906,4 +2912,126 @@ Repo: https://github.com/probuilddigital1-star/keptpages
 - [ ] Nav tests updated: anchor links render on landing, hidden on article pages
 
 **Files:** `packages/web/src/components/landing/Nav.jsx`, `packages/web/src/components/landing/Nav.test.jsx`, `packages/web/src/components/landing/HowItWorks.jsx`, `packages/web/src/components/landing/Pricing.jsx` (verify id)
+**Estimate:** M
+
+---
+
+## Epic 20: Abuse Prevention (ABUSE)
+
+### US-ABUSE-1: Database migration for abuse prevention
+**As a** developer
+**I want to** add columns for file fingerprinting, abuse monitoring, and session tracking
+**So that** the infrastructure supports all abuse prevention features
+
+**Acceptance Criteria:**
+- [x] Migration `020_abuse_prevention.sql` adds `file_hash TEXT` column to `scans` table
+- [x] Partial index `idx_scans_file_hash` on `(user_id, file_hash) WHERE deleted_at IS NULL`
+- [x] `abuse_flags JSONB DEFAULT '{}'` and `flagged_at TIMESTAMPTZ` columns added to `profiles`
+- [x] `active_session_id TEXT` column added to `profiles`
+- [x] Migration is additive only (no breaking changes to existing queries)
+
+**Files:** `supabase/migrations/020_abuse_prevention.sql` (create)
+**Estimate:** S
+
+---
+
+### US-ABUSE-2: Daily scan cap (100/day)
+**As a** platform operator
+**I want to** limit all users to 100 scans per day
+**So that** no single account can run up unlimited API costs even with "unlimited" tier
+
+**Acceptance Criteria:**
+- [x] `dailyCap.js` middleware checks KV key `daily:{userId}:{YYYY-MM-DD}`
+- [x] Skips check entirely for `free` tier users (already monthly-capped)
+- [x] Only enforced for `keeper` and `book_purchaser` tiers
+- [x] Returns 429 with `{ error: "Daily scan limit reached", dailyLimit, dailyUsed }`
+- [x] Sets `X-DailyCap-Limit` and `X-DailyCap-Remaining` response headers
+- [x] KV entries auto-expire after 86400s
+- [x] Graceful fallback if KV errors (request proceeds, error logged)
+- [x] Mounted on `POST /api/scan` only, after auth middleware
+- [x] Checks for `throttle:{userId}` KV key — uses reduced cap (10/day) if present
+- [x] Tests: 10 tests covering allowed/blocked/reset/KV-error/throttle/headers
+
+**Files:** `packages/worker/src/middleware/dailyCap.js`, `packages/worker/src/index.js`, `packages/worker/src/__tests__/dailyCap.test.js`
+**Estimate:** M
+
+---
+
+### US-ABUSE-3: File fingerprinting and deduplication
+**As a** platform operator
+**I want to** detect and skip duplicate image uploads
+**So that** accidental and intentional re-scanning doesn't waste AI API costs
+
+**Acceptance Criteria:**
+- [x] SHA-256 hash computed from `arrayBuffer` after file upload in `POST /api/scan`
+- [x] Hash stored as `file_hash` column in scan INSERT
+- [x] Before R2 upload, query: `SELECT id, title FROM scans WHERE user_id = ? AND file_hash = ? AND deleted_at IS NULL`
+- [x] If duplicate found: return `{ duplicate: true, existingScanId, existingTitle }`, skip R2+AI
+- [x] Duplicate detection does NOT increment `scan_count`
+- [x] Also applies to `POST /api/scan/:id/add-page` for additional pages
+- [x] Soft-deleted scans are not considered duplicates
+- [x] Tests: 4 tests covering hash stored, duplicate detected, deleted ignored, consistent hash
+
+**Files:** `packages/worker/src/routes/scan.js`, `packages/worker/src/__tests__/fileFingerprint.test.js`
+**Estimate:** M
+
+---
+
+### US-ABUSE-4: Account monitoring and admin flagging
+**As an** admin
+**I want to** see which accounts are scanning heavily and flag/throttle/suspend them
+**So that** I can act on commercial abuse or API farming
+
+**Acceptance Criteria:**
+- [x] `GET /admin/abuse-report` returns users with 200+ scans in last 30 days
+- [x] Response includes: userId, displayName, tier, scanCount30d, activeDays, abuseFlags
+- [x] `POST /admin/flag-account` accepts `{ userId, reason, action }` (warn/throttle/suspend)
+- [x] `throttle` action sets KV key `throttle:{userId}` with reduced daily cap (10/day, 30d TTL)
+- [x] `suspend` action bans user via Supabase auth admin API
+- [x] `warn` action sets abuse_flags JSONB on profile for record-keeping
+- [x] All actions set `flagged_at` timestamp
+- [x] Admin-only (existing ADMIN_EMAILS middleware)
+
+**Files:** `packages/worker/src/routes/admin.js`
+**Estimate:** M
+
+---
+
+### US-ABUSE-5: Concurrent session enforcement
+**As a** platform operator
+**I want to** limit each account to one active session
+**So that** credential sharing and reselling is prevented
+
+**Acceptance Criteria:**
+- [x] Frontend generates `sessionId` (UUID) on SIGNED_IN, stores in `localStorage`
+- [x] `X-Session-Id` header sent on all authenticated API requests
+- [x] `sessionEnforce.js` middleware checks KV `session:{userId}` → `{ sessionId, lastSeen }`
+- [x] Same sessionId → proceed, update lastSeen
+- [x] Different sessionId + lastSeen < 5min → 401 `CONCURRENT_SESSION` (when enforce=true)
+- [x] Different sessionId + lastSeen > 5min → new session takes over
+- [x] Missing header → skip (backwards compatibility)
+- [x] Ships as logging-only (`enforce: false`) initially
+- [x] Tests: 9 tests covering same/different/stale session, missing header, KV error, log-only mode
+
+**Files:** `packages/worker/src/middleware/sessionEnforce.js`, `packages/web/src/services/api.js`, `packages/web/src/stores/authStore.js`, `packages/worker/src/__tests__/sessionEnforce.test.js`
+**Estimate:** L
+
+---
+
+### US-ABUSE-6: Frontend abuse prevention UI
+**As a** user
+**I want to** see my daily scan usage and understand duplicate detection
+**So that** I have transparency about limits and don't waste time re-scanning
+
+**Acceptance Criteria:**
+- [x] `GET /user/profile` response includes `dailyScansUsed` and `dailyScansLimit`
+- [x] `subscriptionStore` exposes `dailyScansUsed`, `dailyScansRemaining` state
+- [x] Scan page shows daily cap badge when approaching limit ("85 of 100 daily scans")
+- [x] Scan page shows "Daily limit reached" banner at cap
+- [x] Duplicate scan response shows toast and redirects to existing scan
+- [x] `plans.js` includes `DAILY_SCAN_CAP: 100` and `dailyScanCap` in TIER_LIMITS
+- [x] `canScan()` also checks `dailyScansRemaining > 0` for unlimited tiers
+- [x] 8 new subscriptionStore tests for daily cap state
+
+**Files:** `packages/worker/src/routes/user.js`, `packages/web/src/stores/subscriptionStore.js`, `packages/web/src/stores/scanStore.js`, `packages/web/src/pages/Scan/index.jsx`, `packages/web/src/config/plans.js`
 **Estimate:** M

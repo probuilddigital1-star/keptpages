@@ -12,13 +12,16 @@ export default function Footer() {
             <Link to="/between-the-pages" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70 no-underline">
               Between the Pages
             </Link>
-            <a href="#" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70">
+            <Link to="/privacy" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70 no-underline">
               Privacy
-            </a>
-            <a href="#" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70">
+            </Link>
+            <Link to="/terms" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70 no-underline">
               Terms
-            </a>
-            <a href="#" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70">
+            </Link>
+            <Link to="/fair-use" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70 no-underline">
+              Fair Use
+            </Link>
+            <a href="mailto:hello@keptpages.com" className="font-ui text-[13px] text-cream/35 transition-colors duration-200 hover:text-cream/70 no-underline">
               Contact
             </a>
           </div>

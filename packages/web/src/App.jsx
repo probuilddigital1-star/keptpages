@@ -29,6 +29,9 @@ const AdminOrders = lazy(() => import('@/pages/Admin/Orders'));
 const AuthCallback = lazy(() => import('@/pages/Auth/Callback'));
 const ArticleListing = lazy(() => import('@/pages/Articles'));
 const ArticleDetail = lazy(() => import('@/pages/Articles/ArticleDetail'));
+const Terms = lazy(() => import('@/pages/Legal/Terms'));
+const Privacy = lazy(() => import('@/pages/Legal/Privacy'));
+const FairUse = lazy(() => import('@/pages/Legal/FairUse'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function PageLoader() {
@@ -71,6 +74,9 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/between-the-pages" element={<ArticleListing />} />
             <Route path="/between-the-pages/:slug" element={<ArticleDetail />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/fair-use" element={<FairUse />} />
           </Route>
 
           {/* Public scan (anonymous, no auth required) */}

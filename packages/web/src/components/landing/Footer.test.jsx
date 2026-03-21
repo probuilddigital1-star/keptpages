@@ -9,10 +9,11 @@ describe('Footer', () => {
     expect(screen.getByText('Pages')).toBeInTheDocument();
   });
 
-  it('renders privacy, terms, and contact links', () => {
+  it('renders privacy, terms, fair use, and contact links', () => {
     renderWithRouter(<Footer />);
     expect(screen.getByText('Privacy')).toBeInTheDocument();
     expect(screen.getByText('Terms')).toBeInTheDocument();
+    expect(screen.getByText('Fair Use')).toBeInTheDocument();
     expect(screen.getByText('Contact')).toBeInTheDocument();
   });
 
@@ -24,8 +25,8 @@ describe('Footer', () => {
   it('footer links include Between the Pages and anchor links', () => {
     renderWithRouter(<Footer />);
     const links = screen.getAllByRole('link');
-    // KeptPages logo + Between the Pages + Privacy + Terms + Contact = 5
-    expect(links.length).toBe(5);
+    // KeptPages logo + Between the Pages + Privacy + Terms + Fair Use + Contact = 6
+    expect(links.length).toBe(6);
     expect(screen.getByText('Between the Pages')).toBeInTheDocument();
   });
 });

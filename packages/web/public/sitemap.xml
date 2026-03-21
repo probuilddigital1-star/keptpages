@@ -61,6 +61,21 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://app.keptpages.com/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://app.keptpages.com/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://app.keptpages.com/fair-use</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://app.keptpages.com/signup</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
