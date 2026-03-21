@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import api from '@/services/api';
 import { stripeService } from '@/services/stripe';
-import { TIER_LIMITS } from '@/config/plans';
+import { TIER_LIMITS, DAILY_SCAN_CAP } from '@/config/plans';
 
 export const useSubscriptionStore = create((set, get) => ({
   // State
@@ -14,6 +14,8 @@ export const useSubscriptionStore = create((set, get) => ({
   keeperPassPurchasedAt: null,
   firstBookPurchasedAt: null,
   bookDiscountPercent: 0,
+  dailyScansUsed: 0,
+  dailyScansLimit: DAILY_SCAN_CAP,
 
   // Actions
   fetchSubscription: async () => {
@@ -34,6 +36,8 @@ export const useSubscriptionStore = create((set, get) => ({
         keeperPassPurchasedAt: profile.keeperPassPurchasedAt || null,
         firstBookPurchasedAt: profile.firstBookPurchasedAt || null,
         bookDiscountPercent: profile.bookDiscountPercent || 0,
+        dailyScansUsed: profile.dailyScansUsed || 0,
+        dailyScansLimit: profile.dailyScansLimit || DAILY_SCAN_CAP,
         loading: false,
       });
     } catch (error) {
@@ -43,8 +47,19 @@ export const useSubscriptionStore = create((set, get) => ({
   },
 
   canScan: () => {
-    const { usage, limits } = get();
-    return usage.scans < limits.scans;
+    const { usage, limits, tier, dailyScansUsed, dailyScansLimit } = get();
+    // Monthly limit check
+    if (usage.scans >= limits.scans) return false;
+    // Daily cap check for unlimited tiers
+    if (tier === 'keeper' || tier === 'book_purchaser') {
+      if (dailyScansUsed >= dailyScansLimit) return false;
+    }
+    return true;
+  },
+
+  dailyScansRemaining: () => {
+    const { dailyScansUsed, dailyScansLimit } = get();
+    return Math.max(0, dailyScansLimit - dailyScansUsed);
   },
 
   canCreateCollection: () => {

@@ -13,6 +13,8 @@ import { createClient } from '@supabase/supabase-js';
 // Middleware
 import { authMiddleware } from './middleware/auth.js';
 import { rateLimitMiddleware } from './middleware/rateLimit.js';
+import { dailyCapMiddleware } from './middleware/dailyCap.js';
+import { sessionEnforceMiddleware } from './middleware/sessionEnforce.js';
 
 // Route modules
 import scanRoutes from './routes/scan.js';
@@ -57,8 +59,8 @@ app.use(
       return null;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Stripe-Signature'],
-    exposeHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Stripe-Signature', 'X-Session-Id'],
+    exposeHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After', 'X-DailyCap-Limit', 'X-DailyCap-Remaining'],
     maxAge: 86400,
     credentials: true,
   })
@@ -259,6 +261,9 @@ protectedApi.use('*', authMiddleware());
 // Rate limiting middleware
 protectedApi.use('*', rateLimitMiddleware());
 
+// Session enforcement (logging-only initially — set enforce: true to block)
+protectedApi.use('*', sessionEnforceMiddleware({ enforce: false }));
+
 // Serve R2 images for book designer canvas (authenticated)
 protectedApi.get('/images/*', async (c) => {
   const user = c.get('user');
@@ -289,6 +294,9 @@ protectedApi.get('/images/*', async (c) => {
     },
   });
 });
+
+// Daily scan cap — only on POST /scan (upload)
+protectedApi.post('/scan', dailyCapMiddleware());
 
 // Mount route groups
 protectedApi.route('/scan', scanRoutes);

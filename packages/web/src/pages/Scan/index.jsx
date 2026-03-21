@@ -81,7 +81,7 @@ export default function ScanPage() {
     getAnonymousScansRemaining,
   } = useScanStore();
   const addToCollection = useDocumentsStore((s) => s.addToCollection);
-  const { tier, usage, limits, canScan, purchaseKeeperPass, loading: upgradeLoading, fetchSubscription } = useSubscriptionStore();
+  const { tier, usage, limits, canScan, purchaseKeeperPass, loading: upgradeLoading, fetchSubscription, dailyScansUsed, dailyScansLimit, dailyScansRemaining } = useSubscriptionStore();
 
   useEffect(() => {
     if (!isAnonymous) {
@@ -123,8 +123,12 @@ export default function ScanPage() {
 
   // Authenticated scan counter
   const isFree = !isAnonymous && tier === 'free';
+  const isUnlimitedTier = !isAnonymous && (tier === 'keeper' || tier === 'book_purchaser');
   const scansUsed = usage.scans ?? 0;
   const scansLimit = limits.scans ?? 25;
+  const dailyRemaining = dailyScansRemaining();
+  const dailyAtLimit = isUnlimitedTier && dailyRemaining <= 0;
+  const dailyApproaching = isUnlimitedTier && dailyRemaining > 0 && dailyRemaining <= 15;
   const atLimit = isAnonymous ? anonAtLimit : !canScan();
 
   // ---- Handlers ----
@@ -230,6 +234,16 @@ export default function ScanPage() {
       });
       const scan = await uploadScan(firstFile);
 
+      // Handle duplicate detection
+      if (scan.duplicate) {
+        clearStagedPages();
+        toast(`You've already scanned this image: "${scan.existingTitle || 'Untitled'}"`, 'info');
+        navigate(`/app/scan/${scan.existingScanId}`, {
+          state: { fromCollection: collectionId, fromCollectionName: collectionName },
+        });
+        return;
+      }
+
       // Upload additional pages
       for (let i = 1; i < pages.length; i++) {
         const pageFile = new File([pages[i].blob], `scan-${Date.now()}-page${i + 1}.jpg`, {
@@ -327,6 +341,11 @@ export default function ScanPage() {
             {scansUsed} of {scansLimit} scans used
           </Badge>
         )}
+        {!authLoading && isUnlimitedTier && (
+          <Badge variant={dailyAtLimit ? 'terracotta' : dailyApproaching ? 'gold' : 'default'}>
+            {dailyScansUsed} of {dailyScansLimit} daily scans
+          </Badge>
+        )}
       </div>
 
       {/* At-limit banner */}
@@ -351,6 +370,27 @@ export default function ScanPage() {
             <Button size="sm" onClick={() => isAnonymous ? navigate('/signup') : setShowUpgradeModal(true)}>
               {isAnonymous ? 'Sign Up Free' : 'Get Keeper Pass'}
             </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Daily limit banner (for unlimited tiers) */}
+      {dailyAtLimit && !atLimit && (
+        <Card className="p-5 mb-6 border-terracotta/30 bg-terracotta-light">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-terracotta/10 flex items-center justify-center shrink-0">
+              <svg className="h-5 w-5 text-terracotta" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="font-ui text-sm font-medium text-walnut">
+                Daily scan limit reached
+              </p>
+              <p className="font-ui text-xs text-walnut-secondary mt-1">
+                You&apos;ve used all {dailyScansLimit} scans for today. Your limit resets tomorrow.
+              </p>
+            </div>
           </div>
         </Card>
       )}

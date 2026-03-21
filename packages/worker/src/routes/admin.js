@@ -271,4 +271,151 @@ admin.post('/orders/:id/mock-status', async (c) => {
   });
 });
 
+/**
+ * GET /admin/abuse-report
+ * Returns users with 200+ scans in the last 30 days, ordered by count.
+ */
+admin.get('/abuse-report', async (c) => {
+  const supabase = getSupabase(c.env);
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+
+  // Use raw SQL via RPC or a direct query with aggregation
+  // Since Supabase JS doesn't support GROUP BY directly, we use RPC or a workaround
+  const { data: scans, error: scansError } = await supabase
+    .from('scans')
+    .select('user_id, created_at')
+    .gte('created_at', thirtyDaysAgo)
+    .is('deleted_at', null);
+
+  if (scansError) {
+    console.error('Abuse report query error:', scansError);
+    return c.json({ error: 'Failed to generate abuse report' }, 500);
+  }
+
+  // Aggregate in-memory
+  const userStats = {};
+  for (const scan of scans || []) {
+    if (!userStats[scan.user_id]) {
+      userStats[scan.user_id] = { count: 0, days: new Set() };
+    }
+    userStats[scan.user_id].count++;
+    userStats[scan.user_id].days.add(scan.created_at.slice(0, 10));
+  }
+
+  // Filter to users with 200+ scans
+  const heavyUsers = Object.entries(userStats)
+    .filter(([, stats]) => stats.count >= 200)
+    .sort(([, a], [, b]) => b.count - a.count);
+
+  if (heavyUsers.length === 0) {
+    return c.json({ users: [], message: 'No heavy usage detected' });
+  }
+
+  // Fetch profiles for these users
+  const userIds = heavyUsers.map(([id]) => id);
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, display_name, tier, abuse_flags, flagged_at')
+    .in('id', userIds);
+
+  const profileMap = {};
+  for (const p of profiles || []) {
+    profileMap[p.id] = p;
+  }
+
+  const users = heavyUsers.map(([userId, stats]) => {
+    const profile = profileMap[userId] || {};
+    return {
+      userId,
+      displayName: profile.display_name || null,
+      tier: profile.tier || 'free',
+      scanCount30d: stats.count,
+      activeDays: stats.days.size,
+      abuseFlags: profile.abuse_flags || {},
+      flaggedAt: profile.flagged_at || null,
+    };
+  });
+
+  return c.json({ users });
+});
+
+/**
+ * POST /admin/flag-account
+ * Flag a user account with an action: warn, throttle, or suspend.
+ */
+admin.post('/flag-account', async (c) => {
+  const supabase = getSupabase(c.env);
+  const kv = c.env.RATE_LIMIT;
+
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { userId, reason, action } = body;
+  if (!userId || !reason || !action) {
+    return c.json({ error: 'Missing required fields: userId, reason, action' }, 400);
+  }
+
+  const validActions = ['warn', 'throttle', 'suspend'];
+  if (!validActions.includes(action)) {
+    return c.json({ error: `Invalid action. Must be one of: ${validActions.join(', ')}` }, 400);
+  }
+
+  // Verify the user exists
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, abuse_flags')
+    .eq('id', userId)
+    .single();
+
+  if (profileError || !profile) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
+  const now = new Date().toISOString();
+  const updatedFlags = {
+    ...(profile.abuse_flags || {}),
+    [action]: { reason, timestamp: now, admin: c.get('user')?.email },
+  };
+
+  // Update profile with abuse flags
+  await supabase
+    .from('profiles')
+    .update({ abuse_flags: updatedFlags, flagged_at: now })
+    .eq('id', userId);
+
+  // Action-specific side effects
+  if (action === 'throttle' && kv) {
+    // Set reduced daily cap in KV
+    await kv.put(
+      `throttle:${userId}`,
+      JSON.stringify({ dailyCap: 10, reason, timestamp: now }),
+      { expirationTtl: 30 * 86400 } // 30 day TTL
+    );
+  }
+
+  if (action === 'suspend') {
+    try {
+      await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: 'none', // Permanent ban
+      });
+    } catch (err) {
+      console.error('Failed to suspend user:', err);
+      return c.json({ error: 'Failed to suspend user via auth API' }, 500);
+    }
+  }
+
+  return c.json({
+    userId,
+    action,
+    reason,
+    flaggedAt: now,
+    message: `Account ${action === 'warn' ? 'warned' : action === 'throttle' ? 'throttled to 10 scans/day' : 'suspended'}`,
+  });
+});
+
 export default admin;

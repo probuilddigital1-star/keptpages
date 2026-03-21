@@ -55,11 +55,13 @@ PLANS.KEEPER = PLANS.KEEPER_PASS;
 
 // ── Tier Limits (capabilities per tier) ─────────────────────────────────────
 
+export const DAILY_SCAN_CAP = 100;
+
 export const TIER_LIMITS = {
   no_account:     { scans: 5, collections: 1, pdfExport: false, sharing: false },
   free:           { scans: 40, collections: 2, pdfExport: false, sharing: 'view_only' },
-  book_purchaser: { scans: Infinity, collections: 3, pdfExport: 'per_book', sharing: 'view_only' },
-  keeper:         { scans: Infinity, collections: Infinity, pdfExport: true, sharing: true },
+  book_purchaser: { scans: Infinity, collections: 3, pdfExport: 'per_book', sharing: 'view_only', dailyScanCap: DAILY_SCAN_CAP },
+  keeper:         { scans: Infinity, collections: Infinity, pdfExport: true, sharing: true, dailyScanCap: DAILY_SCAN_CAP },
 };
 
 // ── Book Tiers ──────────────────────────────────────────────────────────────

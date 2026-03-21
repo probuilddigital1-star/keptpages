@@ -33,6 +33,8 @@ const initialState = {
   keeperPassPurchasedAt: null,
   firstBookPurchasedAt: null,
   bookDiscountPercent: 0,
+  dailyScansUsed: 0,
+  dailyScansLimit: 100,
 };
 
 describe('subscriptionStore', () => {
@@ -53,6 +55,8 @@ describe('subscriptionStore', () => {
       expect(state.keeperPassPurchasedAt).toBeNull();
       expect(state.firstBookPurchasedAt).toBeNull();
       expect(state.bookDiscountPercent).toBe(0);
+      expect(state.dailyScansUsed).toBe(0);
+      expect(state.dailyScansLimit).toBe(100);
     });
   });
 
@@ -170,6 +174,34 @@ describe('subscriptionStore', () => {
       expect(state.bookDiscountPercent).toBe(15);
     });
 
+    it('sets dailyScansUsed and dailyScansLimit from profile', async () => {
+      api.get.mockResolvedValue({
+        tier: 'keeper',
+        usage: { scans: 200, collections: 10 },
+        dailyScansUsed: 42,
+        dailyScansLimit: 100,
+      });
+
+      await useSubscriptionStore.getState().fetchSubscription();
+
+      const state = useSubscriptionStore.getState();
+      expect(state.dailyScansUsed).toBe(42);
+      expect(state.dailyScansLimit).toBe(100);
+    });
+
+    it('defaults dailyScansUsed to 0 when not in profile', async () => {
+      api.get.mockResolvedValue({
+        tier: 'free',
+        usage: { scans: 0, collections: 0 },
+      });
+
+      await useSubscriptionStore.getState().fetchSubscription();
+
+      const state = useSubscriptionStore.getState();
+      expect(state.dailyScansUsed).toBe(0);
+      expect(state.dailyScansLimit).toBe(100);
+    });
+
     it('sets loading=false on failure', async () => {
       api.get.mockRejectedValue(new Error('Fetch failed'));
 
@@ -211,8 +243,47 @@ describe('subscriptionStore', () => {
 
     it('returns true for keeper tier (Infinity limit)', () => {
       useSubscriptionStore.setState({
+        tier: 'keeper',
         usage: { scans: 1000, collections: 50 },
         limits: { scans: Infinity, collections: Infinity },
+        dailyScansUsed: 5,
+        dailyScansLimit: 100,
+      });
+
+      expect(useSubscriptionStore.getState().canScan()).toBe(true);
+    });
+
+    it('returns false for keeper tier when daily cap is reached', () => {
+      useSubscriptionStore.setState({
+        tier: 'keeper',
+        usage: { scans: 1000, collections: 50 },
+        limits: { scans: Infinity, collections: Infinity },
+        dailyScansUsed: 100,
+        dailyScansLimit: 100,
+      });
+
+      expect(useSubscriptionStore.getState().canScan()).toBe(false);
+    });
+
+    it('returns false for book_purchaser when daily cap is reached', () => {
+      useSubscriptionStore.setState({
+        tier: 'book_purchaser',
+        usage: { scans: 50, collections: 2 },
+        limits: { scans: Infinity, collections: 3 },
+        dailyScansUsed: 100,
+        dailyScansLimit: 100,
+      });
+
+      expect(useSubscriptionStore.getState().canScan()).toBe(false);
+    });
+
+    it('does not check daily cap for free tier', () => {
+      useSubscriptionStore.setState({
+        tier: 'free',
+        usage: { scans: 10, collections: 0 },
+        limits: { scans: 40, collections: 2 },
+        dailyScansUsed: 200, // Over daily cap, but irrelevant for free
+        dailyScansLimit: 100,
       });
 
       expect(useSubscriptionStore.getState().canScan()).toBe(true);
@@ -254,6 +325,23 @@ describe('subscriptionStore', () => {
       });
 
       expect(useSubscriptionStore.getState().canCreateCollection()).toBe(true);
+    });
+  });
+
+  describe('dailyScansRemaining', () => {
+    it('returns correct remaining count', () => {
+      useSubscriptionStore.setState({ dailyScansUsed: 30, dailyScansLimit: 100 });
+      expect(useSubscriptionStore.getState().dailyScansRemaining()).toBe(70);
+    });
+
+    it('returns 0 when at limit', () => {
+      useSubscriptionStore.setState({ dailyScansUsed: 100, dailyScansLimit: 100 });
+      expect(useSubscriptionStore.getState().dailyScansRemaining()).toBe(0);
+    });
+
+    it('returns 0 when over limit (never negative)', () => {
+      useSubscriptionStore.setState({ dailyScansUsed: 150, dailyScansLimit: 100 });
+      expect(useSubscriptionStore.getState().dailyScansRemaining()).toBe(0);
     });
   });
 

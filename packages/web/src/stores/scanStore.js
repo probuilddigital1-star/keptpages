@@ -51,6 +51,11 @@ export const useScanStore = create((set, get) => ({
         set({ uploadProgress: Math.round(progress * 100) });
         if (onProgress) onProgress(progress);
       });
+      // Handle duplicate detection response
+      if (scan.duplicate) {
+        set({ uploadProgress: 0 });
+        return scan; // Caller handles duplicate UI
+      }
       set((state) => ({
         currentScan: scan,
         scans: [...state.scans, scan],

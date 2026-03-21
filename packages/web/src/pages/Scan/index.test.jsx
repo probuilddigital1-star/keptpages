@@ -41,6 +41,9 @@ const mockSubscriptionStore = {
   purchaseKeeperPass: vi.fn(),
   loading: false,
   fetchSubscription: vi.fn().mockResolvedValue({}),
+  dailyScansUsed: 0,
+  dailyScansLimit: 100,
+  dailyScansRemaining: vi.fn(() => 100),
 };
 
 // Default: authenticated user

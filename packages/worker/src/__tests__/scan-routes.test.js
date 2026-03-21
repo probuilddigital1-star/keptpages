@@ -61,6 +61,7 @@ function createQueryBuilder(result = { data: null, error: null }) {
     neq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
     // When no .single() is called the builder itself is awaited (thenable).
     then: vi.fn((resolve) => resolve(result)),
@@ -203,6 +204,10 @@ function buildTestApp({ user = TEST_USER, uploads, processed } = {}) {
 
   app.route('/scan', scan);
 
+  app.onError((err, c) => {
+    return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+  });
+
   return { app, uploads: mockUploads, processed: mockProcessed };
 }
 
@@ -311,8 +316,15 @@ describe('POST /scan - upload', () => {
       created_at: '2025-06-01T12:00:00Z',
     };
 
-    const builder = createQueryBuilder({ data: scanRecord, error: null });
-    setupSupabase({ scans: builder });
+    // First call: dedup check (no match), second call: insert
+    const dedupBuilder = createQueryBuilder({ data: null, error: { code: 'PGRST116' } });
+    const insertBuilder = createQueryBuilder({ data: scanRecord, error: null });
+    let callCount = 0;
+    mockSupabaseClient.from = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) return dedupBuilder;
+      return insertBuilder;
+    });
 
     const { app, uploads } = buildTestApp();
 
@@ -327,6 +339,10 @@ describe('POST /scan - upload', () => {
     expect(data.status).toBe('uploaded');
     expect(data.originalFilename).toBe('photo.jpg');
     expect(uploads.put).toHaveBeenCalledTimes(1);
+    // Verify file_hash is included in the insert
+    const insertCall = insertBuilder.insert.mock.calls[0]?.[0];
+    expect(insertCall).toHaveProperty('file_hash');
+    expect(typeof insertCall.file_hash).toBe('string');
   });
 
   it('returns 400 when image field is missing', async () => {
@@ -387,8 +403,15 @@ describe('POST /scan - upload', () => {
   });
 
   it('rolls back R2 upload on database error and returns 500', async () => {
-    const builder = createQueryBuilder({ data: null, error: { message: 'insert failed' } });
-    setupSupabase({ scans: builder });
+    // First call: dedup check (no match), second call: insert (fails)
+    const dedupBuilder = createQueryBuilder({ data: null, error: { code: 'PGRST116' } });
+    const insertBuilder = createQueryBuilder({ data: null, error: { message: 'insert failed' } });
+    let callCount = 0;
+    mockSupabaseClient.from = vi.fn(() => {
+      callCount++;
+      if (callCount === 1) return dedupBuilder;
+      return insertBuilder;
+    });
 
     const { app, uploads } = buildTestApp();
 

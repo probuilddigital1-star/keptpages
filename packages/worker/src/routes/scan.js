@@ -17,6 +17,17 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'im
 const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 /**
+ * Compute SHA-256 hash of a file's ArrayBuffer.
+ * Uses the Web Crypto API available in Cloudflare Workers.
+ */
+async function computeFileHash(arrayBuffer) {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
  * Helper to get a Supabase client from the worker environment.
  */
 function getSupabase(env) {
@@ -138,8 +149,29 @@ scan.post('/', async (c) => {
   const ext = file.name?.split('.').pop() || 'jpg';
   const r2Key = `${user.id}/${timestamp}-${crypto.randomUUID()}.${ext}`;
 
-  // Upload to R2
+  // Compute file hash for deduplication
   const arrayBuffer = await file.arrayBuffer();
+  const fileHash = await computeFileHash(arrayBuffer);
+
+  // Check for duplicate: same user, same file, not deleted
+  const { data: existingDup } = await supabase
+    .from('scans')
+    .select('id, title')
+    .eq('user_id', user.id)
+    .eq('file_hash', fileHash)
+    .is('deleted_at', null)
+    .limit(1)
+    .single();
+
+  if (existingDup) {
+    return c.json({
+      duplicate: true,
+      existingScanId: existingDup.id,
+      existingTitle: existingDup.title,
+    });
+  }
+
+  // Upload to R2
   await env.UPLOADS.put(r2Key, arrayBuffer, {
     httpMetadata: {
       contentType: file.type,
@@ -150,7 +182,7 @@ scan.post('/', async (c) => {
     },
   });
 
-  // Create scan record in Supabase
+  // Create scan record in Supabase (with file_hash)
   const { data: scanRecord, error: dbError } = await supabase
     .from('scans')
     .insert({
@@ -159,6 +191,7 @@ scan.post('/', async (c) => {
       original_filename: file.name || 'upload',
       mime_type: file.type,
       file_size: file.size,
+      file_hash: fileHash,
       status: 'uploaded',
     })
     .select()
@@ -240,12 +273,40 @@ scan.post('/:id/add-page', async (c) => {
     return c.json({ error: 'File too large. Maximum size is 20MB.' }, 400);
   }
 
+  // Compute hash and check for duplicate page
+  const arrayBuffer = await file.arrayBuffer();
+  const pageHash = await computeFileHash(arrayBuffer);
+
+  // Check if this exact image is already a page in this scan
+  const primaryHash = scanRecord.file_hash;
+  if (primaryHash && pageHash === primaryHash) {
+    return c.json({
+      duplicate: true,
+      existingScanId: scanRecord.id,
+      existingTitle: scanRecord.title,
+      message: 'This image is already the primary page of this scan',
+    });
+  }
+
+  // Also check additional pages
+  const existingPages = Array.isArray(scanRecord.additional_r2_keys)
+    ? scanRecord.additional_r2_keys
+    : [];
+  const dupPage = existingPages.find((p) => p.fileHash === pageHash);
+  if (dupPage) {
+    return c.json({
+      duplicate: true,
+      existingScanId: scanRecord.id,
+      existingTitle: scanRecord.title,
+      message: 'This image is already added as a page in this scan',
+    });
+  }
+
   // Upload to R2
   const timestamp = Date.now();
   const ext = file.name?.split('.').pop() || 'jpg';
   const r2Key = `${user.id}/${timestamp}-${crypto.randomUUID()}.${ext}`;
 
-  const arrayBuffer = await file.arrayBuffer();
   await env.UPLOADS.put(r2Key, arrayBuffer, {
     httpMetadata: { contentType: file.type },
     customMetadata: {
@@ -264,6 +325,7 @@ scan.post('/:id/add-page', async (c) => {
     mimeType: file.type,
     originalFilename: file.name || 'upload',
     fileSize: file.size,
+    fileHash: pageHash,
   };
 
   const updatedKeys = [...existingKeys, newPageEntry];

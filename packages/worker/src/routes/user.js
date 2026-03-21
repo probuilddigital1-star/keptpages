@@ -42,6 +42,32 @@ user.get('/profile', async (c) => {
     .eq('status', 'active')
     .maybeSingle();
 
+  // Fetch daily scan usage from KV (for keeper/book_purchaser tiers)
+  let dailyScansUsed = 0;
+  let dailyScansLimit = 100;
+  const kv = c.env.RATE_LIMIT;
+  if (kv && profile.tier && profile.tier !== 'free') {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const dailyKey = `daily:${authUser.id}:${today}`;
+      const currentStr = await kv.get(dailyKey);
+      dailyScansUsed = currentStr ? parseInt(currentStr, 10) : 0;
+
+      // Check for throttled cap
+      const throttleVal = await kv.get(`throttle:${authUser.id}`);
+      if (throttleVal) {
+        try {
+          const parsed = JSON.parse(throttleVal);
+          dailyScansLimit = parsed.dailyCap || 10;
+        } catch {
+          dailyScansLimit = 10;
+        }
+      }
+    } catch {
+      // KV error — return defaults
+    }
+  }
+
   return c.json({
     id: profile.id,
     displayName: profile.display_name,
@@ -52,6 +78,8 @@ user.get('/profile', async (c) => {
       scans: profile.scan_count,
       collections: profile.collection_count,
     },
+    dailyScansUsed,
+    dailyScansLimit,
     subscription: subscription
       ? {
           id: subscription.id,

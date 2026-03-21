@@ -1,6 +1,26 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '@/services/supabase';
 
+const SESSION_KEY = 'keptpages_session_id';
+
+function refreshSessionId() {
+  try {
+    const id = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, id);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+function clearSessionId() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Not available in test/SSR
+  }
+}
+
 /**
  * Build the OAuth redirect URL based on current environment.
  * In production this must point to the app domain (app.keptpages.com)
@@ -40,7 +60,12 @@ export const useAuthStore = create((set, get) => ({
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        if (event === 'SIGNED_IN') {
+          refreshSessionId();
+        } else if (event === 'SIGNED_OUT') {
+          clearSessionId();
+        }
         set({
           session,
           user: session?.user ?? null,
@@ -62,6 +87,7 @@ export const useAuthStore = create((set, get) => ({
         password,
       });
       if (error) throw error;
+      refreshSessionId();
       set({ user: data.user, session: data.session, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -108,6 +134,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      clearSessionId();
       set({ user: null, session: null, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });

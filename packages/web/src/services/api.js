@@ -1,10 +1,28 @@
 import { config } from '@/config/env';
 import { supabase } from './supabase';
 
+const SESSION_KEY = 'keptpages_session_id';
+
+function getSessionId() {
+  try {
+    let sessionId = localStorage.getItem(SESSION_KEY);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem(SESSION_KEY, sessionId);
+    }
+    return sessionId;
+  } catch {
+    return null;
+  }
+}
+
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return {};
-  return { Authorization: `Bearer ${session.access_token}` };
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+  const sessionId = getSessionId();
+  if (sessionId) headers['X-Session-Id'] = sessionId;
+  return headers;
 }
 
 async function request(method, path, { body, headers = {}, isPublic = false } = {}) {
